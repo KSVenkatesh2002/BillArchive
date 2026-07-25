@@ -156,7 +156,7 @@ export default function UserProjectPage() {
     try {
       const payload = {
         name: taskForm.name,
-        nickName: taskForm.nickName || taskForm.name,
+        nickName: taskForm.nickName || '',
         status: taskForm.status,
         project: taskForm.project,
         source: taskForm.source,

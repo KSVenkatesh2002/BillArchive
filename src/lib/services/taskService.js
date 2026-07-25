@@ -55,7 +55,7 @@ export const taskService = {
 
     const newTask = {
       name: taskName,
-      nickName: nickName || taskName,
+      nickName: nickName || '',
       clickupId: clickupId || '',
       status: initialStatus,
       statusHistory: [

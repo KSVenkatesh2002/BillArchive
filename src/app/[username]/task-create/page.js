@@ -32,13 +32,18 @@ export default function UserTaskCreatePage() {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   useEffect(() => {
+    if (!username) return; // Prevent comparison prior to route param hydration
     const verifyAuth = async () => {
       try {
         const data = await apiClient.checkAuth();
         if (!data.authenticated) {
           router.push('/login');
-        } else if (data.user.username !== username) {
-          router.push(`/${data.user.username}/task-create`);
+          return;
+        }
+        const loggedUser = data.user.username.toLowerCase();
+        const routeUser = decodeURIComponent(username).toLowerCase();
+        if (loggedUser !== routeUser) {
+          router.push(`/${loggedUser}/task-create`);
         } else {
           setAuthChecking(false);
         }
@@ -148,7 +153,7 @@ export default function UserTaskCreatePage() {
 
       const payload = {
         name: form.name,
-        nickName: form.nickName || form.name,
+        nickName: form.nickName || '',
         status: form.status,
         project: form.project,
         source: form.source,

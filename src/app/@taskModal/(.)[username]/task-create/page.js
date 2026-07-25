@@ -28,7 +28,7 @@ export default function InterceptedTaskCreateModal() {
     try {
       const payload = {
         name: form.name,
-        nickName: form.nickName || form.name,
+        nickName: form.nickName || '',
         status: form.status,
         project: form.project,
         source: form.source,
