@@ -24,7 +24,7 @@ export const metadata = {
   description: CONFIG.DESCRIPTION,
 };
 
-export default function RootLayout({ children, authModal, taskModal }) {
+export default function RootLayout({ children, authModal }) {
   return (
     <html
       lang="en"
@@ -34,7 +34,6 @@ export default function RootLayout({ children, authModal, taskModal }) {
       <body className="min-h-full flex flex-col bg-black text-slate-100" suppressHydrationWarning>
         {children}
         {authModal}
-        {taskModal}
       </body>
     </html>
   );

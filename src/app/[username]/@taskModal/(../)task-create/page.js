@@ -44,21 +44,21 @@ export default function InterceptedTaskCreateModal() {
       const res = await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload)
       });
-
       const data = await res.json();
       if (data.success) {
         router.back();
+        // Give router a tiny moment to go back before refreshing
         setTimeout(() => {
-          window.location.reload();
+          router.refresh();
         }, 100);
       } else {
-        alert(data.error || 'Failed to save task.');
+        alert(data.error || 'Failed to create task');
       }
     } catch (err) {
       console.error(err);
-      alert('An error occurred.');
+      alert('An error occurred');
     }
   };
 
