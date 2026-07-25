@@ -10,6 +10,13 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-jost: var(--font-jost);
+}
+
+.font-balmain {
+  font-family: var(--font-jost), sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
 }
 
 @media (prefers-color-scheme: dark) {

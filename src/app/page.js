@@ -36,10 +36,10 @@ export default function LandingPage() {
       <header className="border-b border-zinc-900 bg-black/60 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-500 flex items-center justify-center font-black text-white text-lg shadow-lg shadow-orange-500/20">
+            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-500 flex items-center justify-center font-balmain font-bold text-white text-md shadow-lg shadow-orange-500/20">
               {CONFIG.SITE_INITIAL}
             </div>
-            <span className="text-lg font-black tracking-tight text-white">{CONFIG.SITE_NAME}</span>
+            <span className="text-md font-balmain font-semibold tracking-wider text-white">{CONFIG.SITE_NAME}</span>
           </div>
 
           <nav className="flex items-center gap-4">
@@ -84,8 +84,8 @@ export default function LandingPage() {
             <span>Next-Gen Task Scoping & Hour Analytics</span>
           </div>
 
-          <h1 className="text-4xl sm:text-6xl font-black text-white tracking-tight leading-none">
-            Scale and Scope Your Billing <span className="bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 bg-clip-text text-transparent">Effortlessly</span>
+          <h1 className="text-3xl sm:text-5xl font-balmain font-light text-white leading-normal">
+            Scale and Scope Your Billing <span className="bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 bg-clip-text text-transparent font-medium">Effortlessly</span>
           </h1>
 
           <p className="text-base sm:text-lg text-zinc-400 leading-relaxed">
@@ -134,7 +134,7 @@ export default function LandingPage() {
         {/* Features Matrix Grid */}
         <div className="pt-8">
           <div className="text-center space-y-3 mb-12">
-            <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Structured for Professional Output</h2>
+            <h2 className="text-xl sm:text-2xl font-balmain font-medium text-white">Structured for Professional Output</h2>
             <p className="text-xs sm:text-sm text-zinc-500 max-w-md mx-auto">Everything you need to analyze, trace, and archive active development contracts.</p>
           </div>
 
@@ -177,7 +177,7 @@ export default function LandingPage() {
         {/* Closing CTA */}
         <div className="bg-gradient-to-r from-orange-950/20 via-zinc-950 to-orange-950/10 border border-zinc-900 rounded-3xl p-8 sm:p-12 text-center space-y-6 relative overflow-hidden">
           <div className="absolute inset-0 bg-orange-600/5 blur-3xl pointer-events-none" />
-          <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">Ready to optimize your time audits?</h2>
+          <h2 className="text-xl sm:text-3xl font-balmain font-medium text-white">Ready to optimize your time audits?</h2>
           <p className="text-xs sm:text-sm text-zinc-400 max-w-lg mx-auto">
             Join the developer dashboard designed to minimize administrative steps. Keep all hours registered under a clean, secure timeline.
           </p>

@@ -14,11 +14,11 @@ export default function Header({
     <header className="flex flex-col lg:flex-row lg:items-center lg:justify-between pb-6 mb-6 border-b border-zinc-800/80 gap-4">
       <div>
         <div className="flex items-center gap-3">
-          <Link href={currentUser ? `/${currentUser.username}` : "/"} className="h-10 w-10 rounded-xl bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-500 flex items-center justify-center font-black text-white text-xl shadow-lg shadow-orange-500/20">
+          <Link href={currentUser ? `/${currentUser.username}` : "/"} className="h-10 w-10 rounded-xl bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-500 flex items-center justify-center font-balmain font-bold text-white text-lg shadow-lg shadow-orange-500/20">
             {CONFIG.SITE_INITIAL}
           </Link>
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-3">
+            <h1 className="text-lg font-balmain font-medium text-white flex items-center gap-3">
               <Link href={currentUser ? `/${currentUser.username}` : "/"} className="hover:text-orange-400 transition-colors">
                 {CONFIG.SITE_NAME}
               </Link>
