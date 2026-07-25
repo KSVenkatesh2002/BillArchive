@@ -29,8 +29,9 @@ export default function RootLayout({ children, authModal, taskModal }) {
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${jost.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-black text-slate-100">
+      <body className="min-h-full flex flex-col bg-black text-slate-100" suppressHydrationWarning>
         {children}
         {authModal}
         {taskModal}
