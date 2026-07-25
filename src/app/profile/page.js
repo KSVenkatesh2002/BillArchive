@@ -191,7 +191,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Avatar Preset Selector */}
-            <div className="w-full space-y-2 border-t border-zinc-850 pt-4">
+            <div className="w-full space-y-2 border-t border-zinc-800 pt-4">
               <span className="text-[10px] font-bold text-zinc-550 uppercase tracking-wider block text-left">Choose Profile Avatar</span>
               <div className="flex justify-center gap-3">
                 {AVATAR_PRESETS.map((preset, index) => (
@@ -212,7 +212,7 @@ export default function ProfilePage() {
 
           {/* Right panel: Profile Editor Form */}
           <div className="lg:col-span-2 bg-zinc-950 p-6 rounded-2xl border border-zinc-800/80 space-y-6">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider pb-3 border-b border-zinc-850">
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider pb-3 border-b border-zinc-800">
               Personal Information
             </h3>
 
@@ -227,7 +227,7 @@ export default function ProfilePage() {
                       placeholder="Alex Mercer"
                       value={form.name}
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
-                      className="w-full bg-black border border-zinc-805 rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-white placeholder-zinc-750 focus:outline-none focus:border-orange-500"
+                      className="w-full bg-black border border-zinc-800 rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-white placeholder-zinc-750 focus:outline-none focus:border-orange-500"
                       required
                     />
                   </div>
@@ -242,7 +242,7 @@ export default function ProfilePage() {
                       placeholder="alex@example.com"
                       value={form.email}
                       onChange={(e) => setForm({ ...form, email: e.target.value })}
-                      className="w-full bg-black border border-zinc-805 rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-white placeholder-zinc-750 focus:outline-none focus:border-orange-500"
+                      className="w-full bg-black border border-zinc-800 rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-white placeholder-zinc-750 focus:outline-none focus:border-orange-500"
                     />
                   </div>
                 </div>
@@ -258,7 +258,7 @@ export default function ProfilePage() {
                       placeholder="e.g. Lead Software Engineer"
                       value={form.title}
                       onChange={(e) => setForm({ ...form, title: e.target.value })}
-                      className="w-full bg-black border border-zinc-805 rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-white placeholder-zinc-750 focus:outline-none focus:border-orange-500"
+                      className="w-full bg-black border border-zinc-800 rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-white placeholder-zinc-750 focus:outline-none focus:border-orange-500"
                     />
                   </div>
                 </div>
@@ -272,7 +272,7 @@ export default function ProfilePage() {
                       placeholder="e.g. +1 (555) 000-0000"
                       value={form.phone}
                       onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                      className="w-full bg-black border border-zinc-805 rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-white placeholder-zinc-750 focus:outline-none focus:border-orange-500"
+                      className="w-full bg-black border border-zinc-800 rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-white placeholder-zinc-750 focus:outline-none focus:border-orange-500"
                     />
                   </div>
                 </div>
@@ -287,12 +287,12 @@ export default function ProfilePage() {
                     value={form.bio}
                     onChange={(e) => setForm({ ...form, bio: e.target.value })}
                     rows={3}
-                    className="w-full bg-black border border-zinc-805 rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-white placeholder-zinc-750 focus:outline-none focus:border-orange-500 resize-none"
+                    className="w-full bg-black border border-zinc-800 rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-white placeholder-zinc-750 focus:outline-none focus:border-orange-500 resize-none"
                   />
                 </div>
               </div>
 
-              <div className="border-t border-zinc-850 pt-4 mt-6">
+              <div className="border-t border-zinc-800 pt-4 mt-6">
                 <label className="block text-xs font-semibold text-zinc-400 mb-1">ClickUp Personal API Token</label>
                 <div className="relative">
                   <Key className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
@@ -301,7 +301,7 @@ export default function ProfilePage() {
                     placeholder="pk_xxxx_xxxxxxxxxxxxxx"
                     value={form.clickUpToken}
                     onChange={(e) => setForm({ ...form, clickUpToken: e.target.value })}
-                    className="w-full bg-black border border-zinc-805 rounded-xl pl-10 pr-10 py-2.5 text-xs text-white placeholder-zinc-750 focus:outline-none focus:border-orange-500 font-mono"
+                    className="w-full bg-black border border-zinc-800 rounded-xl pl-10 pr-10 py-2.5 text-xs text-white placeholder-zinc-750 focus:outline-none focus:border-orange-500 font-mono"
                   />
                   <button
                     type="button"
@@ -314,7 +314,7 @@ export default function ProfilePage() {
                 <p className="text-[10px] text-zinc-500 mt-1">Used to query task linking status from ClickUp API directly.</p>
               </div>
 
-              <div className="pt-4 border-t border-zinc-850 flex flex-col sm:flex-row gap-4 items-center justify-between">
+              <div className="pt-4 border-t border-zinc-800 flex flex-col sm:flex-row gap-4 items-center justify-between">
                 {/* Save profile */}
                 <button
                   type="submit"

@@ -2,20 +2,24 @@ import { CONFIG } from '../config';
 
 // Preserve memory database state across module reloads in development
 if (!global._inMemoryDb) {
-  // Hash the default password 'admin' using bcrypt or simulate it.
-  // Since bcryptjs is async, we store the plaintext/hashed info.
-  // We can seed: admin / admin (hashed using a known hash, or we'll let comparison match it)
   global._inMemoryDb = {
     users: [
       {
         _id: 'mock-admin-id',
         username: 'admin',
-        // pre-hashed '$2b$10$CYV7KUDHU8g2EmkNT1TjweTYdMz8LJuxZ9x2wkuHGkntSvTcPa7qm' which is 'admin'
         password: '$2b$10$CYV7KUDHU8g2EmkNT1TjweTYdMz8LJuxZ9x2wkuHGkntSvTcPa7qm',
         name: 'Admin User',
         role: 'admin',
         createdAt: new Date()
       }
+    ],
+    sources: [
+      { _id: 'source-dialedin', name: 'dialedin' },
+      { _id: 'source-fluent', name: 'fluent' }
+    ],
+    typesOfWork: [
+      { _id: 'type-dev', name: 'dev' },
+      { _id: 'type-qa', name: 'qa' }
     ],
     tasks: [
       {
@@ -29,9 +33,8 @@ if (!global._inMemoryDb) {
         ],
         bill: { allocatedHours: 10, billedHours: 8, actualHours: 7.5 },
         project: 'Auth System',
-        source: 'dialedin',
-        typeOfWork: 'dev',
-        user: 'Admin User',
+        source: 'source-dialedin',
+        typeOfWork: 'type-dev',
         userId: 'mock-admin-id',
         createdAt: new Date(Date.now() - 86400000 * 3),
         updatedAt: new Date(Date.now() - 86400000 * 1)
@@ -48,9 +51,8 @@ if (!global._inMemoryDb) {
         ],
         bill: { allocatedHours: 6, billedHours: 6, actualHours: 5.5 },
         project: 'Invoice Engine',
-        source: 'fluent',
-        typeOfWork: 'qa',
-        user: 'Admin User',
+        source: 'source-fluent',
+        typeOfWork: 'type-qa',
         userId: 'mock-admin-id',
         createdAt: new Date(Date.now() - 86400000 * 5),
         updatedAt: new Date(Date.now() - 86400000 * 1)
@@ -69,9 +71,8 @@ if (!global._inMemoryDb) {
         ],
         bill: { allocatedHours: 15, billedHours: 15, actualHours: 14.0 },
         project: 'Core Infrastructure',
-        source: 'dialedin',
-        typeOfWork: 'dev',
-        user: 'Admin User',
+        source: 'source-dialedin',
+        typeOfWork: 'type-dev',
         userId: 'mock-admin-id',
         createdAt: new Date(Date.now() - 86400000 * 10),
         updatedAt: new Date(Date.now() - 86400000 * 1)
@@ -87,11 +88,40 @@ if (!global._inMemoryDb) {
 
 const dbStore = global._inMemoryDb;
 
+async function normalizeMemoryTaskDoc(taskDoc) {
+  const normalized = { ...taskDoc };
+  delete normalized.username;
+  delete normalized.user;
+
+  // Normalize source
+  if (normalized.source) {
+    const name = String(normalized.source).trim().toLowerCase();
+    let found = dbStore.sources.find(s => s._id === name || s.name === name);
+    if (!found) {
+      found = { _id: 'source-' + Math.random().toString(36).substr(2, 9), name };
+      dbStore.sources.push(found);
+    }
+    normalized.source = found._id;
+  }
+
+  // Normalize typeOfWork
+  if (normalized.typeOfWork) {
+    const name = String(normalized.typeOfWork).trim().toLowerCase();
+    let found = dbStore.typesOfWork.find(t => t._id === name || t.name === name);
+    if (!found) {
+      found = { _id: 'type-' + Math.random().toString(36).substr(2, 9), name };
+      dbStore.typesOfWork.push(found);
+    }
+    normalized.typeOfWork = found._id;
+  }
+
+  return normalized;
+}
+
 export const memoryAdapter = {
   isDemoMode: true,
 
   async connect() {
-    // Memory adapter is always connected
     return true;
   },
 
@@ -120,21 +150,26 @@ export const memoryAdapter = {
   async findTasks(query = {}, options = {}) {
     let filtered = [...dbStore.tasks];
 
-    // Filter by userId if set (auth scope)
     if (query.userId) {
-      filtered = filtered.filter(t => t.userId === query.userId);
+      filtered = filtered.filter(t => t.userId.toString() === query.userId.toString());
     }
 
-    if (query.source) {
-      filtered = filtered.filter(t => t.source === query.source);
+    if (query.source && query.source !== 'all') {
+      let filterSourceId = query.source;
+      const sDoc = dbStore.sources.find(s => s.name === query.source.toLowerCase() || s._id === query.source);
+      if (sDoc) filterSourceId = sDoc._id;
+      filtered = filtered.filter(t => t.source === filterSourceId);
     }
 
-    if (query.project) {
+    if (query.project && query.project !== 'all') {
       filtered = filtered.filter(t => t.project.toLowerCase() === query.project.toLowerCase());
     }
 
-    if (query.typeOfWork) {
-      filtered = filtered.filter(t => t.typeOfWork === query.typeOfWork);
+    if (query.typeOfWork && query.typeOfWork !== 'all') {
+      let filterTypeId = query.typeOfWork;
+      const tDoc = dbStore.typesOfWork.find(t => t.name === query.typeOfWork.toLowerCase() || t._id === query.typeOfWork);
+      if (tDoc) filterTypeId = tDoc._id;
+      filtered = filtered.filter(t => t.typeOfWork === filterTypeId);
     }
 
     if (query.createdAt && query.createdAt.$gte) {
@@ -142,7 +177,7 @@ export const memoryAdapter = {
       filtered = filtered.filter(t => new Date(t.createdAt) >= gteDate);
     }
 
-    // Calculate metrics on all MATCHING tasks (before pagination)
+    // Metrics calculation
     let totalAllocated = 0;
     let totalBilled = 0;
     let totalActual = 0;
@@ -155,16 +190,31 @@ export const memoryAdapter = {
       if (t.status === 'complete') completedCount++;
     });
 
-    // Sort: newest first
     filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-    // Pagination
     const skip = options.skip || 0;
     const limit = options.limit || 15;
     const paginated = filtered.slice(skip, skip + limit);
 
+    const populatedTasks = paginated.map(t => {
+      const u = dbStore.users.find(usr => usr._id.toString() === t.userId.toString());
+      const s = dbStore.sources.find(src => src._id === t.source);
+      const tow = dbStore.typesOfWork.find(type => type._id === t.typeOfWork);
+      return {
+        ...t,
+        _id: t._id.toString(),
+        userId: t.userId.toString(),
+        source: s ? s.name : (t.source || ''),
+        sourceId: t.source || '',
+        typeOfWork: tow ? tow.name : (t.typeOfWork || ''),
+        typeOfWorkId: t.typeOfWork || '',
+        username: u ? u.username : '',
+        user: u ? u.name : ''
+      };
+    });
+
     return {
-      tasks: paginated.map(t => ({ ...t, _id: t._id.toString() })),
+      tasks: populatedTasks,
       hasMore: skip + paginated.length < filtered.length,
       metrics: {
         totalAllocated,
@@ -177,19 +227,36 @@ export const memoryAdapter = {
   },
 
   async createTask(taskDoc) {
+    const normalized = await normalizeMemoryTaskDoc(taskDoc);
     const newTask = {
       _id: 'mem-task-' + Math.random().toString(36).substr(2, 9),
-      ...taskDoc,
-      createdAt: taskDoc.createdAt || new Date(),
-      updatedAt: taskDoc.updatedAt || new Date()
+      ...normalized,
+      createdAt: normalized.createdAt || new Date(),
+      updatedAt: normalized.updatedAt || new Date()
     };
     dbStore.tasks.push(newTask);
     return { ...newTask };
   },
 
   async findTaskById(id) {
-    const task = dbStore.tasks.find(t => t._id.toString() === id.toString());
-    return task ? { ...task } : null;
+    const t = dbStore.tasks.find(tk => tk._id.toString() === id.toString());
+    if (!t) return null;
+
+    const u = dbStore.users.find(usr => usr._id.toString() === t.userId.toString());
+    const s = dbStore.sources.find(src => src._id === t.source);
+    const tow = dbStore.typesOfWork.find(type => type._id === t.typeOfWork);
+
+    return {
+      ...t,
+      _id: t._id.toString(),
+      userId: t.userId.toString(),
+      source: s ? s.name : (t.source || ''),
+      sourceId: t.source || '',
+      typeOfWork: tow ? tow.name : (t.typeOfWork || ''),
+      typeOfWorkId: t.typeOfWork || '',
+      username: u ? u.username : '',
+      user: u ? u.name : ''
+    };
   },
 
   async updateTask(id, updateDoc) {
@@ -206,9 +273,11 @@ export const memoryAdapter = {
       updated.statusHistory = [...(updated.statusHistory || []), updateDoc.$push.statusHistory];
     }
 
-    updated.updatedAt = new Date();
-    dbStore.tasks[idx] = updated;
-    return { ...updated };
+    const normalized = await normalizeMemoryTaskDoc(updated);
+    normalized.updatedAt = new Date();
+    dbStore.tasks[idx] = normalized;
+
+    return this.findTaskById(id);
   },
 
   async deleteTask(id) {
@@ -219,7 +288,6 @@ export const memoryAdapter = {
   },
 
   async findBills() {
-    // Sort by createdAt desc
     const sorted = [...dbStore.bills].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     return sorted.map(b => ({ ...b }));
   },
@@ -238,7 +306,6 @@ export const memoryAdapter = {
     const idx = dbStore.users.findIndex(u => u._id.toString() === id.toString());
     if (idx === -1) return null;
     
-    // Apply updates ($set or directly)
     const updates = updateDoc.$set ? updateDoc.$set : updateDoc;
     dbStore.users[idx] = {
       ...dbStore.users[idx],
@@ -274,5 +341,13 @@ export const memoryAdapter = {
       }
     }
     return true;
+  },
+
+  async getSources() {
+    return [...dbStore.sources];
+  },
+
+  async getTypesOfWork() {
+    return [...dbStore.typesOfWork];
   }
 };

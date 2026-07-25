@@ -13,7 +13,7 @@ export default function NotFound() {
       {/* Cyberpunk grid backdrop */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#141414_1px,transparent_1px),linear-gradient(to_bottom,#141414_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-30 pointer-events-none" />
 
-      <div className="relative z-10 w-full max-w-lg text-center bg-[#070707]/60 backdrop-blur-xl border border-zinc-850 p-10 rounded-3xl shadow-2xl shadow-black/80 flex flex-col items-center">
+      <div className="relative z-10 w-full max-w-lg text-center bg-[#070707]/60 backdrop-blur-xl border border-zinc-800 p-10 rounded-3xl shadow-2xl shadow-black/80 flex flex-col items-center">
         {/* Pulsing floating compass icon */}
         <div className="relative w-20 h-20 bg-gradient-to-br from-indigo-500/10 to-cyan-500/10 rounded-2xl border border-zinc-800 flex items-center justify-center mb-8 shadow-inner group">
           <div className="absolute inset-0 bg-indigo-500/5 rounded-2xl blur-md opacity-0 group-hover:opacity-100 transition-opacity" />

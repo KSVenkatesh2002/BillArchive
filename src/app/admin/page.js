@@ -360,7 +360,7 @@ export default function AdminPage() {
 
         {/* Tab Content Panels */}
         {loadingData ? (
-          <div className="bg-zinc-950/40 border border-zinc-805 rounded-2xl py-20 text-center text-zinc-500">
+          <div className="bg-zinc-950/40 border border-zinc-800 rounded-2xl py-20 text-center text-zinc-500">
             <RefreshCw className="w-8 h-8 animate-spin text-zinc-650 mx-auto mb-3" />
             <p className="text-xs">Synchronizing admin payload...</p>
           </div>
@@ -558,7 +558,7 @@ export default function AdminPage() {
                         placeholder="e.g. AWS Cloud Infrastructure"
                         value={billForm.title}
                         onChange={(e) => setBillForm({ ...billForm, title: e.target.value })}
-                        className="w-full bg-black border border-zinc-805 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-700 focus:outline-none focus:border-orange-500"
+                        className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-700 focus:outline-none focus:border-orange-500"
                         required
                       />
                     </div>
@@ -570,7 +570,7 @@ export default function AdminPage() {
                         placeholder="e.g. Initech Corp"
                         value={billForm.clientName}
                         onChange={(e) => setBillForm({ ...billForm, clientName: e.target.value })}
-                        className="w-full bg-black border border-zinc-805 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-700 focus:outline-none focus:border-orange-500"
+                        className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-700 focus:outline-none focus:border-orange-500"
                         required
                       />
                     </div>
@@ -584,7 +584,7 @@ export default function AdminPage() {
                           placeholder="0.00"
                           value={billForm.amount}
                           onChange={(e) => setBillForm({ ...billForm, amount: e.target.value })}
-                          className="w-full bg-black border border-zinc-805 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-700 focus:outline-none focus:border-orange-500"
+                          className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-700 focus:outline-none focus:border-orange-500"
                           required
                         />
                       </div>
@@ -594,7 +594,7 @@ export default function AdminPage() {
                         <select
                           value={billForm.status}
                           onChange={(e) => setBillForm({ ...billForm, status: e.target.value })}
-                          className="w-full bg-black border border-zinc-805 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-orange-500"
+                          className="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-orange-500"
                         >
                           <option value="Pending" className="bg-black">Pending</option>
                           <option value="Paid" className="bg-black">Paid</option>
@@ -609,7 +609,7 @@ export default function AdminPage() {
                         type="date"
                         value={billForm.date}
                         onChange={(e) => setBillForm({ ...billForm, date: e.target.value })}
-                        className="w-full bg-black border border-zinc-805 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-orange-500"
+                        className="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-orange-500"
                         required
                       />
                     </div>

@@ -34,10 +34,134 @@ async function getDb() {
 
 function castId(id) {
   try {
+    if (id instanceof ObjectId) return id;
     return new ObjectId(id);
   } catch {
     return id;
   }
+}
+
+async function normalizeTaskDoc(taskDoc) {
+  const db = await getDb();
+  const normalized = { ...taskDoc };
+
+  // 1. Cast userId to ObjectId
+  if (normalized.userId) {
+    normalized.userId = castId(normalized.userId);
+  }
+
+  // 2. Remove duplicate user/username fields
+  delete normalized.username;
+  delete normalized.user;
+
+  // 3. Normalize source
+  if (normalized.source) {
+    let sourceId = null;
+    try {
+      if (typeof normalized.source === 'string' && normalized.source.length === 24) {
+        sourceId = castId(normalized.source);
+      }
+    } catch {}
+
+    if (!sourceId) {
+      // Find or create source by name
+      const name = String(normalized.source).trim().toLowerCase();
+      let doc = await db.collection('sources').findOne({ name });
+      if (!doc) {
+        const res = await db.collection('sources').insertOne({ name });
+        sourceId = res.insertedId;
+      } else {
+        sourceId = doc._id;
+      }
+    }
+    normalized.source = sourceId;
+  }
+
+  // 4. Normalize typeOfWork
+  if (normalized.typeOfWork) {
+    let typeId = null;
+    try {
+      if (typeof normalized.typeOfWork === 'string' && normalized.typeOfWork.length === 24) {
+        typeId = castId(normalized.typeOfWork);
+      }
+    } catch {}
+
+    if (!typeId) {
+      // Find or create typeOfWork by name
+      const name = String(normalized.typeOfWork).trim().toLowerCase();
+      let doc = await db.collection('types_of_work').findOne({ name });
+      if (!doc) {
+        const res = await db.collection('types_of_work').insertOne({ name });
+        typeId = res.insertedId;
+      } else {
+        typeId = doc._id;
+      }
+    }
+    normalized.typeOfWork = typeId;
+  }
+
+  return normalized;
+}
+
+async function normalizeUpdateDoc(updateDoc) {
+  const db = await getDb();
+  const normalized = { ...updateDoc };
+  if (!normalized.$set) return normalized;
+
+  // 1. Cast userId
+  if (normalized.$set.userId) {
+    normalized.$set.userId = castId(normalized.$set.userId);
+  }
+
+  // Remove username/user
+  delete normalized.$set.username;
+  delete normalized.$set.user;
+
+  // 2. Normalize source
+  if (normalized.$set.source) {
+    let sourceId = null;
+    try {
+      if (typeof normalized.$set.source === 'string' && normalized.$set.source.length === 24) {
+        sourceId = castId(normalized.$set.source);
+      }
+    } catch {}
+
+    if (!sourceId) {
+      const name = String(normalized.$set.source).trim().toLowerCase();
+      let doc = await db.collection('sources').findOne({ name });
+      if (!doc) {
+        const res = await db.collection('sources').insertOne({ name });
+        sourceId = res.insertedId;
+      } else {
+        sourceId = doc._id;
+      }
+    }
+    normalized.$set.source = sourceId;
+  }
+
+  // 3. Normalize typeOfWork
+  if (normalized.$set.typeOfWork) {
+    let typeId = null;
+    try {
+      if (typeof normalized.$set.typeOfWork === 'string' && normalized.$set.typeOfWork.length === 24) {
+        typeId = castId(normalized.$set.typeOfWork);
+      }
+    } catch {}
+
+    if (!typeId) {
+      const name = String(normalized.$set.typeOfWork).trim().toLowerCase();
+      let doc = await db.collection('types_of_work').findOne({ name });
+      if (!doc) {
+        const res = await db.collection('types_of_work').insertOne({ name });
+        typeId = res.insertedId;
+      } else {
+        typeId = doc._id;
+      }
+    }
+    normalized.$set.typeOfWork = typeId;
+  }
+
+  return normalized;
 }
 
 export const mongoAdapter = {
@@ -82,14 +206,86 @@ export const mongoAdapter = {
     
     // Construct query object
     const mongoQuery = {};
-    if (query.userId) mongoQuery.userId = query.userId;
-    if (query.source) mongoQuery.source = query.source;
+    if (query.userId) mongoQuery.userId = castId(query.userId);
     if (query.project) mongoQuery.project = query.project;
-    if (query.typeOfWork) mongoQuery.typeOfWork = query.typeOfWork;
     if (query.createdAt) mongoQuery.createdAt = query.createdAt;
 
+    // Handle source filter (ID or name lookup)
+    if (query.source && query.source !== 'all') {
+      let sourceId = null;
+      try {
+        if (typeof query.source === 'string' && query.source.length === 24) {
+          sourceId = castId(query.source);
+        }
+      } catch {}
+
+      if (!sourceId) {
+        const doc = await db.collection('sources').findOne({ name: query.source.toLowerCase() });
+        if (doc) sourceId = doc._id;
+      }
+
+      if (sourceId) {
+        mongoQuery.source = sourceId;
+      } else {
+        mongoQuery.source = new ObjectId(); // force no matches
+      }
+    }
+
+    // Handle typeOfWork filter (ID or name lookup)
+    if (query.typeOfWork && query.typeOfWork !== 'all') {
+      let typeId = null;
+      try {
+        if (typeof query.typeOfWork === 'string' && query.typeOfWork.length === 24) {
+          typeId = castId(query.typeOfWork);
+        }
+      } catch {}
+
+      if (!typeId) {
+        const doc = await db.collection('types_of_work').findOne({ name: query.typeOfWork.toLowerCase() });
+        if (doc) typeId = doc._id;
+      }
+
+      if (typeId) {
+        mongoQuery.typeOfWork = typeId;
+      } else {
+        mongoQuery.typeOfWork = new ObjectId(); // force no matches
+      }
+    }
+
+    // aggregation pipeline to lookup related collections
+    const pipeline = [
+      { $match: mongoQuery },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'userDetails'
+        }
+      },
+      { $unwind: { path: '$userDetails', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'sources',
+          localField: 'source',
+          foreignField: '_id',
+          as: 'sourceDetails'
+        }
+      },
+      { $unwind: { path: '$sourceDetails', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'types_of_work',
+          localField: 'typeOfWork',
+          foreignField: '_id',
+          as: 'typeDetails'
+        }
+      },
+      { $unwind: { path: '$typeDetails', preserveNullAndEmptyArrays: true } }
+    ];
+
     // Fetch all matching tasks for metrics calculation
-    const allMatching = await db.collection('tasks').find(mongoQuery).toArray();
+    const allMatching = await db.collection('tasks').aggregate(pipeline).toArray();
     
     let totalAllocated = 0;
     let totalBilled = 0;
@@ -107,14 +303,29 @@ export const mongoAdapter = {
     const limit = options.limit || 15;
 
     const tasks = await db.collection('tasks')
-      .find(mongoQuery)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
+      .aggregate([
+        ...pipeline,
+        { $sort: { createdAt: -1 } },
+        { $skip: skip },
+        { $limit: limit }
+      ])
       .toArray();
 
     return {
-      tasks: tasks.map(t => ({ ...t, _id: t._id.toString() })),
+      tasks: tasks.map(t => ({
+        ...t,
+        _id: t._id.toString(),
+        userId: t.userId ? t.userId.toString() : '',
+        source: t.sourceDetails ? t.sourceDetails.name : (t.source ? t.source.toString() : ''),
+        sourceId: t.source ? t.source.toString() : '',
+        typeOfWork: t.typeDetails ? t.typeDetails.name : (t.typeOfWork ? t.typeOfWork.toString() : ''),
+        typeOfWorkId: t.typeOfWork ? t.typeOfWork.toString() : '',
+        username: t.userDetails ? t.userDetails.username : '',
+        user: t.userDetails ? t.userDetails.name : '',
+        userDetails: undefined,
+        sourceDetails: undefined,
+        typeDetails: undefined
+      })),
       hasMore: skip + tasks.length < allMatching.length,
       metrics: {
         totalAllocated,
@@ -128,31 +339,45 @@ export const mongoAdapter = {
 
   async createTask(taskDoc) {
     const db = await getDb();
+    const normalized = await normalizeTaskDoc(taskDoc);
     const result = await db.collection('tasks').insertOne({
-      ...taskDoc,
-      createdAt: taskDoc.createdAt || new Date(),
-      updatedAt: taskDoc.updatedAt || new Date()
+      ...normalized,
+      createdAt: normalized.createdAt || new Date(),
+      updatedAt: normalized.updatedAt || new Date()
     });
     return {
       _id: result.insertedId.toString(),
-      ...taskDoc
+      ...normalized
     };
   },
 
   async findTaskById(id) {
     const db = await getDb();
     const task = await db.collection('tasks').findOne({ _id: castId(id) });
-    return task;
+    if (!task) return null;
+
+    const userDetails = await db.collection('users').findOne({ _id: castId(task.userId) });
+    const sourceDetails = task.source ? await db.collection('sources').findOne({ _id: castId(task.source) }) : null;
+    const typeDetails = task.typeOfWork ? await db.collection('types_of_work').findOne({ _id: castId(task.typeOfWork) }) : null;
+
+    return {
+      ...task,
+      _id: task._id.toString(),
+      userId: task.userId ? task.userId.toString() : '',
+      source: sourceDetails ? sourceDetails.name : (task.source ? task.source.toString() : ''),
+      sourceId: task.source ? task.source.toString() : '',
+      typeOfWork: typeDetails ? typeDetails.name : (task.typeOfWork ? task.typeOfWork.toString() : ''),
+      typeOfWorkId: task.typeOfWork ? task.typeOfWork.toString() : '',
+      username: userDetails ? userDetails.username : '',
+      user: userDetails ? userDetails.name : ''
+    };
   },
 
   async updateTask(id, updateDoc) {
     const db = await getDb();
-    await db.collection('tasks').updateOne({ _id: castId(id) }, updateDoc);
-    const updated = await db.collection('tasks').findOne({ _id: castId(id) });
-    if (updated) {
-      updated._id = updated._id.toString();
-    }
-    return updated;
+    const normalized = await normalizeUpdateDoc(updateDoc);
+    await db.collection('tasks').updateOne({ _id: castId(id) }, normalized);
+    return this.findTaskById(id);
   },
 
   async deleteTask(id) {
@@ -223,5 +448,27 @@ export const mongoAdapter = {
       { $addToSet: { projects: projectName } }
     );
     return true;
+  },
+
+  async getSources() {
+    const db = await getDb();
+    const sources = await db.collection('sources').find({}).toArray();
+    if (sources.length === 0) {
+      const defaultSources = [{ name: 'dialedin' }, { name: 'fluent' }];
+      await db.collection('sources').insertMany(defaultSources);
+      return (await db.collection('sources').find({}).toArray()).map(s => ({ ...s, _id: s._id.toString() }));
+    }
+    return sources.map(s => ({ ...s, _id: s._id.toString() }));
+  },
+
+  async getTypesOfWork() {
+    const db = await getDb();
+    const types = await db.collection('types_of_work').find({}).toArray();
+    if (types.length === 0) {
+      const defaultTypes = [{ name: 'dev' }, { name: 'qa' }];
+      await db.collection('types_of_work').insertMany(defaultTypes);
+      return (await db.collection('types_of_work').find({}).toArray()).map(t => ({ ...t, _id: t._id.toString() }));
+    }
+    return types.map(t => ({ ...t, _id: t._id.toString() }));
   }
 };

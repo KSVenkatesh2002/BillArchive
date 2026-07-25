@@ -53,7 +53,7 @@ export default function FilterControls({
             <select
               value={filterProject}
               onChange={(e) => setFilterProject(e.target.value)}
-              className="bg-black border border-zinc-805 rounded-xl px-3 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-indigo-500"
+              className="bg-black border border-zinc-800 rounded-xl px-3 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-indigo-500"
             >
               <option value="all">All Projects</option>
               {uniqueProjects.map((p) => (
@@ -69,7 +69,7 @@ export default function FilterControls({
           <select
             value={filterTimeframe}
             onChange={(e) => setFilterTimeframe(e.target.value)}
-            className="bg-black border border-zinc-805 rounded-xl px-3 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-indigo-500"
+            className="bg-black border border-zinc-800 rounded-xl px-3 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-indigo-500"
           >
             <option value="all">All Time</option>
             <option value="1w">Past 1 Week</option>

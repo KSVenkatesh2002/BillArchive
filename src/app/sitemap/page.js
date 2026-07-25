@@ -40,7 +40,7 @@ export default function VisualSitemap() {
           <div className="flex items-center gap-3">
             <Link
               href={currentUser ? `/${username}` : "/"}
-              className="h-10 w-10 bg-zinc-900 hover:bg-zinc-800 rounded-xl border border-zinc-850 flex items-center justify-center transition-colors font-black text-white text-lg"
+              className="h-10 w-10 bg-zinc-900 hover:bg-zinc-800 rounded-xl border border-zinc-800 flex items-center justify-center transition-colors font-black text-white text-lg"
               title="Return to main dashboard"
             >
               {CONFIG.SITE_INITIAL}
@@ -66,7 +66,7 @@ export default function VisualSitemap() {
         </div>
 
         {/* Status Notification */}
-        <div className="p-4 rounded-2xl bg-zinc-950/60 border border-zinc-850 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="p-4 rounded-2xl bg-zinc-950/60 border border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="text-xs font-bold text-white flex items-center gap-2">
               <span className={`w-2 h-2 rounded-full ${currentUser ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
@@ -117,7 +117,7 @@ export default function VisualSitemap() {
               </div>
 
               {/* Login */}
-              <div className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-4 space-y-2 hover:border-zinc-850 transition">
+              <div className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-4 space-y-2 hover:border-zinc-700 transition">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-white">Sign In Gateway</span>
                   <Link href="/login" className="text-orange-400 hover:text-orange-300 text-[11px] font-semibold flex items-center gap-0.5">
@@ -134,7 +134,7 @@ export default function VisualSitemap() {
               </div>
 
               {/* Register */}
-              <div className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-4 space-y-2 hover:border-zinc-850 transition">
+              <div className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-4 space-y-2 hover:border-zinc-700 transition">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-white">Account Registration</span>
                   <Link href="/register" className="text-orange-400 hover:text-orange-300 text-[11px] font-semibold flex items-center gap-0.5">
@@ -161,7 +161,7 @@ export default function VisualSitemap() {
 
             <div className="space-y-3">
               {/* Dynamic User Dashboard */}
-              <div className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-4 space-y-2 hover:border-zinc-850 transition relative overflow-hidden">
+              <div className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-4 space-y-2 hover:border-zinc-700 transition relative overflow-hidden">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-white flex items-center gap-1.5">
                     <Layout className="w-3.5 h-3.5 text-zinc-450" />
@@ -181,7 +181,7 @@ export default function VisualSitemap() {
               </div>
 
               {/* Dynamic Task Create */}
-              <div className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-4 space-y-2 hover:border-zinc-850 transition relative overflow-hidden">
+              <div className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-4 space-y-2 hover:border-zinc-700 transition relative overflow-hidden">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-white flex items-center gap-1.5">
                     <PlusCircle className="w-3.5 h-3.5 text-zinc-450" />
@@ -201,7 +201,7 @@ export default function VisualSitemap() {
               </div>
 
               {/* Dynamic Project Scopes */}
-              <div className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-4 space-y-2 hover:border-zinc-850 transition relative overflow-hidden">
+              <div className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-4 space-y-2 hover:border-zinc-700 transition relative overflow-hidden">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-white flex items-center gap-1.5">
                     <Folder className="w-3.5 h-3.5 text-zinc-450" />
@@ -221,7 +221,7 @@ export default function VisualSitemap() {
               </div>
 
               {/* Profile Page */}
-              <div className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-4 space-y-2 hover:border-zinc-850 transition">
+              <div className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-4 space-y-2 hover:border-zinc-700 transition">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-white">Profile Details</span>
                   <Link href="/profile" className="text-orange-400 hover:text-orange-300 text-[11px] font-semibold flex items-center gap-0.5">
@@ -248,7 +248,7 @@ export default function VisualSitemap() {
 
             <div className="space-y-3">
               {/* Admin Panel */}
-              <div className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-4 space-y-2 hover:border-zinc-850 transition">
+              <div className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-4 space-y-2 hover:border-zinc-700 transition">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-white flex items-center gap-1.5">
                     <Settings2 className="w-3.5 h-3.5 text-zinc-450" />
@@ -268,7 +268,7 @@ export default function VisualSitemap() {
               </div>
 
               {/* Sitemap.xml */}
-              <div className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-4 space-y-2 hover:border-zinc-850 transition">
+              <div className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-4 space-y-2 hover:border-zinc-700 transition">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-white">Dynamic XML Sitemap</span>
                   <a href="/sitemap.xml" target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:text-orange-300 text-[11px] font-semibold flex items-center gap-0.5">

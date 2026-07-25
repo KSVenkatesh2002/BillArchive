@@ -18,7 +18,7 @@ export default function AuditLogModal({ task, onClose }) {
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
       <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
-        <div className="flex items-center justify-between pb-4 border-b border-zinc-805 mb-6">
+        <div className="flex items-center justify-between pb-4 border-b border-zinc-800 mb-6">
           <div>
             <h3 className="text-base font-bold text-white flex items-center gap-2">
               <History className="w-5 h-5 text-indigo-400" />

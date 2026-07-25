@@ -45,7 +45,7 @@ export default function Header({
             <FileText className="w-3.5 h-3.5 text-zinc-400" />
             <span>Copy 1-Wk Report</span>
           </button>
-          <div className="w-px h-4 bg-zinc-850"></div>
+          <div className="w-px h-4 bg-zinc-800"></div>
           <button
             onClick={onCopy1Mo}
             className="text-xs font-semibold px-3 py-1.5 rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-900 transition flex items-center gap-1.5"

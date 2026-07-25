@@ -121,5 +121,15 @@ export const dbService = {
   async addUserProject(userId, projectName) {
     const adapter = await getAdapter();
     return adapter.addUserProject(userId, projectName);
+  },
+
+  async getSources() {
+    const adapter = await getAdapter();
+    return adapter.getSources();
+  },
+
+  async getTypesOfWork() {
+    const adapter = await getAdapter();
+    return adapter.getTypesOfWork();
   }
 };
