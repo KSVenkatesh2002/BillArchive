@@ -88,7 +88,23 @@ if (!global._inMemoryDb) {
 
 const dbStore = global._inMemoryDb;
 
+function ensureStoreInitialized() {
+  if (!dbStore.sources) {
+    dbStore.sources = [
+      { _id: 'source-dialedin', name: 'dialedin' },
+      { _id: 'source-fluent', name: 'fluent' }
+    ];
+  }
+  if (!dbStore.typesOfWork) {
+    dbStore.typesOfWork = [
+      { _id: 'type-dev', name: 'dev' },
+      { _id: 'type-qa', name: 'qa' }
+    ];
+  }
+}
+
 async function normalizeMemoryTaskDoc(taskDoc) {
+  ensureStoreInitialized();
   const normalized = { ...taskDoc };
   delete normalized.username;
   delete normalized.user;

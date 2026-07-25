@@ -11,6 +11,7 @@ import TaskTable from '@/components/TaskTable';
 import Toast from '@/components/Toast';
 import TaskFormModal from '@/components/TaskFormModal';
 import AuditLogModal from '@/components/AuditLogModal';
+import ReportPreviewModal from '@/components/ReportPreviewModal';
 
 export default function UserProjectPage() {
   const { username, name } = useParams();
@@ -227,15 +228,13 @@ export default function UserProjectPage() {
     triggerToast(`Copied ${label} to clipboard!`);
   };
 
-  const handleCopyTimeframeReport = async (tf) => {
-    try {
-      const data = await apiClient.getReport(tf);
-      if (data.reportText) {
-        copyToClipboard(data.reportText, tf === '1w' ? '1-Week Report' : '1-Month Report');
-      }
-    } catch (err) {
-      console.error(err);
-    }
+  // Report Preview Modal state
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [reportModalTimeframe, setReportModalTimeframe] = useState('all');
+
+  const handleOpenReportModal = (tf = 'all') => {
+    setReportModalTimeframe(tf);
+    setReportModalOpen(true);
   };
 
   return (
@@ -246,8 +245,8 @@ export default function UserProjectPage() {
         {/* Header */}
         <Header
           currentUser={currentUser}
-          onCopy1Wk={() => handleCopyTimeframeReport('1w')}
-          onCopy1Mo={() => handleCopyTimeframeReport('1m')}
+          onCopy1Wk={() => handleOpenReportModal('1w')}
+          onCopy1Mo={() => handleOpenReportModal('1m')}
           onLogout={handleLogout}
         />
 
@@ -319,6 +318,15 @@ export default function UserProjectPage() {
       <AuditLogModal
         task={activeHistoryTask}
         onClose={() => setActiveHistoryTask(null)}
+      />
+
+      {/* Report Preview Modal */}
+      <ReportPreviewModal
+        isOpen={reportModalOpen}
+        onClose={() => setReportModalOpen(false)}
+        initialProject={decodedProjectName}
+        initialTimeframe={reportModalTimeframe}
+        projectsList={[decodedProjectName]}
       />
     </div>
   );

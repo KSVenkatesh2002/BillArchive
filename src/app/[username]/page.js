@@ -14,6 +14,7 @@ import TaskCards from '@/components/TaskCards';
 import Toast from '@/components/Toast';
 import AuditLogModal from '@/components/AuditLogModal';
 import TaskFormModal from '@/components/TaskFormModal';
+import ReportPreviewModal from '@/components/ReportPreviewModal';
 
 export default function UserDashboard() {
   const { username } = useParams();
@@ -244,50 +245,30 @@ export default function UserDashboard() {
     setTimeout(() => setToastMessage(''), 3500);
   };
 
+  // Report Preview Modal state
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [reportModalProject, setReportModalProject] = useState('all');
+  const [reportModalTimeframe, setReportModalTimeframe] = useState('all');
+
+  const handleOpenReportModal = (tf = 'all', proj = 'all') => {
+    setReportModalTimeframe(tf);
+    setReportModalProject(proj);
+    setReportModalOpen(true);
+  };
+
   const copyToClipboard = (text, label) => {
     navigator.clipboard.writeText(text);
     triggerToast(`Copied ${label} to clipboard!`);
   };
 
   // Generate Copy Text for Timeframe Report (1 Week or 1 Month)
-  const handleCopyTimeframeReport = async (tf) => {
-    try {
-      const data = await apiClient.getReport(tf);
-      if (data.reportText) {
-        copyToClipboard(data.reportText, tf === '1w' ? '1-Week Report' : '1-Month Report');
-      }
-    } catch (err) {
-      console.error(err);
-    }
+  const handleCopyTimeframeReport = (tf) => {
+    handleOpenReportModal(tf, 'all');
   };
 
   // Generate Copy Text for a Specific Project
   const handleCopyProjectDetails = (projectName) => {
-    const projectTasks = tasks.filter(t => t.project === projectName);
-    let text = `=========================================\n`;
-    text += `PROJECT DETAILS: ${projectName.toUpperCase()}\n`;
-    text += `Total Tasks: ${projectTasks.length}\n`;
-    text += `=========================================\n\n`;
-
-    let totalAlloc = 0, totalBilled = 0, totalActual = 0;
-
-    projectTasks.forEach((t, index) => {
-      totalAlloc += Number(t.bill?.allocatedHours || 0);
-      totalBilled += Number(t.bill?.billedHours || 0);
-      totalActual += Number(t.bill?.actualHours || 0);
-
-      text += `${index + 1}. Task: ${t.name} (Nick: ${t.nickName || 'N/A'})\n`;
-      text += `   Status: ${t.status} | Source: ${t.source} | Work: ${t.typeOfWork}\n`;
-      text += `   Allocated: ${t.bill?.allocatedHours || 0}h | Billed: ${t.bill?.billedHours || 0}h | Actual: ${t.bill?.actualHours || 0}h\n`;
-      if (t.statusHistory && t.statusHistory.length > 0) {
-        text += `   Status History: ${t.statusHistory.map(h => h.status).join(' ➔ ')}\n`;
-      }
-      text += `-----------------------------------------\n`;
-    });
-
-    text += `TOTALS: Allocated: ${totalAlloc}h | Billed: ${totalBilled}h | Actual: ${totalActual}h\n`;
-
-    copyToClipboard(text, `Project "${projectName}" details`);
+    handleOpenReportModal('all', projectName);
   };
 
   // Memoized derived calculations for unique projects
@@ -303,8 +284,8 @@ export default function UserDashboard() {
         {/* Top Navbar Header */}
         <Header
           currentUser={currentUser}
-          onCopy1Wk={() => handleCopyTimeframeReport('1w')}
-          onCopy1Mo={() => handleCopyTimeframeReport('1m')}
+          onCopy1Wk={() => handleOpenReportModal('1w', 'all')}
+          onCopy1Mo={() => handleOpenReportModal('1m', 'all')}
           onLogout={handleLogout}
         />
 
@@ -419,6 +400,15 @@ export default function UserDashboard() {
       <AuditLogModal
         task={activeHistoryTask}
         onClose={() => setActiveHistoryTask(null)}
+      />
+
+      {/* Report Preview Modal */}
+      <ReportPreviewModal
+        isOpen={reportModalOpen}
+        onClose={() => setReportModalOpen(false)}
+        initialProject={reportModalProject}
+        initialTimeframe={reportModalTimeframe}
+        projectsList={uniqueProjects}
       />
     </div>
   );

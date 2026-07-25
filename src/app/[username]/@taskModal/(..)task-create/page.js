@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+export const dynamic = 'force-dynamic';
 import TaskFormModal from '@/components/TaskFormModal';
 
 export default function InterceptedTaskCreateModal() {
