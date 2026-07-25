@@ -30,7 +30,6 @@ export default function UserTaskCreatePage() {
   const [isAddingNewProject, setIsAddingNewProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [scrapingTitle, setScrapingTitle] = useState(false);
 
   useEffect(() => {
     const verifyAuth = async () => {
@@ -105,32 +104,11 @@ export default function UserTaskCreatePage() {
     );
   }
 
-  // Handle auto parsing of ClickUp URL/ID input
-  const handleLinkInput = async (e) => {
-    const rawVal = e.target.value;
+  const handleLinkInput = (e) => {
     setForm({
       ...form,
-      clickupId: rawVal
+      clickupId: e.target.value
     });
-
-    if (rawVal.startsWith('http://') || rawVal.startsWith('https://')) {
-      setScrapingTitle(true);
-      try {
-        const res = await fetch(`/api/title-scraper?url=${encodeURIComponent(rawVal)}`);
-        const data = await res.json();
-        if (data.success && data.title) {
-          setForm({
-            ...form,
-            clickupId: rawVal,
-            name: data.title
-          });
-        }
-      } catch (err) {
-        console.error('Failed to scrape title:', err);
-      } finally {
-        setScrapingTitle(false);
-      }
-    }
   };
 
   const handleProjectSelect = (e) => {
@@ -215,23 +193,16 @@ export default function UserTaskCreatePage() {
           {/* ClickUp Link Input */}
           <div className="p-3.5 bg-black rounded-xl border border-zinc-800/80">
             <label className="block text-xs font-semibold text-zinc-300 mb-1">ClickUp Link / Task ID</label>
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="e.g. https://app.clickup.com/t/86d3tn93v or 86d3tn93v"
-                value={form.clickupId}
-                onChange={handleLinkInput}
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white placeholder-zinc-650 focus:outline-none focus:border-orange-500"
-              />
-              {scrapingTitle && (
-                <span className="absolute right-3 top-2.5 text-[10px] text-orange-400 animate-pulse">
-                  Scraping page title...
-                </span>
-              )}
-            </div>
+            <input
+              type="text"
+              placeholder="e.g. https://app.clickup.com/t/86d3tn93v or 86d3tn93v"
+              value={form.clickupId}
+              onChange={handleLinkInput}
+              className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white placeholder-zinc-655 focus:outline-none focus:border-orange-500"
+            />
             <p className="text-[10px] text-zinc-500 mt-1.5 flex items-start gap-1">
               <Lightbulb className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-              <span>Pasting a web URL automatically scrapes the page title for the Task Name input.</span>
+              <span>Pasting a link will store it as a clickable ClickUp ID shortcut in reports.</span>
             </p>
           </div>
 
