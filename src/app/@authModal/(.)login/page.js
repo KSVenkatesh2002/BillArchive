@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AuthModal from '@/components/AuthModal';
+import { apiClient } from '@/lib/apiClient';
 
 export default function LoginModal() {
   const [form, setForm] = useState({ username: '', password: '', name: '' });
@@ -14,15 +15,10 @@ export default function LoginModal() {
     e.preventDefault();
     setError('');
 
-    const endpoint = mode === 'login' ? '/api/auth/login' : '/api/auth/register';
-
     try {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
+      const data = mode === 'login' 
+        ? await apiClient.login(form.username, form.password)
+        : await apiClient.register(form.name, form.username, form.password);
 
       if (data.success) {
         // Go back (closes modal) and refresh parent page state

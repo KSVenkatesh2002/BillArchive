@@ -1,5 +1,7 @@
 'use client';
 
+import { History } from 'lucide-react';
+
 const STATUS_OPTIONS = [
   { id: 'inprocess', label: 'In Process' },
   { id: 'dev', label: 'Development' },
@@ -19,7 +21,8 @@ export default function AuditLogModal({ task, onClose }) {
         <div className="flex items-center justify-between pb-4 border-b border-zinc-805 mb-6">
           <div>
             <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <span>🕒 Task Status History</span>
+              <History className="w-5 h-5 text-indigo-400" />
+              <span>Task Status History</span>
             </h3>
             <p className="text-xs text-zinc-400 mt-1">Audit log timeline for: {task.name}</p>
           </div>

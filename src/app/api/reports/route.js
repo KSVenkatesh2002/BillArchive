@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/mongodb';
+import { dbService } from '@/lib/db/dbService';
 
 export async function GET(request) {
   try {
@@ -7,66 +7,27 @@ export async function GET(request) {
     const timeframe = searchParams.get('timeframe') || '1w'; // '1w' or '1m'
     const project = searchParams.get('project');
 
-    let tasks = [];
-
-    if (!process.env.MONGODB_URI) {
-      // Mock data for report preview
-      tasks = [
-        {
-          name: 'Implement OAuth Login Flow',
-          nickName: 'OAuth-Auth',
-          status: 'dev',
-          bill: { allocatedHours: 10, billedHours: 8, actualHours: 7.5 },
-          project: 'Auth System',
-          source: 'dialedin',
-          typeOfWork: 'dev',
-          user: 'Alex Dev',
-          createdAt: new Date(Date.now() - 86400000 * 2),
-        },
-        {
-          name: 'QA Testing on Billing Webhooks',
-          nickName: 'Bill-QA',
-          status: 'ready for qa',
-          bill: { allocatedHours: 6, billedHours: 6, actualHours: 5.5 },
-          project: 'Invoice Engine',
-          source: 'fluent',
-          typeOfWork: 'qa',
-          user: 'Sarah Tester',
-          createdAt: new Date(Date.now() - 86400000 * 4),
-        },
-        {
-          name: 'Database Migration to MongoDB Atlas',
-          nickName: 'Atlas-DB',
-          status: 'complete',
-          bill: { allocatedHours: 15, billedHours: 15, actualHours: 14.0 },
-          project: 'Core Infrastructure',
-          source: 'dialedin',
-          typeOfWork: 'dev',
-          user: 'Alex Dev',
-          createdAt: new Date(Date.now() - 86400000 * 6),
-        }
-      ];
-    } else {
-      const db = await getDatabase();
-      const query = {};
-
-      const now = new Date();
-      if (timeframe === '1w') {
-        const dateLimit = new Date();
-        dateLimit.setDate(now.getDate() - 7);
-        query.createdAt = { $gte: dateLimit };
-      } else if (timeframe === '1m') {
-        const dateLimit = new Date();
-        dateLimit.setDate(now.getDate() - 30);
-        query.createdAt = { $gte: dateLimit };
-      }
-
-      if (project) {
-        query.project = project;
-      }
-
-      tasks = await db.collection('tasks').find(query).toArray();
+    const query = {};
+    const now = new Date();
+    
+    if (timeframe === '1w') {
+      const dateLimit = new Date();
+      dateLimit.setDate(now.getDate() - 7);
+      query.createdAt = { $gte: dateLimit };
+    } else if (timeframe === '1m') {
+      const dateLimit = new Date();
+      dateLimit.setDate(now.getDate() - 30);
+      query.createdAt = { $gte: dateLimit };
     }
+
+    if (project) {
+      query.project = project;
+    }
+
+    // Retrieve tasks through the database service (handles mock or live MongoDB automatically)
+    // Using a large limit to retrieve all matching tasks for the report
+    const result = await dbService.findTasks(query, { limit: 1000 });
+    const tasks = result.tasks || [];
 
     // Generate formatted plain text report
     const title = project 
@@ -104,6 +65,8 @@ export async function GET(request) {
     textBuffer += `Total Actual Hours: ${totalActual} hrs\n`;
     textBuffer += `=========================================\n`;
 
+    const isDemo = await dbService.isDemo();
+
     return NextResponse.json({
       success: true,
       timeframe,
@@ -111,7 +74,8 @@ export async function GET(request) {
       tasksCount: tasks.length,
       totals: { totalAllocated, totalBilled, totalActual },
       reportText: textBuffer,
-      tasks
+      tasks,
+      isDemo
     });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

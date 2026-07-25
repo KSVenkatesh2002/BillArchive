@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { Pin, ExternalLink, Folder, Copy, Clock, Edit2, Trash2 } from 'lucide-react';
 
 const STATUS_OPTIONS = [
   { id: 'inprocess', label: 'In Process', color: 'bg-blue-500/10 text-blue-400 border-blue-500/30' },
@@ -22,6 +24,9 @@ export default function TaskTable({
   openEditModal,
   deleteTask,
 }) {
+  const params = useParams();
+  const username = params?.username || 'admin';
+
   return (
     <div className="bg-[#0b0b0b] rounded-2xl border border-zinc-800/80 shadow-2xl overflow-hidden">
       {loading ? (
@@ -31,7 +36,7 @@ export default function TaskTable({
         </div>
       ) : tasks.length === 0 ? (
         <div className="py-20 text-center text-zinc-400">
-          <span className="text-3xl block mb-2">📌</span>
+          <Pin className="w-8 h-8 text-zinc-500 mx-auto mb-2" />
           <p className="text-base font-semibold text-zinc-200">No tasks found matching criteria</p>
           <p className="text-xs text-zinc-500 mt-1">Click "+ New Task" to create one!</p>
         </div>
@@ -70,7 +75,8 @@ export default function TaskTable({
                             className="text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-black px-2 py-0.5 rounded border border-emerald-500/20 transition flex items-center gap-1 shrink-0"
                             title="Open Task in ClickUp"
                           >
-                            🔗 ClickUp
+                            <ExternalLink className="w-3 h-3" />
+                            <span>ClickUp</span>
                           </a>
                         )}
                       </div>
@@ -84,19 +90,21 @@ export default function TaskTable({
                     <td className="py-3.5 px-3">
                       <div className="flex items-center gap-2">
                         <Link
-                          href={`/project/${encodeURIComponent(task.project)}`}
-                          className="font-semibold text-zinc-200 bg-black hover:bg-zinc-900 hover:text-white px-2.5 py-1 rounded-lg border border-zinc-800/80 transition-colors"
+                          href={`/${username}/project/${encodeURIComponent(task.project)}`}
+                          className="font-semibold text-zinc-200 bg-black hover:bg-zinc-900 hover:text-white px-2.5 py-1 rounded-lg border border-zinc-800/80 transition-colors inline-flex items-center gap-1.5"
                           title={`View workspace tasks for project "${task.project}"`}
                         >
-                          📂 {task.project}
+                          <Folder className="w-3.5 h-3.5 text-zinc-400" />
+                          <span>{task.project}</span>
                         </Link>
                         {handleCopyProjectDetails && (
                           <button
                             onClick={() => handleCopyProjectDetails(task.project)}
                             title={`Copy all details for project "${task.project}" as text`}
-                            className="opacity-0 group-hover:opacity-100 text-[10px] bg-zinc-900 hover:bg-indigo-600 text-zinc-300 hover:text-white p-1 px-1.5 rounded transition"
+                            className="opacity-0 group-hover:opacity-100 text-[10px] bg-zinc-900 hover:bg-indigo-600 text-zinc-300 hover:text-white p-1 px-1.5 rounded transition inline-flex items-center gap-1"
                           >
-                            📋 Copy
+                            <Copy className="w-3 h-3" />
+                            <span>Copy</span>
                           </button>
                         )}
                       </div>
@@ -121,10 +129,10 @@ export default function TaskTable({
                     <td className="py-3.5 px-3 text-center">
                       <button
                         onClick={() => setActiveHistoryTask(task)}
-                        className="bg-black hover:bg-zinc-900 text-zinc-300 border border-zinc-800 px-2.5 py-1 rounded-lg text-[11px] font-mono transition flex items-center gap-1 mx-auto"
+                        className="bg-black hover:bg-zinc-900 text-zinc-300 border border-zinc-800 px-2.5 py-1 rounded-lg text-[11px] font-mono transition flex items-center gap-1.5 mx-auto"
                         title="Click to view full status progression audit log"
                       >
-                        <span>🕒</span>
+                        <Clock className="w-3.5 h-3.5 text-zinc-400" />
                         <span>{task.statusHistory?.length || 1} change{(task.statusHistory?.length || 1) > 1 ? 's' : ''}</span>
                       </button>
                     </td>
@@ -164,22 +172,22 @@ export default function TaskTable({
 
                     {/* Action buttons */}
                     <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => openEditModal(task)}
-                          className="bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white p-1.5 rounded-lg border border-zinc-800 transition"
-                          title="Edit task"
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          onClick={() => deleteTask(task._id)}
-                          className="bg-zinc-900 hover:bg-rose-950/40 text-zinc-400 hover:text-rose-350 p-1.5 rounded-lg border border-zinc-800 transition"
-                          title="Delete task"
-                        >
-                          🗑️
-                        </button>
-                      </div>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => openEditModal(task)}
+                            className="bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white p-1.5 rounded-lg border border-zinc-800 transition flex items-center justify-center"
+                            title="Edit task"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => deleteTask(task._id)}
+                            className="bg-zinc-900 hover:bg-rose-950/40 text-zinc-400 hover:text-rose-350 p-1.5 rounded-lg border border-zinc-800 transition flex items-center justify-center"
+                            title="Delete task"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                     </td>
                   </tr>
                 );

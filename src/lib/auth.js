@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
+import { CONFIG } from './config';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-jwt-key-change-in-production-12345';
 const secretKey = new TextEncoder().encode(JWT_SECRET);
@@ -18,7 +19,7 @@ export async function signToken(payload) {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('7d')
+    .setExpirationTime(`${CONFIG.JWT_EXPIRY_DAYS}d`)
     .sign(secretKey);
 }
 
@@ -33,7 +34,8 @@ export async function verifyToken(token) {
 
 export async function getAuthUser() {
   const cookieStore = await cookies();
-  const token = cookieStore.get('auth_token')?.value;
+  const token = cookieStore.get(CONFIG.JWT_COOKIE_NAME)?.value;
   if (!token) return null;
   return verifyToken(token);
 }
+

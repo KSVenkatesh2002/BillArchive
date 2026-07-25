@@ -1,27 +1,25 @@
 import { NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/mongodb';
+import { dbService } from '@/lib/db/dbService';
 
 export async function GET() {
   try {
-    if (!process.env.MONGODB_URI) {
-      return NextResponse.json(
-        {
-          status: 'error',
-          connected: false,
-          message: 'MONGODB_URI environment variable is missing. Please set it in .env.local',
-        },
-        { status: 400 }
-      );
+    const isDemo = await dbService.isDemo();
+    if (isDemo) {
+      return NextResponse.json({
+        status: 'success',
+        connected: true,
+        database: 'in-memory-fallback',
+        message: 'Running in In-Memory Demo Fallback mode. Live database could not be reached.',
+      });
     }
 
-    const db = await getDatabase();
-    // Ping the database to verify live connection
-    await db.command({ ping: 1 });
+    // Perform a lightweight query to test active Mongo connection
+    await dbService.findTasks({}, { limit: 1 });
 
     return NextResponse.json({
       status: 'success',
       connected: true,
-      database: process.env.MONGODB_DB || 'bill_db',
+      database: process.env.MONGODB_DB || 'bill',
       message: 'Successfully connected to MongoDB live instance!',
     });
   } catch (error) {
@@ -29,7 +27,7 @@ export async function GET() {
       {
         status: 'error',
         connected: false,
-        message: error.message || 'Failed to connect to MongoDB',
+        message: error.message || 'Failed to connect to database',
       },
       { status: 500 }
     );

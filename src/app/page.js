@@ -1,372 +1,202 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { CONFIG } from '@/lib/config';
+import { apiClient } from '@/lib/apiClient';
+import { ArrowRight, CheckCircle2, Clock, Shield, Sparkles, Zap, Layers, Cpu } from 'lucide-react';
 
-// Import child components
-import Header from '@/components/Header';
-import MetricsBar from '@/components/MetricsBar';
-import FilterControls from '@/components/FilterControls';
-import TaskTable from '@/components/TaskTable';
-import Toast from '@/components/Toast';
-import AuditLogModal from '@/components/AuditLogModal';
-import TaskFormModal from '@/components/TaskFormModal';
-
-export default function App() {
-  // Auth state
+export default function LandingPage() {
   const [currentUser, setCurrentUser] = useState(null);
-
-  // App Data, Filters, Pagination
-  const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-
-  const [filterSource, setFilterSource] = useState('all');
-  const [filterType, setFilterType] = useState('all');
-  const [filterProject, setFilterProject] = useState('all');
-  const [filterTimeframe, setFilterTimeframe] = useState('all');
-  const [isDemo, setIsDemo] = useState(false);
-  const [metrics, setMetrics] = useState({
-    totalAllocated: 0,
-    totalBilled: 0,
-    totalActual: 0,
-    completedCount: 0,
-    variance: 0
-  });
-
-  // Edit Task Modal state (Creation uses /task-create route)
-  const [showTaskModal, setShowTaskModal] = useState(false);
-  const [editingTask, setEditingTask] = useState(null);
-  const [taskForm, setTaskForm] = useState({
-    name: '',
-    nickName: '',
-    status: 'inprocess',
-    project: '',
-    source: 'dialedin',
-    typeOfWork: 'dev',
-    allocatedHours: '',
-    billedHours: '',
-    actualHours: '',
-    clickupId: ''
-  });
-
-  // History Audit Modal state
-  const [activeHistoryTask, setActiveHistoryTask] = useState(null);
-
-  // Copy Feedback Toast
-  const [toastMessage, setToastMessage] = useState('');
-
-  // Check auth
-  const checkAuth = async () => {
-    try {
-      const res = await fetch('/api/auth/me');
-      const data = await res.json();
-      if (data.authenticated) {
-        setCurrentUser(data.user);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  // Fetch paginated tasks
-  const fetchTasks = async (pageNum, reset = false) => {
-    setLoading(true);
-    try {
-      let url = `/api/tasks?page=${pageNum}&limit=15&timeframe=${filterTimeframe}`;
-      if (filterSource !== 'all') url += `&source=${filterSource}`;
-      if (filterType !== 'all') url += `&typeOfWork=${filterType}`;
-      if (filterProject !== 'all') url += `&project=${encodeURIComponent(filterProject)}`;
-
-      const res = await fetch(url);
-      const data = await res.json();
-
-      if (data.success) {
-        const fetchedTasks = data.tasks || [];
-        setTasks(prev => (reset ? fetchedTasks : [...prev, ...fetchedTasks]));
-        setHasMore(data.hasMore);
-        setIsDemo(data.isDemo || false);
-        if (data.metrics) {
-          setMetrics(data.metrics);
-        }
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
-    checkAuth();
+    async function check() {
+      try {
+        const data = await apiClient.checkAuth();
+        if (data.authenticated && data.user) {
+          setCurrentUser(data.user);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    check();
   }, []);
 
-  // Reset page and list on filter change
-  useEffect(() => {
-    setPage(1);
-    fetchTasks(1, true);
-  }, [filterSource, filterType, filterProject, filterTimeframe]);
-
-  // Load next page on scroll reach end
-  const handleScroll = () => {
-    if (
-      window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 100 &&
-      hasMore &&
-      !loading
-    ) {
-      setPage(prev => {
-        const nextPage = prev + 1;
-        fetchTasks(nextPage, false);
-        return nextPage;
-      });
-    }
-  };
-
-  useEffect(() => {
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [hasMore, loading]);
-
-  // Handle Logout (Clear tasks & state)
-  const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    setCurrentUser(null);
-    setTasks([]);
-    setMetrics({
-      totalAllocated: 0,
-      totalBilled: 0,
-      totalActual: 0,
-      completedCount: 0,
-      variance: 0
-    });
-    triggerToast('Logged out successfully');
-  };
-
-  // Quick Status change directly from the desktop list
-  const handleQuickStatusChange = async (taskId, newStatus) => {
-    try {
-      const res = await fetch(`/api/tasks/${taskId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        fetchTasks(1, true);
-        triggerToast(`Status updated to "${newStatus}"`);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  // Handle Save (Edit Mode)
-  const handleSaveTask = async (e) => {
-    e.preventDefault();
-    if (!taskForm.name || !taskForm.project) return;
-
-    try {
-      const payload = {
-        name: taskForm.name,
-        nickName: taskForm.nickName || taskForm.name,
-        status: taskForm.status,
-        project: taskForm.project,
-        source: taskForm.source,
-        typeOfWork: taskForm.typeOfWork,
-        clickupId: taskForm.clickupId,
-        bill: {
-          allocatedHours: parseFloat(taskForm.allocatedHours || 0),
-          billedHours: parseFloat(taskForm.billedHours || 0),
-          actualHours: parseFloat(taskForm.actualHours || 0),
-        }
-      };
-
-      const res = await fetch(`/api/tasks/${editingTask._id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        setShowTaskModal(false);
-        setEditingTask(null);
-        fetchTasks(1, true);
-        triggerToast('Task updated successfully!');
-      } else {
-        alert(data.error || 'Failed to save task.');
-      }
-    } catch (err) {
-      console.error(err);
-      alert('An error occurred.');
-    }
-  };
-
-  const openEditModal = (task) => {
-    setEditingTask(task);
-    setTaskForm({
-      name: task.name,
-      nickName: task.nickName || '',
-      status: task.status,
-      project: task.project,
-      source: task.source,
-      typeOfWork: task.typeOfWork,
-      allocatedHours: task.bill?.allocatedHours || '',
-      billedHours: task.bill?.billedHours || '',
-      actualHours: task.bill?.actualHours || '',
-      clickupId: task.clickupId || '',
-    });
-    setShowTaskModal(true);
-  };
-
-  const deleteTask = async (id) => {
-    if (!confirm('Are you sure you want to delete this task?')) return;
-    try {
-      const res = await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.success) {
-        fetchTasks(1, true);
-        triggerToast('Task deleted');
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const triggerToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(''), 3500);
-  };
-
-  const copyToClipboard = (text, label) => {
-    navigator.clipboard.writeText(text);
-    triggerToast(`Copied ${label} to clipboard!`);
-  };
-
-  // Generate Copy Text for Timeframe Report (1 Week or 1 Month)
-  const handleCopyTimeframeReport = async (tf) => {
-    try {
-      const res = await fetch(`/api/reports?timeframe=${tf}`);
-      const data = await res.json();
-      if (data.reportText) {
-        copyToClipboard(data.reportText, tf === '1w' ? '1-Week Report' : '1-Month Report');
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  // Generate Copy Text for a Specific Project
-  const handleCopyProjectDetails = (projectName) => {
-    const projectTasks = tasks.filter(t => t.project === projectName);
-    let text = `=========================================\n`;
-    text += `PROJECT DETAILS: ${projectName.toUpperCase()}\n`;
-    text += `Total Tasks: ${projectTasks.length}\n`;
-    text += `=========================================\n\n`;
-
-    let totalAlloc = 0, totalBilled = 0, totalActual = 0;
-
-    projectTasks.forEach((t, index) => {
-      totalAlloc += Number(t.bill?.allocatedHours || 0);
-      totalBilled += Number(t.bill?.billedHours || 0);
-      totalActual += Number(t.bill?.actualHours || 0);
-
-      text += `${index + 1}. Task: ${t.name} (Nick: ${t.nickName || 'N/A'})\n`;
-      text += `   Status: ${t.status} | Source: ${t.source} | Work: ${t.typeOfWork}\n`;
-      text += `   Allocated: ${t.bill?.allocatedHours || 0}h | Billed: ${t.bill?.billedHours || 0}h | Actual: ${t.bill?.actualHours || 0}h\n`;
-      if (t.statusHistory && t.statusHistory.length > 0) {
-        text += `   Status History: ${t.statusHistory.map(h => h.status).join(' ➔ ')}\n`;
-      }
-      text += `-----------------------------------------\n`;
-    });
-
-    text += `TOTALS: Allocated: ${totalAlloc}h | Billed: ${totalBilled}h | Actual: ${totalActual}h\n`;
-
-    copyToClipboard(text, `Project "${projectName}" details`);
-  };
-
-  // Memoized derived calculations for unique projects
-  const uniqueProjects = useMemo(() => {
-    return Array.from(new Set(tasks.map(t => t.project))).filter(Boolean);
-  }, [tasks]);
-
   return (
-    <div className="min-h-screen bg-black text-slate-100 font-sans selection:bg-indigo-500 selection:text-white">
-      <Toast message={toastMessage} />
+    <div className="min-h-screen bg-black text-zinc-100 font-sans selection:bg-orange-500 selection:text-white relative overflow-hidden">
+      {/* Background radial gradient glow */}
+      <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-orange-600/10 blur-[150px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] rounded-full bg-amber-600/5 blur-[120px] pointer-events-none" />
 
-      <div className="relative max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Top Navbar Header */}
-        <Header
-          currentUser={currentUser}
-          onCopy1Wk={() => handleCopyTimeframeReport('1w')}
-          onCopy1Mo={() => handleCopyTimeframeReport('1m')}
-          onLogout={handleLogout}
-        />
+      {/* Header / Navigation */}
+      <header className="border-b border-zinc-900 bg-black/60 backdrop-blur-md sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-500 flex items-center justify-center font-black text-white text-lg shadow-lg shadow-orange-500/20">
+              {CONFIG.SITE_INITIAL}
+            </div>
+            <span className="text-lg font-black tracking-tight text-white">{CONFIG.SITE_NAME}</span>
+          </div>
 
-        {/* Status Notification for Demo Mode */}
-        {isDemo && (
-          <div className="mb-6 p-3 rounded-xl bg-amber-950/20 border border-amber-900/30 text-amber-300 text-xs flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span>⚡</span>
-              <span>Running in Live Demo Mode. Configure <code className="bg-amber-900/40 px-1 rounded">MONGODB_URI</code> in <code className="bg-amber-900/40 px-1 rounded">.env.local</code> for persistent Atlas database storage.</span>
+          <nav className="flex items-center gap-4">
+            {loading ? (
+              <div className="h-8 w-20 bg-zinc-900 animate-pulse rounded-lg" />
+            ) : currentUser ? (
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-zinc-400 font-medium hidden sm:inline">Logged in as <strong className="text-zinc-200">{currentUser.name}</strong></span>
+                <Link
+                  href={`/${currentUser.username}`}
+                  className="bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow-lg shadow-orange-600/25 flex items-center gap-1.5"
+                >
+                  <span>Go to Dashboard</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/login"
+                  className="text-zinc-450 hover:text-white text-xs font-bold px-3.5 py-2 rounded-xl transition"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/register"
+                  className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 text-xs font-bold px-4 py-2 rounded-xl transition"
+                >
+                  Register
+                </Link>
+              </div>
+            )}
+          </nav>
+        </div>
+      </header>
+
+      {/* Hero Section */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 space-y-20 relative">
+        <div className="text-center max-w-3xl mx-auto space-y-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-950/30 border border-orange-500/30 text-orange-400 text-xs font-semibold">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Next-Gen Task Scoping & Hour Analytics</span>
+          </div>
+
+          <h1 className="text-4xl sm:text-6xl font-black text-white tracking-tight leading-none">
+            Scale and Scope Your Billing <span className="bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 bg-clip-text text-transparent">Effortlessly</span>
+          </h1>
+
+          <p className="text-base sm:text-lg text-zinc-400 leading-relaxed">
+            Manage your daily workflow, link tasks directly to your ClickUp workspaces, record exact hour allocations, and build client billing summaries with premium developer speed.
+          </p>
+
+          <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
+            {currentUser ? (
+              <Link
+                href={`/${currentUser.username}`}
+                className="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-sm px-7 py-3.5 rounded-xl shadow-xl shadow-orange-600/30 transition flex items-center gap-2"
+              >
+                <span>Access Personal Workspace</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/register"
+                  className="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-sm px-7 py-3.5 rounded-xl shadow-xl shadow-orange-600/30 transition flex items-center gap-2"
+                >
+                  <span>Start Free Account</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+                <Link
+                  href="/login"
+                  className="bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 text-zinc-350 hover:text-white font-bold text-sm px-6 py-3.5 rounded-xl transition"
+                >
+                  Demo Live Sandbox
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Dashboard Image Mockup Display */}
+        <div className="relative group max-w-5xl mx-auto rounded-2xl overflow-hidden border border-zinc-800/80 shadow-[0_0_50px_rgba(234,88,12,0.15)] bg-zinc-950">
+          <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-orange-500/50 to-transparent" />
+          <img
+            src="/dashboard_mockup.png"
+            alt="SaaS BillArchive Task Dashboard View"
+            className="w-full h-auto object-cover opacity-90 transition duration-700 group-hover:scale-[1.01] group-hover:opacity-100"
+          />
+        </div>
+
+        {/* Features Matrix Grid */}
+        <div className="pt-8">
+          <div className="text-center space-y-3 mb-12">
+            <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Structured for Professional Output</h2>
+            <p className="text-xs sm:text-sm text-zinc-500 max-w-md mx-auto">Everything you need to analyze, trace, and archive active development contracts.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Feature 1 */}
+            <div className="bg-zinc-950 border border-zinc-900 rounded-2xl p-6 hover:border-orange-500/30 transition-all duration-300 group">
+              <div className="w-10 h-10 bg-orange-950/40 border border-orange-500/20 rounded-xl flex items-center justify-center text-orange-400 mb-4 group-hover:bg-orange-500 group-hover:text-black transition">
+                <Layers className="w-5 h-5" />
+              </div>
+              <h3 className="text-base font-bold text-white mb-2">Namespace Scoping</h3>
+              <p className="text-xs text-zinc-450 leading-relaxed">
+                Clean and intuitive URL structures nested directly under your username namespace. Scope projects dynamically with automatic auth validation.
+              </p>
+            </div>
+
+            {/* Feature 2 */}
+            <div className="bg-zinc-950 border border-zinc-900 rounded-2xl p-6 hover:border-orange-500/30 transition-all duration-300 group">
+              <div className="w-10 h-10 bg-orange-950/40 border border-orange-500/20 rounded-xl flex items-center justify-center text-orange-400 mb-4 group-hover:bg-orange-500 group-hover:text-black transition">
+                <Cpu className="w-5 h-5" />
+              </div>
+              <h3 className="text-base font-bold text-white mb-2">ClickUp Synchronization</h3>
+              <p className="text-xs text-zinc-450 leading-relaxed">
+                Paste ClickUp URLs to automatically parse task IDs, synchronize status parameters, and audit task histories with inline quick triggers.
+              </p>
+            </div>
+
+            {/* Feature 3 */}
+            <div className="bg-zinc-950 border border-zinc-900 rounded-2xl p-6 hover:border-orange-500/30 transition-all duration-300 group">
+              <div className="w-10 h-10 bg-orange-950/40 border border-orange-500/20 rounded-xl flex items-center justify-center text-orange-400 mb-4 group-hover:bg-orange-500 group-hover:text-black transition">
+                <Clock className="w-5 h-5" />
+              </div>
+              <h3 className="text-base font-bold text-white mb-2">Billing Metrics Reporting</h3>
+              <p className="text-xs text-zinc-450 leading-relaxed">
+                Compare allocated, billed, and actual hours to view variance trends. Copy detailed text-based summaries to clipboard instantly.
+              </p>
             </div>
           </div>
-        )}
+        </div>
 
-        {/* Dashboard Metrics Bar */}
-        <MetricsBar
-          tasksLength={tasks.length}
-          metrics={metrics}
-        />
-
-        {/* Filter Controls Bar */}
-        <FilterControls
-          filterSource={filterSource}
-          setFilterSource={setFilterSource}
-          filterType={filterType}
-          setFilterType={setFilterType}
-          filterProject={filterProject}
-          setFilterProject={setFilterProject}
-          filterTimeframe={filterTimeframe}
-          setFilterTimeframe={setFilterTimeframe}
-          uniqueProjects={uniqueProjects}
-          tasksLength={tasks.length}
-        />
-
-        {/* Dense Desktop Task Data Table */}
-        <TaskTable
-          loading={loading && tasks.length === 0}
-          tasks={tasks}
-          handleQuickStatusChange={handleQuickStatusChange}
-          setActiveHistoryTask={setActiveHistoryTask}
-          handleCopyProjectDetails={handleCopyProjectDetails}
-          openEditModal={openEditModal}
-          deleteTask={deleteTask}
-        />
-
-        {/* Infinite Scroll loading indicator */}
-        {loading && tasks.length > 0 && (
-          <div className="py-6 text-center text-zinc-500 text-xs">
-            Loading next page...
+        {/* Closing CTA */}
+        <div className="bg-gradient-to-r from-orange-950/20 via-zinc-950 to-orange-950/10 border border-zinc-900 rounded-3xl p-8 sm:p-12 text-center space-y-6 relative overflow-hidden">
+          <div className="absolute inset-0 bg-orange-600/5 blur-3xl pointer-events-none" />
+          <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">Ready to optimize your time audits?</h2>
+          <p className="text-xs sm:text-sm text-zinc-400 max-w-lg mx-auto">
+            Join the developer dashboard designed to minimize administrative steps. Keep all hours registered under a clean, secure timeline.
+          </p>
+          <div className="pt-2">
+            <Link
+              href={currentUser ? `/${currentUser.username}` : "/register"}
+              className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold px-6 py-3 rounded-xl transition shadow-lg shadow-orange-600/20"
+            >
+              <span>{currentUser ? 'Go to Dashboard' : 'Get Started Now'}</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
-        )}
-      </div>
+        </div>
+      </main>
 
-      {/* Task Edit Modal */}
-      <TaskFormModal
-        show={showTaskModal}
-        isEdit={true}
-        form={taskForm}
-        onChange={setTaskForm}
-        onSubmit={handleSaveTask}
-        onClose={() => setShowTaskModal(false)}
-      />
-
-      {/* History Audit Modal */}
-      <AuditLogModal
-        task={activeHistoryTask}
-        onClose={() => setActiveHistoryTask(null)}
-      />
+      {/* Footer */}
+      <footer className="border-t border-zinc-900 bg-zinc-950/40 py-8 text-center text-xs text-zinc-550">
+        <p>&copy; {new Date().getFullYear()} {CONFIG.SITE_NAME}. All rights reserved.</p>
+      </footer>
     </div>
   );
 }

@@ -1,10 +1,15 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import { apiClient } from '@/lib/apiClient';
+import { PlusCircle, Lightbulb } from 'lucide-react';
 
-export default function TaskCreatePage() {
+export default function UserTaskCreatePage() {
+  const { username } = useParams();
+  const router = useRouter();
+
   const [form, setForm] = useState({
     name: '',
     nickName: '',
@@ -18,7 +23,34 @@ export default function TaskCreatePage() {
     clickupId: ''
   });
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const [authChecking, setAuthChecking] = useState(true);
+
+  useEffect(() => {
+    const verifyAuth = async () => {
+      try {
+        const data = await apiClient.checkAuth();
+        if (!data.authenticated) {
+          router.push('/login');
+        } else if (data.user.username !== username) {
+          router.push(`/${data.user.username}/task-create`);
+        } else {
+          setAuthChecking(false);
+        }
+      } catch (err) {
+        console.error(err);
+        router.push('/login');
+      }
+    };
+    verifyAuth();
+  }, [router, username]);
+
+  if (authChecking) {
+    return (
+      <div className="min-h-screen bg-black text-slate-100 flex items-center justify-center">
+        <div className="animate-spin inline-block w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
 
   // Handle auto parsing of ClickUp URL/ID input
   const handleLinkInput = (e) => {
@@ -61,15 +93,9 @@ export default function TaskCreatePage() {
         }
       };
 
-      const res = await fetch('/api/tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
+      const data = await apiClient.createTask(payload);
       if (data.success) {
-        router.push('/');
+        router.push(`/${username}`);
         router.refresh();
       } else {
         alert(data.error || 'Failed to save task. Make sure you are logged in!');
@@ -87,9 +113,10 @@ export default function TaskCreatePage() {
       <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-xl p-6 shadow-2xl relative">
         <div className="flex items-center justify-between pb-4 border-b border-zinc-800 mb-6">
           <h2 className="text-xl font-black text-white flex items-center gap-2">
-            <span>🚀 Create New Task</span>
+            <PlusCircle className="w-5 h-5 text-orange-450" />
+            <span>Create New Task</span>
           </h2>
-          <Link href="/" className="text-zinc-400 hover:text-white text-xs font-semibold">
+          <Link href={`/${username}`} className="text-zinc-400 hover:text-white text-xs font-semibold">
             Cancel
           </Link>
         </div>
@@ -103,10 +130,11 @@ export default function TaskCreatePage() {
               placeholder="e.g. https://app.clickup.com/t/86d3tn93v or 86d3tn93v"
               value={form.clickupId}
               onChange={handleLinkInput}
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-indigo-500"
+              className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white placeholder-zinc-650 focus:outline-none focus:border-orange-500"
             />
-            <p className="text-[10px] text-zinc-500 mt-1">
-              💡 Pasting a ClickUp link automatically extracts the ID for your nickname and task name placeholder.
+            <p className="text-[10px] text-zinc-500 mt-1.5 flex items-start gap-1">
+              <Lightbulb className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+              <span>Pasting a ClickUp link automatically extracts the ID for your nickname and task name placeholder.</span>
             </p>
           </div>
 
@@ -118,7 +146,7 @@ export default function TaskCreatePage() {
                 placeholder="e.g. Build Payment Gateway"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-indigo-500"
+                className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-zinc-650 focus:outline-none focus:border-orange-500"
                 required
               />
             </div>
@@ -130,7 +158,7 @@ export default function TaskCreatePage() {
                 placeholder="e.g. Pay-GW"
                 value={form.nickName}
                 onChange={(e) => setForm({ ...form, nickName: e.target.value })}
-                className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-indigo-500"
+                className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-zinc-650 focus:outline-none focus:border-orange-500"
               />
             </div>
           </div>
@@ -143,7 +171,7 @@ export default function TaskCreatePage() {
                 placeholder="e.g. Billing Engine"
                 value={form.project}
                 onChange={(e) => setForm({ ...form, project: e.target.value })}
-                className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-indigo-500"
+                className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-zinc-650 focus:outline-none focus:border-orange-500"
                 required
               />
             </div>
@@ -153,7 +181,7 @@ export default function TaskCreatePage() {
               <select
                 value={form.status}
                 onChange={(e) => setForm({ ...form, status: e.target.value })}
-                className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-orange-500"
               >
                 <option value="inprocess">In Process</option>
                 <option value="dev">Development</option>
@@ -173,7 +201,7 @@ export default function TaskCreatePage() {
               <select
                 value={form.source}
                 onChange={(e) => setForm({ ...form, source: e.target.value })}
-                className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-orange-500"
               >
                 <option value="dialedin">dialedin</option>
                 <option value="fluent">fluent</option>
@@ -185,7 +213,7 @@ export default function TaskCreatePage() {
               <select
                 value={form.typeOfWork}
                 onChange={(e) => setForm({ ...form, typeOfWork: e.target.value })}
-                className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-orange-500"
               >
                 <option value="dev">dev (Development)</option>
                 <option value="qa">qa (Quality Assurance)</option>
@@ -195,7 +223,7 @@ export default function TaskCreatePage() {
 
           {/* Billing Hours Breakdown */}
           <div className="p-3.5 rounded-xl bg-black border border-zinc-800 space-y-3">
-            <div className="text-xs font-bold text-indigo-400 uppercase tracking-wider">Billing Hours Metrics</div>
+            <div className="text-xs font-bold text-orange-400 uppercase tracking-wider">Billing Hours Metrics</div>
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="block text-[11px] text-zinc-400 mb-1">Allocated (hrs)</label>
@@ -205,7 +233,7 @@ export default function TaskCreatePage() {
                   placeholder="0"
                   value={form.allocatedHours}
                   onChange={(e) => setForm({ ...form, allocatedHours: e.target.value })}
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-orange-500"
                 />
               </div>
               <div>
@@ -216,7 +244,7 @@ export default function TaskCreatePage() {
                   placeholder="0"
                   value={form.billedHours}
                   onChange={(e) => setForm({ ...form, billedHours: e.target.value })}
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-orange-500"
                 />
               </div>
               <div>
@@ -227,7 +255,7 @@ export default function TaskCreatePage() {
                   placeholder="0"
                   value={form.actualHours}
                   onChange={(e) => setForm({ ...form, actualHours: e.target.value })}
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-orange-500"
                 />
               </div>
             </div>
@@ -236,7 +264,7 @@ export default function TaskCreatePage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white font-bold text-xs py-3 rounded-xl transition shadow-lg shadow-indigo-600/25 disabled:opacity-55"
+            className="w-full bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-xs py-3 rounded-xl transition shadow-lg shadow-orange-600/25 disabled:opacity-55"
           >
             {loading ? 'Creating task...' : 'Create Task'}
           </button>

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/mongodb';
-import { hashPassword, signToken } from '@/lib/auth';
+import { authService } from '@/lib/services/authService';
+import { CONFIG } from '@/lib/config';
 
 export async function POST(request) {
   try {
@@ -13,46 +13,26 @@ export async function POST(request) {
       );
     }
 
-    const db = await getDatabase();
-    const existingUser = await db.collection('users').findOne({ username: username.toLowerCase() });
-
-    if (existingUser) {
-      return NextResponse.json(
-        { success: false, error: 'Username already taken.' },
-        { status: 400 }
-      );
-    }
-
-    const hashedPassword = await hashPassword(password);
-    const newUser = {
-      name,
-      username: username.toLowerCase(),
-      password: hashedPassword,
-      createdAt: new Date(),
-    };
-
-    const result = await db.collection('users').insertOne(newUser);
-    const token = await signToken({
-      userId: result.insertedId.toString(),
-      username: newUser.username,
-      name: newUser.name,
-    });
+    const { token, user } = await authService.register(name, username, password);
 
     const response = NextResponse.json({
       success: true,
-      user: { id: result.insertedId.toString(), username: newUser.username, name: newUser.name },
+      user,
     });
 
-    response.cookies.set('auth_token', token, {
+    response.cookies.set(CONFIG.JWT_COOKIE_NAME, token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: 60 * 60 * 24 * CONFIG.JWT_EXPIRY_DAYS,
       path: '/',
     });
 
     return response;
   } catch (error) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: error.message || 'Registration failed' },
+      { status: 400 }
+    );
   }
 }

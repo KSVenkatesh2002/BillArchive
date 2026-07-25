@@ -1,6 +1,7 @@
 'use client';
 
 import MetricCard from './MetricCard';
+import { CheckCircle, AlertTriangle } from 'lucide-react';
 
 export default function MetricsBar({ tasksLength, metrics }) {
   return (
@@ -33,8 +34,18 @@ export default function MetricsBar({ tasksLength, metrics }) {
         <div className="text-xl font-bold text-white mt-1">
           {metrics.variance.toFixed(1)} hrs
         </div>
-        <div className="text-[10px] text-zinc-400">
-          {metrics.variance >= 0 ? '✅ Under actual log' : '⚠️ Over actual log'}
+        <div className="text-[10px] text-zinc-400 mt-1 flex items-center gap-1.5">
+          {metrics.variance >= 0 ? (
+            <>
+              <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span>Under actual log</span>
+            </>
+          ) : (
+            <>
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span>Over actual log</span>
+            </>
+          )}
         </div>
       </div>
     </div>

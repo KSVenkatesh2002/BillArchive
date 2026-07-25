@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { apiClient } from '@/lib/apiClient';
 import Header from '@/components/Header';
 import MetricsBar from '@/components/MetricsBar';
 import FilterControls from '@/components/FilterControls';
@@ -10,18 +11,14 @@ import TaskTable from '@/components/TaskTable';
 import Toast from '@/components/Toast';
 import TaskFormModal from '@/components/TaskFormModal';
 import AuditLogModal from '@/components/AuditLogModal';
-import AuthModal from '@/components/AuthModal';
 
-export default function ProjectPage() {
-  const { name } = useParams();
+export default function UserProjectPage() {
+  const { username, name } = useParams();
   const decodedProjectName = decodeURIComponent(name);
+  const router = useRouter();
 
   // Auth state
   const [currentUser, setCurrentUser] = useState(null);
-  const [authMode, setAuthMode] = useState('login');
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authForm, setAuthForm] = useState({ username: '', password: '', name: '' });
-  const [authError, setAuthError] = useState('');
 
   // App Data, Filters, Pagination
   const [tasks, setTasks] = useState([]);
@@ -62,13 +59,18 @@ export default function ProjectPage() {
   // Check auth
   const checkAuth = async () => {
     try {
-      const res = await fetch('/api/auth/me');
-      const data = await res.json();
+      const data = await apiClient.checkAuth();
       if (data.authenticated) {
         setCurrentUser(data.user);
+        if (data.user.username !== username) {
+          router.push(`/${data.user.username}/project/${name}`);
+        }
+      } else {
+        router.push('/login');
       }
     } catch (err) {
       console.error(err);
+      router.push('/login');
     }
   };
 
@@ -76,12 +78,14 @@ export default function ProjectPage() {
   const fetchTasks = async (pageNum, reset = false) => {
     setLoading(true);
     try {
-      let url = `/api/tasks?project=${encodeURIComponent(decodedProjectName)}&page=${pageNum}&limit=15&timeframe=${filterTimeframe}`;
-      if (filterSource !== 'all') url += `&source=${filterSource}`;
-      if (filterType !== 'all') url += `&typeOfWork=${filterType}`;
-
-      const res = await fetch(url);
-      const data = await res.json();
+      const data = await apiClient.getTasks({
+        page: pageNum,
+        limit: 15,
+        timeframe: filterTimeframe,
+        source: filterSource,
+        typeOfWork: filterType,
+        project: decodedProjectName
+      });
 
       if (data.success) {
         const fetchedTasks = data.tasks || [];
@@ -127,19 +131,15 @@ export default function ProjectPage() {
   }, [hasMore, loading]);
 
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    await apiClient.logout();
     setCurrentUser(null);
     setTasks([]);
+    router.push('/');
   };
 
   const handleQuickStatusChange = async (taskId, newStatus) => {
     try {
-      const res = await fetch(`/api/tasks/${taskId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      const data = await res.json();
+      const data = await apiClient.updateTask(taskId, { status: newStatus });
       if (data.success) {
         fetchTasks(1, true);
         triggerToast(`Status updated to "${newStatus}"`);
@@ -169,22 +169,10 @@ export default function ProjectPage() {
         }
       };
 
-      let res;
-      if (editingTask) {
-        res = await fetch(`/api/tasks/${editingTask._id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-      } else {
-        res = await fetch('/api/tasks', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-      }
+      const data = editingTask 
+        ? await apiClient.updateTask(editingTask._id, payload)
+        : await apiClient.createTask(payload);
 
-      const data = await res.json();
       if (data.success) {
         setShowTaskModal(false);
         setEditingTask(null);
@@ -219,8 +207,7 @@ export default function ProjectPage() {
   const deleteTask = async (id) => {
     if (!confirm('Are you sure you want to delete this task?')) return;
     try {
-      const res = await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
-      const data = await res.json();
+      const data = await apiClient.deleteTask(id);
       if (data.success) {
         fetchTasks(1, true);
         triggerToast('Task deleted');
@@ -242,8 +229,7 @@ export default function ProjectPage() {
 
   const handleCopyTimeframeReport = async (tf) => {
     try {
-      const res = await fetch(`/api/reports?timeframe=${tf}`);
-      const data = await res.json();
+      const data = await apiClient.getReport(tf);
       if (data.reportText) {
         copyToClipboard(data.reportText, tf === '1w' ? '1-Week Report' : '1-Month Report');
       }
@@ -253,7 +239,7 @@ export default function ProjectPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-slate-100 font-sans selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-black text-slate-100 font-sans selection:bg-orange-500 selection:text-white">
       <Toast message={toastMessage} />
 
       <div className="relative max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -268,11 +254,11 @@ export default function ProjectPage() {
         {/* Back navigation & Project Title */}
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-zinc-800 pb-4 gap-3">
           <div className="flex items-center gap-3">
-            <Link href="/" className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:text-white text-zinc-300 px-3 py-1.5 rounded-lg text-xs font-semibold transition">
+            <Link href={`/${username}`} className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-850 hover:text-white text-zinc-300 px-3 py-1.5 rounded-lg text-xs font-semibold transition">
               ← Dashboard
             </Link>
             <h2 className="text-xl font-black text-white">
-              Project: <span className="text-indigo-400 font-mono">{decodedProjectName}</span>
+              Project: <span className="text-orange-400 font-mono">{decodedProjectName}</span>
             </h2>
           </div>
           <span className="text-xs text-zinc-400">

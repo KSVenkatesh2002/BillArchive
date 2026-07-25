@@ -1,5 +1,7 @@
 'use client';
 
+import { Edit3, PlusCircle, Lightbulb } from 'lucide-react';
+
 const STATUS_OPTIONS = [
   { id: 'inprocess', label: 'In Process' },
   { id: 'dev', label: 'Development' },
@@ -42,7 +44,8 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
       <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-xl p-6 shadow-2xl">
         <div className="flex items-center justify-between pb-4 border-b border-zinc-805 mb-4">
           <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            <span>{isEdit ? '✏️ Edit Task' : '🚀 Create New Task'}</span>
+            {isEdit ? <Edit3 className="w-5 h-5 text-indigo-400" /> : <PlusCircle className="w-5 h-5 text-indigo-400" />}
+            <span>{isEdit ? 'Edit Task' : 'Create New Task'}</span>
           </h3>
           <button onClick={onClose} className="text-zinc-400 hover:text-white text-lg font-bold">
             ✕
@@ -51,7 +54,7 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
 
         <form onSubmit={onSubmit} className="space-y-4">
           {/* ClickUp Link Input */}
-          <div className="p-3.5 bg-black rounded-xl border border-zinc-805">
+          <div className="p-3.5 bg-black rounded-xl border border-zinc-850">
             <label className="block text-xs font-semibold text-zinc-300 mb-1">ClickUp Link / Task ID</label>
             <input
               type="text"
@@ -60,8 +63,9 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
               onChange={handleLinkInput}
               className="w-full bg-zinc-900 border border-zinc-805 rounded-lg px-3 py-2 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-indigo-500"
             />
-            <p className="text-[10px] text-zinc-500 mt-1">
-              💡 Pasting a ClickUp link automatically extracts the ID for your nickname and task name placeholder.
+            <p className="text-[10px] text-zinc-500 mt-1.5 flex items-start gap-1">
+              <Lightbulb className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+              <span>Pasting a ClickUp link automatically extracts the ID for your nickname and task name placeholder.</span>
             </p>
           </div>
 
