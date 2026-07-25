@@ -22,13 +22,7 @@ export default function Header({
               <Link href={currentUser ? `/${currentUser.username}` : "/"} className="hover:text-orange-400 transition-colors">
                 {CONFIG.SITE_NAME}
               </Link>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-300 border border-orange-500/30">
-                {CONFIG.SUBTITLE}
-              </span>
             </h1>
-            <p className="text-xs text-zinc-400 mt-0.5">
-              {CONFIG.DESCRIPTION}
-            </p>
           </div>
         </div>
       </div>
@@ -67,18 +61,13 @@ export default function Header({
 
         {/* Auth Profile / Login Button */}
         {currentUser ? (
-          <div className="flex items-center gap-3 bg-[#0d0d0d] border border-zinc-800 rounded-xl px-3.5 py-1.5">
-            <div className="text-right">
-              <div className="text-xs font-bold text-zinc-200">{currentUser.name}</div>
-              <div className="text-[10px] text-zinc-450">@{currentUser.username}</div>
-            </div>
+          <div className="flex items-center gap-3 hover:bg-[#0d0d0d] border border-zinc-800 rounded-xl px-1 py-1.5">
             <Link
               href="/profile"
-              className="text-xs bg-zinc-900 hover:bg-zinc-800 text-zinc-300 px-2.5 py-1 rounded-lg transition border border-zinc-705 flex items-center gap-1.5"
+              className="text-xs text-zinc-300 px-2.5 py-1 rounded-lg transition flex items-center gap-1.5"
               title="Edit Profile Details"
             >
-              <User className="w-3.5 h-3.5 text-zinc-400" />
-              <span>Profile</span>
+              <User className="w-4 h-4 text-zinc-400" />
             </Link>
             {currentUser.role === 'admin' && (
               <Link
@@ -86,17 +75,10 @@ export default function Header({
                 className="text-xs bg-orange-950/30 hover:bg-orange-900/40 text-orange-400 px-2.5 py-1 rounded-lg transition border border-orange-900/30 flex items-center gap-1"
                 title="Super Admin Controls"
               >
-                <Shield className="w-3.5 h-3.5 text-orange-400" />
+                <Shield className="w-4 h-4 text-orange-400" />
                 <span>Admin</span>
               </Link>
             )}
-            <button
-              onClick={onLogout}
-              className="text-xs bg-zinc-900 hover:bg-zinc-800 text-rose-450 px-2.5 py-1 rounded-lg transition border border-zinc-705 flex items-center gap-1.5"
-            >
-              <LogOut className="w-3 h-3 text-rose-400" />
-              <span>Logout</span>
-            </button>
           </div>
         ) : (
           <Link

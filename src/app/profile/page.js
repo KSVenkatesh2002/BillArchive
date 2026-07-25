@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiClient } from '@/lib/apiClient';
 import { CONFIG } from '@/lib/config';
+import { LogOut } from 'lucide-react';
+
 import {
   User,
   Mail,
@@ -78,6 +80,11 @@ export default function ProfilePage() {
     init();
   }, [router]);
 
+  const handleLogout = async () => {
+    await apiClient.logout();
+    router.push('/');
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -136,18 +143,27 @@ export default function ProfilePage() {
       <div className="max-w-4xl mx-auto space-y-6">
         
         {/* Header Navigation */}
-        <div className="flex items-center gap-3 pb-6 border-b border-zinc-800/80">
-          <Link
-            href={currentUser ? `/${currentUser.username}` : "/"}
-            className="h-10 w-10 bg-zinc-900 hover:bg-zinc-800 rounded-xl border border-zinc-800 flex items-center justify-center transition-colors"
-            title="Return to main dashboard"
-          >
-            <ArrowLeft className="w-5 h-5 text-zinc-400" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-black text-white tracking-tight">Account Profile</h1>
-            <p className="text-xs text-zinc-400 mt-0.5">Customize your personal bio, settings, and team integrations</p>
+        <div className="flex items-center justify-between gap-3 pb-6 border-b border-zinc-800/80">
+          
+          <div className="flex items-center gap-3">
+            <Link
+              href={currentUser ? `/${currentUser.username}` : "/"}
+              className="h-10 w-10 bg-zinc-900 hover:bg-zinc-800 rounded-xl border border-zinc-800 flex items-center justify-center transition-colors"
+              title="Return to main dashboard"
+            >
+              <ArrowLeft className="w-5 h-5 text-zinc-400" />
+            </Link>
+            <div>
+              <h1 className="text-2xl font-black text-white tracking-tight">Account Profile</h1>
+              <p className="text-xs text-zinc-400 mt-0.5">Customize your personal bio, settings, and team integrations</p>
+            </div>
           </div>
+          <button
+            onClick={handleLogout}
+            className="text-xs bg-zinc-900 hover:bg-zinc-800 text-rose-450 px-2.5 py-1 rounded-lg transition border border-zinc-705 flex items-center gap-1.5"
+          >
+            <LogOut className="w-4 h-4 text-rose-400" />
+          </button>
         </div>
 
         {/* Success/Error Alerts */}
