@@ -32,23 +32,33 @@ export default function UserTaskCreatePage() {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   useEffect(() => {
-    if (!username) return; // Prevent comparison prior to route param hydration
+    console.log('[task-create page] Mounting/updating page. route param username:', username);
+    if (!username) {
+      console.log('[task-create page] Route param username is not yet hydrated.');
+      return;
+    }
     const verifyAuth = async () => {
       try {
+        console.log('[task-create page] Calling checkAuth...');
         const data = await apiClient.checkAuth();
+        console.log('[task-create page] checkAuth result:', data);
         if (!data.authenticated) {
+          console.log('[task-create page] User not authenticated. Redirecting to /login');
           router.push('/login');
           return;
         }
         const loggedUser = data.user.username.toLowerCase();
         const routeUser = decodeURIComponent(username).toLowerCase();
+        console.log('[task-create page] loggedUser:', loggedUser, 'routeUser:', routeUser);
         if (loggedUser !== routeUser) {
+          console.log(`[task-create page] Mismatch. Redirecting to /${loggedUser}/task-create`);
           router.push(`/${loggedUser}/task-create`);
         } else {
+          console.log('[task-create page] Matches logged in user. Disabling loading spinner.');
           setAuthChecking(false);
         }
       } catch (err) {
-        console.error(err);
+        console.error('[task-create page] Auth verification error:', err);
         router.push('/login');
       }
     };
@@ -57,21 +67,24 @@ export default function UserTaskCreatePage() {
 
   useEffect(() => {
     if (authChecking) return;
+    console.log('[task-create page] Loading options (projects/statuses)...');
 
     // Fetch user projects
     fetch('/api/projects')
       .then((res) => res.json())
       .then((data) => {
+        console.log('[task-create page] Projects fetch result:', data);
         if (data.success) {
           setProjects(data.projects || []);
         }
       })
-      .catch((err) => console.error(err));
+      .catch((err) => console.error('[task-create page] Projects fetch error:', err));
 
     // Fetch statuses
     fetch('/api/admin/statuses')
       .then((res) => res.json())
       .then((data) => {
+        console.log('[task-create page] Statuses fetch result:', data);
         if (data.success) {
           setStatuses(data.statuses || []);
         } else {
@@ -87,7 +100,8 @@ export default function UserTaskCreatePage() {
           ]);
         }
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error('[task-create page] Statuses fetch error, using defaults:', err);
         setStatuses([
           'inprocess',
           'dev',
@@ -271,8 +285,8 @@ export default function UserTaskCreatePage() {
                   className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-orange-500 appearance-none cursor-pointer"
                 >
                   {statuses.map((s) => (
-                    <option key={s} value={s} className="bg-black text-white">
-                      {s.toUpperCase()}
+                    <option key={s || ''} value={s || ''} className="bg-black text-white">
+                      {(s || '').toUpperCase()}
                     </option>
                   ))}
                 </select>

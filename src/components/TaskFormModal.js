@@ -193,8 +193,8 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
                   className="w-full bg-black border border-zinc-805 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-orange-500 appearance-none cursor-pointer"
                 >
                   {statuses.map((s) => (
-                    <option key={s} value={s} className="bg-black text-white">
-                      {s.toUpperCase()}
+                    <option key={s || ''} value={s || ''} className="bg-black text-white">
+                      {(s || '').toUpperCase()}
                     </option>
                   ))}
                 </select>
