@@ -49,7 +49,8 @@ export const taskService = {
       throw new Error('Task name and project are required');
     }
 
-    const initialStatus = CONFIG.VALID_STATUSES.includes(status) ? status : 'inprocess';
+    const validStatuses = await dbService.getStatuses();
+    const initialStatus = validStatuses.includes(status) ? status : (validStatuses[0] || 'inprocess');
     const now = new Date();
 
     const newTask = {
@@ -129,7 +130,8 @@ export const taskService = {
 
     // Status Audit History tracking
     if (status && status !== existingTask.status) {
-      if (!CONFIG.VALID_STATUSES.includes(status)) {
+      const validStatuses = await dbService.getStatuses();
+      if (!validStatuses.includes(status)) {
         throw new Error('Invalid status value');
       }
       updateDoc.$set.status = status;

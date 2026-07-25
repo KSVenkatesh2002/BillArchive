@@ -83,10 +83,10 @@ export default function Header({
             {currentUser.role === 'admin' && (
               <Link
                 href="/admin"
-                className="text-xs bg-indigo-950/40 hover:bg-indigo-900/60 text-indigo-400 px-2.5 py-1 rounded-lg transition border border-indigo-900/40 flex items-center gap-1"
+                className="text-xs bg-orange-950/30 hover:bg-orange-900/40 text-orange-400 px-2.5 py-1 rounded-lg transition border border-orange-900/30 flex items-center gap-1"
                 title="Super Admin Controls"
               >
-                <Shield className="w-3.5 h-3.5 text-indigo-400" />
+                <Shield className="w-3.5 h-3.5 text-orange-400" />
                 <span>Admin</span>
               </Link>
             )}

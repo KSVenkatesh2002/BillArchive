@@ -18,7 +18,8 @@ import {
   AlertTriangle,
   Plus,
   RefreshCw,
-  FolderOpen
+  FolderOpen,
+  LogOut
 } from 'lucide-react';
 
 export default function AdminPage() {
@@ -26,8 +27,15 @@ export default function AdminPage() {
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [adminData, setAdminData] = useState(null);
   const [loadingData, setLoadingData] = useState(true);
-  const [activeTab, setActiveTab] = useState('system'); // 'system', 'users', 'bills'
+  const [activeTab, setActiveTab] = useState('system'); // 'system', 'users', 'bills', 'statuses'
   const [error, setError] = useState('');
+
+  // Status management state
+  const [statuses, setStatuses] = useState([]);
+  const [newStatusName, setNewStatusName] = useState('');
+  const [savingStatuses, setSavingStatuses] = useState(false);
+  const [statusesSuccess, setStatusesSuccess] = useState('');
+  const [statusesError, setStatusesError] = useState('');
 
   // Bill Form State
   const [billForm, setBillForm] = useState({
@@ -67,6 +75,7 @@ export default function AdminPage() {
       const data = await apiClient.getAdminData();
       if (data.success) {
         setAdminData(data);
+        setStatuses(data.statuses || []);
       } else {
         setError(data.error || 'Failed to fetch administrator data.');
       }
@@ -74,6 +83,61 @@ export default function AdminPage() {
       setError('An error occurred while fetching system data.');
     } finally {
       setLoadingData(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await apiClient.logout();
+      router.push('/login');
+    } catch (err) {
+      console.error('Logout failed:', err);
+    }
+  };
+
+  const moveStatus = (index, direction) => {
+    const updated = [...statuses];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex >= 0 && targetIndex < updated.length) {
+      const temp = updated[index];
+      updated[index] = updated[targetIndex];
+      updated[targetIndex] = temp;
+      setStatuses(updated);
+    }
+  };
+
+  const removeStatus = (statusName) => {
+    setStatuses(statuses.filter(s => s !== statusName));
+  };
+
+  const addStatus = () => {
+    const name = newStatusName.trim().toLowerCase();
+    if (!name) return;
+    if (statuses.includes(name)) {
+      setStatusesError('Status option already exists.');
+      return;
+    }
+    setStatusesError('');
+    setStatuses([...statuses, name]);
+    setNewStatusName('');
+  };
+
+  const saveStatuses = async () => {
+    setSavingStatuses(true);
+    setStatusesSuccess('');
+    setStatusesError('');
+    try {
+      const res = await apiClient.updateStatuses(statuses);
+      if (res.success) {
+        setStatusesSuccess('Task status configuration saved successfully!');
+        setStatuses(res.statuses || []);
+      } else {
+        setStatusesError(res.error || 'Failed to save status configuration.');
+      }
+    } catch (err) {
+      setStatusesError('An error occurred while saving statuses.');
+    } finally {
+      setSavingStatuses(false);
     }
   };
 
@@ -182,13 +246,23 @@ export default function AdminPage() {
               </p>
             </div>
           </div>
-          <button
-            onClick={fetchAdminData}
-            className="self-start sm:self-center text-xs bg-zinc-900 hover:bg-zinc-800 text-zinc-350 px-3.5 py-2 rounded-xl transition border border-zinc-800 flex items-center gap-2"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loadingData ? 'animate-spin' : ''}`} />
-            <span>Sync Data</span>
-          </button>
+          <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
+            <button
+              onClick={fetchAdminData}
+              className="text-xs bg-zinc-900 hover:bg-zinc-800 text-zinc-350 px-3.5 py-2 rounded-xl transition border border-zinc-800 flex items-center gap-2"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loadingData ? 'animate-spin' : ''}`} />
+              <span>Sync Data</span>
+            </button>
+            <button
+              onClick={handleLogout}
+              className="text-xs bg-rose-950/30 hover:bg-rose-900/40 text-rose-300 px-3.5 py-2 rounded-xl transition border border-rose-900/30 flex items-center gap-2"
+              title="Sign Out of Admin Console"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Sign Out</span>
+            </button>
+          </div>
         </div>
 
         {/* Top Analytics Metrics Grid */}
@@ -270,6 +344,17 @@ export default function AdminPage() {
           >
             <DollarSign className="w-4 h-4" />
             <span>Bills Ledger ({stats.billsCount})</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('statuses')}
+            className={`px-4 py-2.5 text-xs font-bold transition flex items-center gap-2 border-b-2 -mb-px ${
+              activeTab === 'statuses'
+                ? 'border-orange-500 text-white'
+                : 'border-transparent text-zinc-450 hover:text-zinc-200'
+            }`}
+          >
+            <Settings className="w-4 h-4" />
+            <span>Manage Statuses</span>
           </button>
         </div>
 
@@ -540,6 +625,134 @@ export default function AdminPage() {
                   </form>
                 </div>
 
+              </div>
+            )}
+
+            {/* Manage Statuses Tab */}
+            {activeTab === 'statuses' && (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fadeIn">
+                <div className="lg:col-span-2 bg-zinc-950 border border-zinc-800/80 rounded-2xl p-6 space-y-6 shadow-2xl">
+                  <div>
+                    <h3 className="text-sm font-bold text-white">System Task Statuses Config</h3>
+                    <p className="text-[11px] text-zinc-450 mt-1 leading-relaxed">
+                      Reorder, add, or delete the status options for the dashboard tasks. These updates will reflect across all user accounts in real time.
+                    </p>
+                  </div>
+
+                  {statusesError && (
+                    <div className="p-3 bg-red-955/20 border border-red-900/30 rounded-xl text-red-300 text-xs">
+                      {statusesError}
+                    </div>
+                  )}
+
+                  {statusesSuccess && (
+                    <div className="p-3 bg-emerald-955/20 border border-emerald-900/30 rounded-xl text-emerald-350 text-xs">
+                      {statusesSuccess}
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    {statuses.length === 0 ? (
+                      <div className="text-center py-6 text-zinc-500 text-xs">No status configurations found.</div>
+                    ) : (
+                      statuses.map((status, index) => (
+                        <div
+                          key={status}
+                          className="flex items-center justify-between p-3.5 bg-black border border-zinc-800 hover:border-zinc-700 rounded-xl transition group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs font-bold text-zinc-500 font-mono w-5">{(index + 1).toString().padStart(2, '0')}</span>
+                            <span className="text-xs font-bold text-zinc-150 uppercase tracking-wide bg-zinc-900 border border-zinc-800 px-3 py-1 rounded-lg">
+                              {status}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => moveStatus(index, 'up')}
+                              disabled={index === 0}
+                              className="h-8 w-8 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 disabled:opacity-30 disabled:hover:bg-zinc-900 transition flex items-center justify-center font-bold text-xs"
+                              title="Move Up"
+                            >
+                              ▲
+                            </button>
+                            <button
+                              onClick={() => moveStatus(index, 'down')}
+                              disabled={index === statuses.length - 1}
+                              className="h-8 w-8 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 disabled:opacity-30 disabled:hover:bg-zinc-900 transition flex items-center justify-center font-bold text-xs"
+                              title="Move Down"
+                            >
+                              ▼
+                            </button>
+                            <div className="w-px h-5 bg-zinc-800 mx-1"></div>
+                            <button
+                              onClick={() => removeStatus(status)}
+                              className="h-8 w-8 rounded-lg bg-rose-955/20 hover:bg-rose-900/30 border border-rose-900/30 text-rose-455 hover:text-rose-350 transition flex items-center justify-center text-[10px] font-bold"
+                              title="Delete Status"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={saveStatuses}
+                      disabled={savingStatuses}
+                      className="bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs px-6 py-2.5 rounded-xl transition shadow-lg shadow-orange-600/20 flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <span>{savingStatuses ? 'Saving...' : 'Save Status Changes'}</span>
+                    </button>
+                    <button
+                      onClick={() => setStatuses([...CONFIG.VALID_STATUSES])}
+                      className="bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 text-xs px-4 py-2.5 rounded-xl transition"
+                    >
+                      Reset Defaults
+                    </button>
+                  </div>
+                </div>
+
+                {/* Add Status Form */}
+                <div className="bg-zinc-950 p-6 rounded-2xl border border-zinc-800/80 space-y-4 h-fit shadow-2xl">
+                  <div className="border-b border-zinc-800 pb-3">
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <Plus className="w-4.5 h-4.5 text-orange-450" />
+                      <span>Add New Status Option</span>
+                    </h3>
+                    <p className="text-[10px] text-zinc-450 mt-0.5">Append a new task status choice</p>
+                  </div>
+
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      addStatus();
+                    }}
+                    className="space-y-4"
+                  >
+                    <div>
+                      <label className="block text-[11px] font-semibold text-zinc-405 mb-1">Status Name</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Ready for Deployment"
+                        value={newStatusName}
+                        onChange={(e) => setNewStatusName(e.target.value)}
+                        className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-700 focus:outline-none focus:border-orange-500"
+                        required
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs py-3 rounded-xl border border-zinc-800 transition flex items-center justify-center gap-1.5"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add to List</span>
+                    </button>
+                  </form>
+                </div>
               </div>
             )}
 

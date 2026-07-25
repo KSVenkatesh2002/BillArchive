@@ -47,7 +47,8 @@ export async function GET() {
         totalGrossPaidAmount: totalGrossBilledAmount
       },
       users,
-      bills
+      bills,
+      statuses: await dbService.getStatuses()
     });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

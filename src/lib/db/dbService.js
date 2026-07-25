@@ -101,5 +101,25 @@ export const dbService = {
   async updateUser(id, updateDoc) {
     const adapter = await getAdapter();
     return adapter.updateUser(id, updateDoc);
+  },
+
+  async getStatuses() {
+    const adapter = await getAdapter();
+    return adapter.getStatuses();
+  },
+
+  async saveStatuses(list) {
+    const adapter = await getAdapter();
+    return adapter.saveStatuses(list);
+  },
+
+  async getUserProjects(userId) {
+    const adapter = await getAdapter();
+    return adapter.getUserProjects(userId);
+  },
+
+  async addUserProject(userId, projectName) {
+    const adapter = await getAdapter();
+    return adapter.addUserProject(userId, projectName);
   }
 };

@@ -1,10 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import TaskFormModal from '@/components/TaskFormModal';
 
-export default function TaskCreateModal() {
+export default function InterceptedTaskCreateModal() {
+  const { username } = useParams();
+  const router = useRouter();
+
   const [form, setForm] = useState({
     name: '',
     nickName: '',
@@ -17,7 +20,6 @@ export default function TaskCreateModal() {
     actualHours: '',
     clickupId: ''
   });
-  const router = useRouter();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -47,13 +49,12 @@ export default function TaskCreateModal() {
 
       const data = await res.json();
       if (data.success) {
-        // Go back (closes modal) and refresh parent page
         router.back();
         setTimeout(() => {
           window.location.reload();
         }, 100);
       } else {
-        alert(data.error || 'Failed to save task. Make sure you are logged in!');
+        alert(data.error || 'Failed to save task.');
       }
     } catch (err) {
       console.error(err);

@@ -99,6 +99,15 @@ export const apiClient = {
     return res.json();
   },
 
+  async updateStatuses(statuses) {
+    const res = await fetch('/api/admin/statuses', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ statuses }),
+    });
+    return res.json();
+  },
+
   async updateProfile(profileData) {
     const res = await fetch('/api/auth/profile', {
       method: 'PUT',

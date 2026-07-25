@@ -246,5 +246,33 @@ export const memoryAdapter = {
       updatedAt: new Date()
     };
     return { ...dbStore.users[idx] };
+  },
+
+  async getStatuses() {
+    if (!dbStore.statuses) {
+      dbStore.statuses = [...CONFIG.VALID_STATUSES];
+    }
+    return [...dbStore.statuses];
+  },
+
+  async saveStatuses(list) {
+    dbStore.statuses = [...list];
+    return [...dbStore.statuses];
+  },
+
+  async getUserProjects(userId) {
+    const user = dbStore.users.find(u => u._id.toString() === userId.toString());
+    return user?.projects || [];
+  },
+
+  async addUserProject(userId, projectName) {
+    const user = dbStore.users.find(u => u._id.toString() === userId.toString());
+    if (user) {
+      if (!user.projects) user.projects = [];
+      if (!user.projects.includes(projectName)) {
+        user.projects.push(projectName);
+      }
+    }
+    return true;
   }
 };

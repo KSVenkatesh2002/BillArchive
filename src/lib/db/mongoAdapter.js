@@ -187,5 +187,41 @@ export const mongoAdapter = {
       updated._id = updated._id.toString();
     }
     return updated;
+  },
+
+  async getStatuses() {
+    const db = await getDb();
+    const doc = await db.collection('settings').findOne({ key: 'statuses' });
+    if (!doc) {
+      // Seed default statuses into db
+      await db.collection('settings').insertOne({ key: 'statuses', list: [...CONFIG.VALID_STATUSES] });
+      return [...CONFIG.VALID_STATUSES];
+    }
+    return doc.list;
+  },
+
+  async saveStatuses(list) {
+    const db = await getDb();
+    await db.collection('settings').updateOne(
+      { key: 'statuses' },
+      { $set: { list } },
+      { upsert: true }
+    );
+    return list;
+  },
+
+  async getUserProjects(userId) {
+    const db = await getDb();
+    const user = await db.collection('users').findOne({ _id: castId(userId) });
+    return user?.projects || [];
+  },
+
+  async addUserProject(userId, projectName) {
+    const db = await getDb();
+    await db.collection('users').updateOne(
+      { _id: castId(userId) },
+      { $addToSet: { projects: projectName } }
+    );
+    return true;
   }
 };
