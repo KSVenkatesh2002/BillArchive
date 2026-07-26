@@ -52,9 +52,6 @@ export default function UserDashboard() {
     name: '',
     nickName: '',
     status: 'inprocess',
-    project: '',
-    source: 'dialedin',
-    typeOfWork: 'dev',
     allocatedHours: '',
     billedHours: '',
     actualHours: '',
@@ -120,7 +117,36 @@ export default function UserDashboard() {
     try {
       const res = await fetch('/api/organization/config').then((r) => r.json());
       if (res.success && res.organization) {
-        setDynamicFields(res.organization.dynamicFields || []);
+        const fields = res.organization.dynamicFields || [];
+        setDynamicFields(fields);
+
+        // Seed default filter values from organization config
+        const sourceField = fields.find(f => f.name === 'source');
+        if (sourceField?.defaultValue) {
+          setFilterSource(sourceField.defaultValue);
+        }
+
+        const typeField = fields.find(f => f.name === 'typeOfWork');
+        if (typeField?.defaultValue) {
+          setFilterType(typeField.defaultValue);
+        }
+
+        const projectField = fields.find(f => f.name === 'project');
+        if (projectField?.defaultValue) {
+          setFilterProject(projectField.defaultValue);
+        }
+
+        const initialCustomFilters = {};
+        fields.forEach(f => {
+          if (f.name !== 'source' && f.name !== 'typeOfWork' && f.name !== 'project') {
+            if (f.defaultValue !== undefined && f.defaultValue !== null && f.defaultValue !== '') {
+              initialCustomFilters[f.name] = String(f.defaultValue);
+            }
+          }
+        });
+        if (Object.keys(initialCustomFilters).length > 0) {
+          setCustomFilters(initialCustomFilters);
+        }
       }
     } catch (err) {
       console.error('Failed to load organization config:', err);
@@ -193,16 +219,17 @@ export default function UserDashboard() {
   // Handle Save (Edit Mode)
   const handleSaveTask = async (e) => {
     e.preventDefault();
-    if (!taskForm.name || !taskForm.project) return;
+    const projectVal = taskForm.dynamicValues?.project || taskForm.project;
+    if (!taskForm.name || !projectVal) return;
 
     try {
       const payload = {
         name: taskForm.name,
         nickName: taskForm.nickName || '',
         status: taskForm.status,
-        project: taskForm.project,
-        source: taskForm.source,
-        typeOfWork: taskForm.typeOfWork,
+        project: projectVal || '',
+        source: taskForm.dynamicValues?.source || taskForm.source || undefined,
+        typeOfWork: taskForm.dynamicValues?.typeOfWork || taskForm.typeOfWork || undefined,
         clickupId: taskForm.clickupId,
         dynamicValues: taskForm.dynamicValues || {},
         bill: {

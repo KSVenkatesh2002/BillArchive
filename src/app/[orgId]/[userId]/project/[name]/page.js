@@ -30,6 +30,8 @@ export default function UserProjectPage() {
   const [filterSource, setFilterSource] = useState('all');
   const [filterType, setFilterType] = useState('all');
   const [filterTimeframe, setFilterTimeframe] = useState('all');
+  const [dynamicFields, setDynamicFields] = useState([]);
+  const [customFilters, setCustomFilters] = useState({});
   const [isDemo, setIsDemo] = useState(false);
   const [metrics, setMetrics] = useState({
     totalAllocated: 0,
@@ -46,9 +48,6 @@ export default function UserProjectPage() {
     name: '',
     nickName: '',
     status: 'inprocess',
-    project: decodedProjectName,
-    source: 'dialedin',
-    typeOfWork: 'dev',
     allocatedHours: '',
     billedHours: '',
     actualHours: '',
@@ -76,6 +75,41 @@ export default function UserProjectPage() {
     }
   };
 
+  const fetchOrgConfig = async () => {
+    try {
+      const res = await fetch('/api/organization/config').then((r) => r.json());
+      if (res.success && res.organization) {
+        const fields = res.organization.dynamicFields || [];
+        setDynamicFields(fields);
+
+        // Seed default filter values from organization config
+        const sourceField = fields.find(f => f.name === 'source');
+        if (sourceField?.defaultValue) {
+          setFilterSource(sourceField.defaultValue);
+        }
+
+        const typeField = fields.find(f => f.name === 'typeOfWork');
+        if (typeField?.defaultValue) {
+          setFilterType(typeField.defaultValue);
+        }
+
+        const initialCustomFilters = {};
+        fields.forEach(f => {
+          if (f.name !== 'source' && f.name !== 'typeOfWork' && f.name !== 'project') {
+            if (f.defaultValue !== undefined && f.defaultValue !== null && f.defaultValue !== '') {
+              initialCustomFilters[f.name] = String(f.defaultValue);
+            }
+          }
+        });
+        if (Object.keys(initialCustomFilters).length > 0) {
+          setCustomFilters(initialCustomFilters);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load organization config:', err);
+    }
+  };
+
   // Fetch paginated tasks for project
   const fetchTasks = async (pageNum, reset = false) => {
     setLoading(true);
@@ -86,7 +120,8 @@ export default function UserProjectPage() {
         timeframe: filterTimeframe,
         source: filterSource,
         typeOfWork: filterType,
-        project: decodedProjectName
+        project: decodedProjectName,
+        ...customFilters
       });
 
       if (data.success) {
@@ -105,12 +140,17 @@ export default function UserProjectPage() {
     }
   };
 
-  // Reset page and reload when filters change
+  // Run auth check and load organization configuration on mount
   useEffect(() => {
     checkAuth();
+    fetchOrgConfig();
+  }, []);
+
+  // Reset page and reload when filters change
+  useEffect(() => {
     setPage(1);
     fetchTasks(1, true);
-  }, [filterSource, filterType, filterTimeframe]);
+  }, [filterSource, filterType, filterTimeframe, customFilters]);
 
   // Load next page on scroll reach end
   const handleScroll = () => {
@@ -153,16 +193,17 @@ export default function UserProjectPage() {
 
   const handleSaveTask = async (e) => {
     e.preventDefault();
-    if (!taskForm.name || !taskForm.project) return;
+    const projectVal = taskForm.dynamicValues?.project || taskForm.project || decodedProjectName;
+    if (!taskForm.name || !projectVal) return;
 
     try {
       const payload = {
         name: taskForm.name,
         nickName: taskForm.nickName || '',
         status: taskForm.status,
-        project: taskForm.project,
-        source: taskForm.source,
-        typeOfWork: taskForm.typeOfWork,
+        project: projectVal,
+        source: taskForm.dynamicValues?.source || taskForm.source || undefined,
+        typeOfWork: taskForm.dynamicValues?.typeOfWork || taskForm.typeOfWork || undefined,
         clickupId: taskForm.clickupId,
         dynamicValues: taskForm.dynamicValues || {},
         bill: {
@@ -286,6 +327,9 @@ export default function UserProjectPage() {
           setFilterTimeframe={setFilterTimeframe}
           uniqueProjects={[decodedProjectName]}
           tasksLength={tasks.length}
+          dynamicFields={dynamicFields}
+          customFilters={customFilters}
+          setCustomFilters={setCustomFilters}
         />
 
         {/* Tasks Table */}
@@ -297,6 +341,7 @@ export default function UserProjectPage() {
           handleCopyProjectDetails={() => {}}
           openEditModal={openEditModal}
           deleteTask={deleteTask}
+          dynamicFields={dynamicFields}
         />
 
         {/* Infinite Scroll loading indicator */}

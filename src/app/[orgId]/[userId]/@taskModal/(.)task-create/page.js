@@ -13,28 +13,28 @@ export default function InterceptedTaskCreateModal() {
     name: '',
     nickName: '',
     status: 'inprocess',
-    project: '',
-    source: 'dialedin',
-    typeOfWork: 'dev',
     allocatedHours: '',
     billedHours: '',
     actualHours: '',
-    clickupId: ''
+    clickupId: '',
+    dynamicValues: {}
   });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name || !form.project) return;
+    const projectVal = form.dynamicValues?.project || form.project;
+    if (!form.name || !projectVal) return;
 
     try {
       const payload = {
         name: form.name,
         nickName: form.nickName || '',
         status: form.status,
-        project: form.project,
-        source: form.source,
-        typeOfWork: form.typeOfWork,
+        project: projectVal,
+        source: form.dynamicValues?.source || form.source || undefined,
+        typeOfWork: form.dynamicValues?.typeOfWork || form.typeOfWork || undefined,
         clickupId: form.clickupId,
+        dynamicValues: form.dynamicValues || {},
         bill: {
           allocatedHours: parseFloat(form.allocatedHours || 0),
           billedHours: parseFloat(form.billedHours || 0),
