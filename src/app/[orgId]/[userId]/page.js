@@ -2,8 +2,23 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { apiClient } from '@/lib/apiClient';
+import { useSelector, useDispatch } from 'react-redux';
 import { Zap, LayoutGrid, List } from 'lucide-react';
+
+// Import Redux Actions & Thunks
+import { checkAuth, logout } from '@/lib/store/authSlice';
+import { fetchOrgConfig } from '@/lib/store/orgSlice';
+import {
+  fetchTasks,
+  setFilterSource,
+  setFilterType,
+  setFilterProject,
+  setFilterTimeframe,
+  setCustomFilters,
+  setActiveHistoryTask,
+  deleteTask,
+  updateTask
+} from '@/lib/store/taskSlice';
 
 // Import child components
 import Header from '@/components/Header';
@@ -19,33 +34,28 @@ import ReportPreviewModal from '@/components/ReportPreviewModal';
 export default function UserDashboard() {
   const { userId, orgId } = useParams();
   const router = useRouter();
+  const dispatch = useDispatch();
 
-  // Auth state
-  const [currentUser, setCurrentUser] = useState(null);
+  // Select states from Redux store
+  const { currentUser } = useSelector((state) => state.auth);
+  const { dynamicFields } = useSelector((state) => state.org);
+  const {
+    tasks,
+    loading,
+    page,
+    hasMore,
+    isDemo,
+    metrics,
+    filterSource,
+    filterType,
+    filterProject,
+    filterTimeframe,
+    customFilters,
+    activeHistoryTask
+  } = useSelector((state) => state.tasks);
 
-  // App Data, Filters, Pagination
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-
-  const [dynamicFields, setDynamicFields] = useState([]);
-  const [filterSource, setFilterSource] = useState('all');
-  const [filterType, setFilterType] = useState('all');
-  const [filterProject, setFilterProject] = useState('all');
-  const [filterTimeframe, setFilterTimeframe] = useState('all');
-  const [customFilters, setCustomFilters] = useState({});
-  const [isDemo, setIsDemo] = useState(false);
+  // Local UI states (viewMode, modals, toast)
   const [viewMode, setViewMode] = useState('table');
-  const [metrics, setMetrics] = useState({
-    totalAllocated: 0,
-    totalBilled: 0,
-    totalActual: 0,
-    completedCount: 0,
-    variance: 0
-  });
-
-  // Edit Task Modal state (Creation uses /task-create route)
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [taskForm, setTaskForm] = useState({
@@ -59,20 +69,18 @@ export default function UserDashboard() {
     dynamicValues: {}
   });
 
-  // History Audit Modal state
-  const [activeHistoryTask, setActiveHistoryTask] = useState(null);
-
-  // Copy Feedback Toast
   const [toastMessage, setToastMessage] = useState('');
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [reportModalProject, setReportModalProject] = useState('all');
+  const [reportModalTimeframe, setReportModalTimeframe] = useState('all');
 
   // Check auth
-  const checkAuth = async () => {
+  const handleCheckAuth = async () => {
     try {
-      const data = await apiClient.checkAuth();
-      if (data.authenticated) {
-        setCurrentUser(data.user);
-        if (data.user.userId !== userId || data.user.orgId !== orgId) {
-          router.push(`/${data.user.orgId || 'dialedin'}/${data.user.userId}`);
+      const user = await dispatch(checkAuth()).unwrap();
+      if (user) {
+        if (user.userId !== userId || user.orgId !== orgId) {
+          router.push(`/${user.orgId || 'dialedin'}/${user.userId}`);
         }
       } else {
         router.push('/login');
@@ -84,56 +92,30 @@ export default function UserDashboard() {
   };
 
   // Fetch paginated tasks
-  const fetchTasks = async (pageNum, reset = false) => {
-    setLoading(true);
-    try {
-      const data = await apiClient.getTasks({
-        page: pageNum,
-        limit: 15,
-        timeframe: filterTimeframe,
-        source: filterSource,
-        typeOfWork: filterType,
-        project: filterProject,
-        ...customFilters
-      });
-
-      if (data.success) {
-        const fetchedTasks = data.tasks || [];
-        setTasks(prev => (reset ? fetchedTasks : [...prev, ...fetchedTasks]));
-        setHasMore(data.hasMore);
-        setIsDemo(data.isDemo || false);
-        if (data.metrics) {
-          setMetrics(data.metrics);
-        }
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+  const handleFetchTasks = (pageNum, reset = false) => {
+    dispatch(fetchTasks({ pageNum, reset }));
   };
 
-  const fetchOrgConfig = async () => {
+  const handleFetchOrgConfig = async () => {
     try {
-      const res = await fetch('/api/organization/config').then((r) => r.json());
-      if (res.success && res.organization) {
-        const fields = res.organization.dynamicFields || [];
-        setDynamicFields(fields);
+      const orgData = await dispatch(fetchOrgConfig()).unwrap();
+      if (orgData) {
+        const fields = orgData.dynamicFields || [];
 
         // Seed default filter values from organization config
         const sourceField = fields.find(f => f.name === 'source');
         if (sourceField?.defaultValue) {
-          setFilterSource(sourceField.defaultValue);
+          dispatch(setFilterSource(sourceField.defaultValue));
         }
 
         const typeField = fields.find(f => f.name === 'typeOfWork');
         if (typeField?.defaultValue) {
-          setFilterType(typeField.defaultValue);
+          dispatch(setFilterType(typeField.defaultValue));
         }
 
         const projectField = fields.find(f => f.name === 'project');
         if (projectField?.defaultValue) {
-          setFilterProject(projectField.defaultValue);
+          dispatch(setFilterProject(projectField.defaultValue));
         }
 
         const initialCustomFilters = {};
@@ -145,7 +127,7 @@ export default function UserDashboard() {
           }
         });
         if (Object.keys(initialCustomFilters).length > 0) {
-          setCustomFilters(initialCustomFilters);
+          dispatch(setCustomFilters(initialCustomFilters));
         }
       }
     } catch (err) {
@@ -154,17 +136,16 @@ export default function UserDashboard() {
   };
 
   useEffect(() => {
-    checkAuth();
-    fetchOrgConfig();
+    handleCheckAuth();
+    handleFetchOrgConfig();
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
       setViewMode('cards');
     }
   }, []);
 
-  // Reset page and list on filter change
+  // Reload tasks when filters change
   useEffect(() => {
-    setPage(1);
-    fetchTasks(1, true);
+    handleFetchTasks(1, true);
   }, [filterSource, filterType, filterProject, filterTimeframe, customFilters]);
 
   // Load next page on scroll reach end
@@ -174,31 +155,19 @@ export default function UserDashboard() {
       hasMore &&
       !loading
     ) {
-      setPage(prev => {
-        const nextPage = prev + 1;
-        fetchTasks(nextPage, false);
-        return nextPage;
-      });
+      const nextPage = page + 1;
+      handleFetchTasks(nextPage, false);
     }
   };
 
   useEffect(() => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [hasMore, loading]);
+  }, [hasMore, loading, page]);
 
-  // Handle Logout (Clear tasks & state)
+  // Handle Logout
   const handleLogout = async () => {
-    await apiClient.logout();
-    setCurrentUser(null);
-    setTasks([]);
-    setMetrics({
-      totalAllocated: 0,
-      totalBilled: 0,
-      totalActual: 0,
-      completedCount: 0,
-      variance: 0
-    });
+    await dispatch(logout()).unwrap();
     triggerToast('Logged out successfully');
     router.push('/');
   };
@@ -206,9 +175,8 @@ export default function UserDashboard() {
   // Quick Status change directly from the desktop list
   const handleQuickStatusChange = async (taskId, newStatus) => {
     try {
-      const data = await apiClient.updateTask(taskId, { status: newStatus });
+      const data = await dispatch(updateTask({ taskId, updateData: { status: newStatus } })).unwrap();
       if (data.success) {
-        fetchTasks(1, true);
         triggerToast(`Status updated to "${newStatus}"`);
       }
     } catch (err) {
@@ -239,11 +207,10 @@ export default function UserDashboard() {
         }
       };
 
-      const data = await apiClient.updateTask(editingTask._id, payload);
+      const data = await dispatch(updateTask({ taskId: editingTask._id, updateData: payload })).unwrap();
       if (data.success) {
         setShowTaskModal(false);
         setEditingTask(null);
-        fetchTasks(1, true);
         triggerToast('Task updated successfully!');
       } else {
         alert(data.error || 'Failed to save task.');
@@ -272,14 +239,11 @@ export default function UserDashboard() {
     setShowTaskModal(true);
   };
 
-  const deleteTask = async (id) => {
+  const handleDeleteTask = async (id) => {
     if (!confirm('Are you sure you want to delete this task?')) return;
     try {
-      const data = await apiClient.deleteTask(id);
-      if (data.success) {
-        fetchTasks(1, true);
-        triggerToast('Task deleted');
-      }
+      await dispatch(deleteTask(id)).unwrap();
+      triggerToast('Task deleted');
     } catch (err) {
       console.error(err);
     }
@@ -290,25 +254,10 @@ export default function UserDashboard() {
     setTimeout(() => setToastMessage(''), 3500);
   };
 
-  // Report Preview Modal state
-  const [reportModalOpen, setReportModalOpen] = useState(false);
-  const [reportModalProject, setReportModalProject] = useState('all');
-  const [reportModalTimeframe, setReportModalTimeframe] = useState('all');
-
   const handleOpenReportModal = (tf = 'all', proj = 'all') => {
     setReportModalTimeframe(tf);
     setReportModalProject(proj);
     setReportModalOpen(true);
-  };
-
-  const copyToClipboard = (text, label) => {
-    navigator.clipboard.writeText(text);
-    triggerToast(`Copied ${label} to clipboard!`);
-  };
-
-  // Generate Copy Text for Timeframe Report (1 Week or 1 Month)
-  const handleCopyTimeframeReport = (tf) => {
-    handleOpenReportModal(tf, 'all');
   };
 
   // Generate Copy Text for a Specific Project
@@ -353,18 +302,21 @@ export default function UserDashboard() {
         {/* Filter Controls Bar */}
         <FilterControls
           filterSource={filterSource}
-          setFilterSource={setFilterSource}
+          setFilterSource={(val) => dispatch(setFilterSource(val))}
           filterType={filterType}
-          setFilterType={setFilterType}
+          setFilterType={(val) => dispatch(setFilterType(val))}
           filterProject={filterProject}
-          setFilterProject={setFilterProject}
+          setFilterProject={(val) => dispatch(setFilterProject(val))}
           filterTimeframe={filterTimeframe}
-          setFilterTimeframe={setFilterTimeframe}
+          setFilterTimeframe={(val) => dispatch(setFilterTimeframe(val))}
           uniqueProjects={uniqueProjects}
           tasksLength={tasks.length}
           dynamicFields={dynamicFields}
           customFilters={customFilters}
-          setCustomFilters={setCustomFilters}
+          setCustomFilters={(val) => {
+            const resolved = typeof val === 'function' ? val(customFilters) : val;
+            dispatch(setCustomFilters(resolved));
+          }}
         />
 
         {/* View Mode Toggle Header */}
@@ -409,10 +361,10 @@ export default function UserDashboard() {
             loading={loading && tasks.length === 0}
             tasks={tasks}
             handleQuickStatusChange={handleQuickStatusChange}
-            setActiveHistoryTask={setActiveHistoryTask}
+            setActiveHistoryTask={(val) => dispatch(setActiveHistoryTask(val))}
             handleCopyProjectDetails={handleCopyProjectDetails}
             openEditModal={openEditModal}
-            deleteTask={deleteTask}
+            deleteTask={handleDeleteTask}
             dynamicFields={dynamicFields}
           />
         ) : (
@@ -420,10 +372,10 @@ export default function UserDashboard() {
             loading={loading && tasks.length === 0}
             tasks={tasks}
             handleQuickStatusChange={handleQuickStatusChange}
-            setActiveHistoryTask={setActiveHistoryTask}
+            setActiveHistoryTask={(val) => dispatch(setActiveHistoryTask(val))}
             handleCopyProjectDetails={handleCopyProjectDetails}
             openEditModal={openEditModal}
-            deleteTask={deleteTask}
+            deleteTask={handleDeleteTask}
             dynamicFields={dynamicFields}
           />
         )}
@@ -449,7 +401,7 @@ export default function UserDashboard() {
       {/* History Audit Modal */}
       <AuditLogModal
         task={activeHistoryTask}
-        onClose={() => setActiveHistoryTask(null)}
+        onClose={() => dispatch(setActiveHistoryTask(null))}
       />
 
       {/* Report Preview Modal */}

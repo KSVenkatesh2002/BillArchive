@@ -24,6 +24,8 @@ export const metadata = {
   description: CONFIG.DESCRIPTION,
 };
 
+import { ReduxProvider } from "@/lib/store/ReduxProvider";
+
 export default function RootLayout({ children, authModal }) {
   return (
     <html
@@ -32,8 +34,10 @@ export default function RootLayout({ children, authModal }) {
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col bg-black text-slate-100" suppressHydrationWarning>
-        {children}
-        {authModal}
+        <ReduxProvider>
+          {children}
+          {authModal}
+        </ReduxProvider>
       </body>
     </html>
   );

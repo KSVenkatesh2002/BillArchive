@@ -1,9 +1,22 @@
 'use client';
 
+import { useSelector } from 'react-redux';
 import MetricCard from './MetricCard';
 import { CheckCircle, AlertTriangle } from 'lucide-react';
 
-export default function MetricsBar({ tasksLength, metrics }) {
+export default function MetricsBar(props) {
+  const storeMetrics = useSelector((state) => state.tasks.metrics);
+  const storeTasksLength = useSelector((state) => state.tasks.tasks.length);
+
+  const metrics = props.metrics || storeMetrics || {
+    totalAllocated: 0,
+    totalBilled: 0,
+    totalActual: 0,
+    completedCount: 0,
+    variance: 0
+  };
+  const tasksLength = props.tasksLength ?? storeTasksLength;
+
   return (
     <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
       <MetricCard
@@ -13,29 +26,29 @@ export default function MetricsBar({ tasksLength, metrics }) {
       />
       <MetricCard
         title="Allocated Hours"
-        value={`${metrics.totalAllocated.toFixed(1)} hrs`}
+        value={`${(metrics.totalAllocated || 0).toFixed(1)} hrs`}
         subtext="Planned budget"
         colorClass="text-indigo-400"
       />
       <MetricCard
         title="Billed Hours"
-        value={`${metrics.totalBilled.toFixed(1)} hrs`}
+        value={`${(metrics.totalBilled || 0).toFixed(1)} hrs`}
         subtext="Billable to client"
         colorClass="text-cyan-400"
       />
       <MetricCard
         title="Actual Hours"
-        value={`${metrics.totalActual.toFixed(1)} hrs`}
+        value={`${(metrics.totalActual || 0).toFixed(1)} hrs`}
         subtext="Logged work"
         colorClass="text-purple-400"
       />
       <div className="col-span-2 md:col-span-1 bg-zinc-950 p-4 rounded-xl border border-zinc-800 flex flex-col justify-between hover:border-zinc-700 transition-all">
         <div className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider">Efficiency Variance</div>
         <div className="text-xl font-bold text-white mt-1">
-          {metrics.variance.toFixed(1)} hrs
+          {(metrics.variance || 0).toFixed(1)} hrs
         </div>
         <div className="text-[10px] text-zinc-400 mt-1 flex items-center gap-1.5">
-          {metrics.variance >= 0 ? (
+          {(metrics.variance || 0) >= 0 ? (
             <>
               <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
               <span>Under actual log</span>

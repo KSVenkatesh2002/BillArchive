@@ -2,8 +2,25 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useSelector, useDispatch } from 'react-redux';
 import Link from 'next/link';
-import { apiClient } from '@/lib/apiClient';
+
+// Import Redux Actions & Thunks
+import { checkAuth, logout } from '@/lib/store/authSlice';
+import { fetchOrgConfig } from '@/lib/store/orgSlice';
+import {
+  fetchTasks,
+  setFilterSource,
+  setFilterType,
+  setFilterProject,
+  setFilterTimeframe,
+  setCustomFilters,
+  setActiveHistoryTask,
+  deleteTask,
+  updateTask
+} from '@/lib/store/taskSlice';
+
+// Import child components
 import Header from '@/components/Header';
 import MetricsBar from '@/components/MetricsBar';
 import FilterControls from '@/components/FilterControls';
@@ -17,31 +34,25 @@ export default function UserProjectPage() {
   const { userId, orgId, name } = useParams();
   const decodedProjectName = decodeURIComponent(name);
   const router = useRouter();
+  const dispatch = useDispatch();
 
-  // Auth state
-  const [currentUser, setCurrentUser] = useState(null);
+  // Select states from Redux store
+  const { currentUser } = useSelector((state) => state.auth);
+  const { dynamicFields } = useSelector((state) => state.org);
+  const {
+    tasks,
+    loading,
+    page,
+    hasMore,
+    metrics,
+    filterSource,
+    filterType,
+    filterTimeframe,
+    customFilters,
+    activeHistoryTask
+  } = useSelector((state) => state.tasks);
 
-  // App Data, Filters, Pagination
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-
-  const [filterSource, setFilterSource] = useState('all');
-  const [filterType, setFilterType] = useState('all');
-  const [filterTimeframe, setFilterTimeframe] = useState('all');
-  const [dynamicFields, setDynamicFields] = useState([]);
-  const [customFilters, setCustomFilters] = useState({});
-  const [isDemo, setIsDemo] = useState(false);
-  const [metrics, setMetrics] = useState({
-    totalAllocated: 0,
-    totalBilled: 0,
-    totalActual: 0,
-    completedCount: 0,
-    variance: 0
-  });
-
-  // Modal states
+  // Local UI states (modals, toast)
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [taskForm, setTaskForm] = useState({
@@ -54,17 +65,18 @@ export default function UserProjectPage() {
     clickupId: '',
     dynamicValues: {}
   });
-  const [activeHistoryTask, setActiveHistoryTask] = useState(null);
+
   const [toastMessage, setToastMessage] = useState('');
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [reportModalTimeframe, setReportModalTimeframe] = useState('all');
 
   // Check auth
-  const checkAuth = async () => {
+  const handleCheckAuth = async () => {
     try {
-      const data = await apiClient.checkAuth();
-      if (data.authenticated) {
-        setCurrentUser(data.user);
-        if (data.user.userId !== userId) {
-          router.push(`/${data.user.orgId || 'dialedin'}/${data.user.userId}/project/${name}`);
+      const user = await dispatch(checkAuth()).unwrap();
+      if (user) {
+        if (user.userId !== userId) {
+          router.push(`/${user.orgId || 'dialedin'}/${user.userId}/project/${name}`);
         }
       } else {
         router.push('/login');
@@ -75,22 +87,26 @@ export default function UserProjectPage() {
     }
   };
 
-  const fetchOrgConfig = async () => {
+  // Fetch paginated tasks
+  const handleFetchTasks = (pageNum, reset = false) => {
+    dispatch(fetchTasks({ pageNum, reset }));
+  };
+
+  const handleFetchOrgConfig = async () => {
     try {
-      const res = await fetch('/api/organization/config').then((r) => r.json());
-      if (res.success && res.organization) {
-        const fields = res.organization.dynamicFields || [];
-        setDynamicFields(fields);
+      const orgData = await dispatch(fetchOrgConfig()).unwrap();
+      if (orgData) {
+        const fields = orgData.dynamicFields || [];
 
         // Seed default filter values from organization config
         const sourceField = fields.find(f => f.name === 'source');
         if (sourceField?.defaultValue) {
-          setFilterSource(sourceField.defaultValue);
+          dispatch(setFilterSource(sourceField.defaultValue));
         }
 
         const typeField = fields.find(f => f.name === 'typeOfWork');
         if (typeField?.defaultValue) {
-          setFilterType(typeField.defaultValue);
+          dispatch(setFilterType(typeField.defaultValue));
         }
 
         const initialCustomFilters = {};
@@ -102,7 +118,7 @@ export default function UserProjectPage() {
           }
         });
         if (Object.keys(initialCustomFilters).length > 0) {
-          setCustomFilters(initialCustomFilters);
+          dispatch(setCustomFilters(initialCustomFilters));
         }
       }
     } catch (err) {
@@ -110,46 +126,15 @@ export default function UserProjectPage() {
     }
   };
 
-  // Fetch paginated tasks for project
-  const fetchTasks = async (pageNum, reset = false) => {
-    setLoading(true);
-    try {
-      const data = await apiClient.getTasks({
-        page: pageNum,
-        limit: 15,
-        timeframe: filterTimeframe,
-        source: filterSource,
-        typeOfWork: filterType,
-        project: decodedProjectName,
-        ...customFilters
-      });
-
-      if (data.success) {
-        const fetchedTasks = data.tasks || [];
-        setTasks(prev => (reset ? fetchedTasks : [...prev, ...fetchedTasks]));
-        setHasMore(data.hasMore);
-        setIsDemo(data.isDemo || false);
-        if (data.metrics) {
-          setMetrics(data.metrics);
-        }
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Run auth check and load organization configuration on mount
   useEffect(() => {
-    checkAuth();
-    fetchOrgConfig();
-  }, []);
+    dispatch(setFilterProject(decodedProjectName));
+    handleCheckAuth();
+    handleFetchOrgConfig();
+  }, [decodedProjectName]);
 
-  // Reset page and reload when filters change
+  // Reload tasks when filters change
   useEffect(() => {
-    setPage(1);
-    fetchTasks(1, true);
+    handleFetchTasks(1, true);
   }, [filterSource, filterType, filterTimeframe, customFilters]);
 
   // Load next page on scroll reach end
@@ -159,31 +144,27 @@ export default function UserProjectPage() {
       hasMore &&
       !loading
     ) {
-      setPage(prev => {
-        const nextPage = prev + 1;
-        fetchTasks(nextPage, false);
-        return nextPage;
-      });
+      const nextPage = page + 1;
+      handleFetchTasks(nextPage, false);
     }
   };
 
   useEffect(() => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [hasMore, loading]);
+  }, [hasMore, loading, page]);
 
+  // Handle Logout
   const handleLogout = async () => {
-    await apiClient.logout();
-    setCurrentUser(null);
-    setTasks([]);
+    await dispatch(logout()).unwrap();
     router.push('/');
   };
 
+  // Quick Status change directly from the desktop list
   const handleQuickStatusChange = async (taskId, newStatus) => {
     try {
-      const data = await apiClient.updateTask(taskId, { status: newStatus });
+      const data = await dispatch(updateTask({ taskId, updateData: { status: newStatus } })).unwrap();
       if (data.success) {
-        fetchTasks(1, true);
         triggerToast(`Status updated to "${newStatus}"`);
       }
     } catch (err) {
@@ -191,6 +172,7 @@ export default function UserProjectPage() {
     }
   };
 
+  // Handle Save (Edit/Create Mode)
   const handleSaveTask = async (e) => {
     e.preventDefault();
     const projectVal = taskForm.dynamicValues?.project || taskForm.project || decodedProjectName;
@@ -214,13 +196,12 @@ export default function UserProjectPage() {
       };
 
       const data = editingTask 
-        ? await apiClient.updateTask(editingTask._id, payload)
-        : await apiClient.createTask(payload);
+        ? await dispatch(updateTask({ taskId: editingTask._id, updateData: payload })).unwrap()
+        : await dispatch(createTask(payload)).unwrap();
 
       if (data.success) {
         setShowTaskModal(false);
         setEditingTask(null);
-        fetchTasks(1, true);
         triggerToast(editingTask ? 'Task updated successfully!' : 'New task created!');
       } else {
         alert(data.error || 'Failed to save task.');
@@ -249,14 +230,11 @@ export default function UserProjectPage() {
     setShowTaskModal(true);
   };
 
-  const deleteTask = async (id) => {
+  const handleDeleteTask = async (id) => {
     if (!confirm('Are you sure you want to delete this task?')) return;
     try {
-      const data = await apiClient.deleteTask(id);
-      if (data.success) {
-        fetchTasks(1, true);
-        triggerToast('Task deleted');
-      }
+      await dispatch(deleteTask(id)).unwrap();
+      triggerToast('Task deleted');
     } catch (err) {
       console.error(err);
     }
@@ -266,15 +244,6 @@ export default function UserProjectPage() {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 3500);
   };
-
-  const copyToClipboard = (text, label) => {
-    navigator.clipboard.writeText(text);
-    triggerToast(`Copied ${label} to clipboard!`);
-  };
-
-  // Report Preview Modal state
-  const [reportModalOpen, setReportModalOpen] = useState(false);
-  const [reportModalTimeframe, setReportModalTimeframe] = useState('all');
 
   const handleOpenReportModal = (tf = 'all') => {
     setReportModalTimeframe(tf);
@@ -318,18 +287,21 @@ export default function UserProjectPage() {
         {/* Filters */}
         <FilterControls
           filterSource={filterSource}
-          setFilterSource={setFilterSource}
+          setFilterSource={(val) => dispatch(setFilterSource(val))}
           filterType={filterType}
-          setFilterType={setFilterType}
+          setFilterType={(val) => dispatch(setFilterType(val))}
           filterProject={decodedProjectName}
           setFilterProject={() => {}}
           filterTimeframe={filterTimeframe}
-          setFilterTimeframe={setFilterTimeframe}
+          setFilterTimeframe={(val) => dispatch(setFilterTimeframe(val))}
           uniqueProjects={[decodedProjectName]}
           tasksLength={tasks.length}
           dynamicFields={dynamicFields}
           customFilters={customFilters}
-          setCustomFilters={setCustomFilters}
+          setCustomFilters={(val) => {
+            const resolved = typeof val === 'function' ? val(customFilters) : val;
+            dispatch(setCustomFilters(resolved));
+          }}
         />
 
         {/* Tasks Table */}
@@ -337,10 +309,10 @@ export default function UserProjectPage() {
           loading={loading && tasks.length === 0}
           tasks={tasks}
           handleQuickStatusChange={handleQuickStatusChange}
-          setActiveHistoryTask={setActiveHistoryTask}
+          setActiveHistoryTask={(val) => dispatch(setActiveHistoryTask(val))}
           handleCopyProjectDetails={() => {}}
           openEditModal={openEditModal}
-          deleteTask={deleteTask}
+          deleteTask={handleDeleteTask}
           dynamicFields={dynamicFields}
         />
 
@@ -365,7 +337,7 @@ export default function UserProjectPage() {
       {/* History Audit Modal */}
       <AuditLogModal
         task={activeHistoryTask}
-        onClose={() => setActiveHistoryTask(null)}
+        onClose={() => dispatch(setActiveHistoryTask(null))}
       />
 
       {/* Report Preview Modal */}

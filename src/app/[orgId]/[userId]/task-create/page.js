@@ -2,13 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { useDispatch } from 'react-redux';
 import Link from 'next/link';
 import { apiClient } from '@/lib/apiClient';
+import { createTask } from '@/lib/store/taskSlice';
 import TaskFormModal from '@/components/TaskFormModal';
 
 export default function UserTaskCreatePage() {
   const { userId, orgId } = useParams();
   const router = useRouter();
+  const dispatch = useDispatch();
 
   const [form, setForm] = useState({
     name: '',
@@ -48,18 +51,27 @@ export default function UserTaskCreatePage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name) return;
+
+    if (!form.name || !form.name.trim()) {
+      alert('Please enter a Task Name.');
+      return;
+    }
+
+    const projectVal = form.dynamicValues?.project || form.project || 'General';
 
     try {
       const payload = {
-        name: form.name,
+        name: form.name.trim(),
         nickName: form.nickName || '',
-        status: form.status,
-        project: form.dynamicValues?.project || form.project || '',
+        status: form.status || 'inprocess',
+        project: projectVal,
         source: form.dynamicValues?.source || form.source || undefined,
         typeOfWork: form.dynamicValues?.typeOfWork || form.typeOfWork || undefined,
         clickupId: form.clickupId,
-        dynamicValues: form.dynamicValues || {},
+        dynamicValues: {
+          ...(form.dynamicValues || {}),
+          project: projectVal
+        },
         bill: {
           allocatedHours: parseFloat(form.allocatedHours || 0),
           billedHours: parseFloat(form.billedHours || 0),
@@ -67,16 +79,15 @@ export default function UserTaskCreatePage() {
         }
       };
 
-      const data = await apiClient.createTask(payload);
-      if (data.success) {
+      const result = await dispatch(createTask(payload)).unwrap();
+      if (result && result.success) {
         router.push(`/${orgId || 'dialedin'}/${userId}`);
-        router.refresh();
       } else {
-        alert(data.error || 'Failed to save task.');
+        alert(result?.error || 'Failed to save task.');
       }
     } catch (err) {
       console.error(err);
-      alert('An error occurred.');
+      alert(typeof err === 'string' ? err : err?.message || 'An error occurred while creating the task.');
     }
   };
 
