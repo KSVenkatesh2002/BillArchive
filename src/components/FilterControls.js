@@ -1,18 +1,7 @@
 'use client';
 
+import { useMemo } from 'react';
 import FilterToggle from './FilterToggle';
-
-const SOURCE_OPTIONS = [
-  { id: 'all', label: 'All' },
-  { id: 'dialedin', label: 'Dialedin' },
-  { id: 'fluent', label: 'Fluent' },
-];
-
-const WORK_TYPE_OPTIONS = [
-  { id: 'all', label: 'All' },
-  { id: 'dev', label: 'Dev' },
-  { id: 'qa', label: 'QA' },
-];
 
 export default function FilterControls({
   filterSource,
@@ -25,29 +14,93 @@ export default function FilterControls({
   setFilterTimeframe,
   uniqueProjects,
   tasksLength,
+  dynamicFields = [],
+  customFilters = {},
+  setCustomFilters = () => {}
 }) {
+  const sourceField = dynamicFields.find(f => f.name === 'source');
+  const typeOfWorkField = dynamicFields.find(f => f.name === 'typeOfWork');
+  const projectField = dynamicFields.find(f => f.name === 'project');
+
+  const sourceOptions = useMemo(() => {
+    if (!sourceField) return [];
+    return [
+      { id: 'all', label: 'All' },
+      ...(sourceField.options || []).map(opt => ({ id: opt, label: opt.charAt(0).toUpperCase() + opt.slice(1) }))
+    ];
+  }, [sourceField]);
+
+  const workTypeOptions = useMemo(() => {
+    if (!typeOfWorkField) return [];
+    return [
+      { id: 'all', label: 'All' },
+      ...(typeOfWorkField.options || []).map(opt => ({ id: opt, label: opt.charAt(0).toUpperCase() + opt.slice(1) }))
+    ];
+  }, [typeOfWorkField]);
+
+  const projectOptions = useMemo(() => {
+    const opts = new Set(uniqueProjects);
+    if (projectField?.options) {
+      projectField.options.forEach(opt => opts.add(opt));
+    }
+    return Array.from(opts);
+  }, [uniqueProjects, projectField]);
+
   return (
     <div className="bg-[#0b0b0b] p-4 rounded-2xl border border-zinc-800/80 mb-6 flex flex-wrap items-center justify-between gap-4">
       <div className="flex flex-wrap items-center gap-3">
         {/* Source Filter */}
-        <FilterToggle
-          label="Source"
-          value={filterSource}
-          options={SOURCE_OPTIONS}
-          onChange={setFilterSource}
-        />
+        {sourceField && (
+          <FilterToggle
+            label="Source"
+            value={filterSource}
+            options={sourceOptions}
+            onChange={setFilterSource}
+          />
+        )}
 
         {/* Type of Work Filter */}
-        <FilterToggle
-          label="Type of Work"
-          value={filterType}
-          options={WORK_TYPE_OPTIONS}
-          onChange={setFilterType}
-          activeColorClass="bg-cyan-600 text-white shadow"
-        />
+        {typeOfWorkField && (
+          <FilterToggle
+            label="Type of Work"
+            value={filterType}
+            options={workTypeOptions}
+            onChange={setFilterType}
+            activeColorClass="bg-cyan-600 text-white shadow"
+          />
+        )}
+
+        {/* Dynamic Custom Filters */}
+        {dynamicFields
+          .filter(f => f.name !== 'source' && f.name !== 'typeOfWork' && f.name !== 'project')
+          .map(field => {
+            const value = customFilters[field.name] || 'all';
+            const onChange = (val) => setCustomFilters(prev => ({ ...prev, [field.name]: val }));
+
+            const options = field.type === 'toggle'
+              ? [
+                  { id: 'all', label: 'All' },
+                  { id: 'true', label: 'Yes' },
+                  { id: 'false', label: 'No' }
+                ]
+              : [
+                  { id: 'all', label: 'All' },
+                  ...(field.options || []).map(opt => ({ id: opt, label: opt.charAt(0).toUpperCase() + opt.slice(1) }))
+                ];
+
+            return (
+              <FilterToggle
+                key={field.name}
+                label={field.label}
+                value={value}
+                options={options}
+                onChange={onChange}
+              />
+            );
+          })}
 
         {/* Project Filter */}
-        {setFilterProject && filterProject !== undefined && (
+        {projectField && setFilterProject && filterProject !== undefined && (
           <div>
             <label className="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Project</label>
             <select
@@ -56,7 +109,7 @@ export default function FilterControls({
               className="bg-black border border-zinc-800 rounded-xl px-3 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-indigo-500"
             >
               <option value="all">All Projects</option>
-              {uniqueProjects.map((p) => (
+              {projectOptions.map((p) => (
                 <option key={p} value={p}>{p}</option>
               ))}
             </select>

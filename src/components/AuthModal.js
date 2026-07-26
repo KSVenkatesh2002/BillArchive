@@ -34,17 +34,37 @@ export default function AuthModal({ show, onClose, mode, setMode, form, onChange
  
         <form onSubmit={onSubmit} className="space-y-4">
           {mode === 'register' && (
-            <div>
-              <label className="block text-xs text-zinc-300 font-semibold mb-1">Full Name</label>
-              <input
-                type="text"
-                placeholder="e.g. Alex Mercer"
-                value={form.name}
-                onChange={(e) => onChange({ ...form, name: e.target.value })}
-                className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-650 focus:outline-none focus:border-orange-500"
-                required
-              />
-            </div>
+            <>
+              <div className="p-3 bg-zinc-900/40 border border-zinc-800/60 rounded-xl space-y-3">
+                <span className="text-[10px] font-bold text-orange-400 uppercase tracking-wider block">Organization Details</span>
+                <div>
+                  <label className="block text-xs text-zinc-300 font-semibold mb-1">Organization Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Acme Corp"
+                    value={form.orgName || ''}
+                    onChange={(e) => onChange({ ...form, orgName: e.target.value })}
+                    className="w-full bg-black border border-zinc-805 rounded-xl px-3.5 py-2 text-xs text-white placeholder-zinc-650 focus:outline-none focus:border-orange-500"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="p-3 bg-zinc-900/40 border border-zinc-800/60 rounded-xl space-y-3">
+                <span className="text-[10px] font-bold text-orange-400 uppercase tracking-wider block">Admin Credentials</span>
+                <div>
+                  <label className="block text-xs text-zinc-300 font-semibold mb-1">Full Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Alex Mercer"
+                    value={form.name || ''}
+                    onChange={(e) => onChange({ ...form, name: e.target.value })}
+                    className="w-full bg-black border border-zinc-805 rounded-xl px-3.5 py-2 text-xs text-white placeholder-zinc-650 focus:outline-none focus:border-orange-500"
+                    required
+                  />
+                </div>
+              </div>
+            </>
           )}
  
           <div>
@@ -52,9 +72,9 @@ export default function AuthModal({ show, onClose, mode, setMode, form, onChange
             <input
               type="text"
               placeholder="e.g. alex_dev"
-              value={form.username}
+              value={form.username || ''}
               onChange={(e) => onChange({ ...form, username: e.target.value })}
-              className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-650 focus:outline-none focus:border-indigo-500"
+              className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-650 focus:outline-none focus:border-orange-500"
               required
             />
           </div>
@@ -65,7 +85,7 @@ export default function AuthModal({ show, onClose, mode, setMode, form, onChange
               <input
                 type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
-                value={form.password}
+                value={form.password || ''}
                 onChange={(e) => onChange({ ...form, password: e.target.value })}
                 className="w-full bg-black border border-zinc-800 rounded-xl pl-3.5 pr-10 py-2.5 text-xs text-white placeholder-zinc-650 focus:outline-none focus:border-orange-500"
                 required
@@ -85,6 +105,7 @@ export default function AuthModal({ show, onClose, mode, setMode, form, onChange
             </div>
           </div>
 
+
           <button
             type="submit"
             className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs py-3 rounded-xl transition shadow-lg shadow-orange-600/20"
@@ -100,7 +121,7 @@ export default function AuthModal({ show, onClose, mode, setMode, form, onChange
           <button
             onClick={() => {
               setMode(mode === 'login' ? 'register' : 'login');
-              onChange({ username: '', password: '', name: '' });
+              onChange({ username: '', password: '', name: '', orgName: '' });
             }}
             className="text-orange-400 hover:underline font-semibold"
           >

@@ -26,7 +26,9 @@ export default function VisualSitemap() {
     check();
   }, []);
 
-  const username = currentUser?.username || 'admin';
+  const orgId = currentUser?.orgId || 'dialedin';
+  const userId = currentUser?.userId || currentUser?.id || 'admin';
+  const dashboardPath = `/${orgId}/${userId}`;
 
   return (
     <div className="min-h-screen bg-black text-zinc-150 font-sans selection:bg-orange-500 selection:text-white p-4 sm:p-6 lg:p-8 relative overflow-hidden">
@@ -39,7 +41,7 @@ export default function VisualSitemap() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-6 border-b border-zinc-800 gap-4">
           <div className="flex items-center gap-3">
             <Link
-              href={currentUser ? `/${username}` : "/"}
+              href={currentUser ? dashboardPath : "/"}
               className="h-10 w-10 bg-zinc-900 hover:bg-zinc-800 rounded-xl border border-zinc-800 flex items-center justify-center transition-colors font-black text-white text-lg"
               title="Return to main dashboard"
             >
@@ -58,7 +60,7 @@ export default function VisualSitemap() {
             </div>
           </div>
           <Link
-            href={currentUser ? `/${username}` : "/"}
+            href={currentUser ? dashboardPath : "/"}
             className="text-xs bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 px-4 py-2 rounded-xl transition"
           >
             ← Return Home
@@ -74,7 +76,7 @@ export default function VisualSitemap() {
             </div>
             <p className="text-[11px] text-zinc-450">
               {currentUser
-                ? `Active dynamic paths will link directly to @${currentUser.username}'s personalized views.`
+                ? `Active dynamic paths will link directly to your personalized views.`
                 : 'Log in to unlock and interact with personalized dynamic routes.'
               }
             </p>
@@ -167,7 +169,7 @@ export default function VisualSitemap() {
                     <Layout className="w-3.5 h-3.5 text-zinc-450" />
                     <span>Personal Dashboard</span>
                   </span>
-                  <Link href={`/${username}`} className="text-orange-400 hover:text-orange-300 text-[11px] font-semibold flex items-center gap-0.5">
+                  <Link href={dashboardPath} className="text-orange-400 hover:text-orange-300 text-[11px] font-semibold flex items-center gap-0.5">
                     <span>Visit</span>
                     <ArrowRight className="w-3 h-3" />
                   </Link>
@@ -176,7 +178,7 @@ export default function VisualSitemap() {
                   Your primary workspace display tasks table, metrics breakdown, and interactive reports copy.
                 </p>
                 <div className="text-[10px] font-mono text-zinc-650 bg-black/40 px-2 py-1 rounded border border-zinc-900 w-fit">
-                  /{username}
+                  /[orgId]/[userId]
                 </div>
               </div>
 
@@ -187,7 +189,7 @@ export default function VisualSitemap() {
                     <PlusCircle className="w-3.5 h-3.5 text-zinc-450" />
                     <span>New Task Form</span>
                   </span>
-                  <Link href={`/${username}/task-create`} className="text-orange-400 hover:text-orange-300 text-[11px] font-semibold flex items-center gap-0.5">
+                  <Link href={`${dashboardPath}/task-create`} className="text-orange-400 hover:text-orange-300 text-[11px] font-semibold flex items-center gap-0.5">
                     <span>Open</span>
                     <ArrowRight className="w-3 h-3" />
                   </Link>
@@ -196,7 +198,7 @@ export default function VisualSitemap() {
                   Quickly initialize new tasks, input allocations, and auto-parse ClickUp ticket paths.
                 </p>
                 <div className="text-[10px] font-mono text-zinc-650 bg-black/40 px-2 py-1 rounded border border-zinc-900 w-fit">
-                  /{username}/task-create
+                  /[orgId]/[userId]/task-create
                 </div>
               </div>
 
@@ -207,7 +209,7 @@ export default function VisualSitemap() {
                     <Folder className="w-3.5 h-3.5 text-zinc-450" />
                     <span>Project Scopes</span>
                   </span>
-                  <Link href={`/${username}/project/BillArchive`} className="text-orange-400 hover:text-orange-300 text-[11px] font-semibold flex items-center gap-0.5">
+                  <Link href={`${dashboardPath}/project/BillArchive`} className="text-orange-400 hover:text-orange-300 text-[11px] font-semibold flex items-center gap-0.5">
                     <span>Demo</span>
                     <ArrowRight className="w-3 h-3" />
                   </Link>
@@ -216,7 +218,7 @@ export default function VisualSitemap() {
                   Clean isolation filters to view tasks scoped only to a specific project name query.
                 </p>
                 <div className="text-[10px] font-mono text-zinc-650 bg-black/40 px-2 py-1 rounded border border-zinc-900 w-fit">
-                  /{username}/project/[name]
+                  /[orgId]/[userId]/project/[name]
                 </div>
               </div>
 
@@ -224,7 +226,7 @@ export default function VisualSitemap() {
               <div className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-4 space-y-2 hover:border-zinc-700 transition">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-white">Profile Details</span>
-                  <Link href="/profile" className="text-orange-400 hover:text-orange-300 text-[11px] font-semibold flex items-center gap-0.5">
+                  <Link href={`${dashboardPath}/profile`} className="text-orange-400 hover:text-orange-300 text-[11px] font-semibold flex items-center gap-0.5">
                     <span>Visit</span>
                     <ArrowRight className="w-3 h-3" />
                   </Link>
@@ -233,7 +235,7 @@ export default function VisualSitemap() {
                   Manage personal parameters (name, bio, email, clickup API keys) or soft-delete accounts.
                 </p>
                 <div className="text-[10px] font-mono text-zinc-600 bg-black/40 px-2 py-1 rounded border border-zinc-900 w-fit">
-                  /profile
+                  /[orgId]/[userId]/profile
                 </div>
               </div>
             </div>
@@ -254,7 +256,7 @@ export default function VisualSitemap() {
                     <Settings2 className="w-3.5 h-3.5 text-zinc-450" />
                     <span>Diagnostics & Ledger</span>
                   </span>
-                  <Link href="/admin" className="text-orange-400 hover:text-orange-300 text-[11px] font-semibold flex items-center gap-0.5">
+                  <Link href="/superadmin" className="text-orange-400 hover:text-orange-300 text-[11px] font-semibold flex items-center gap-0.5">
                     <span>Enter</span>
                     <ArrowRight className="w-3 h-3" />
                   </Link>
@@ -263,7 +265,7 @@ export default function VisualSitemap() {
                   Restricted to system operators. Grants direct visibility of user logs, invoice ledger lists, and Atlas connection adaptors.
                 </p>
                 <div className="text-[10px] font-mono text-zinc-650 bg-black/40 px-2 py-1 rounded border border-zinc-900 w-fit">
-                  /admin
+                  /superadmin
                 </div>
               </div>
 

@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AuthModal from '@/components/AuthModal';
+import { apiClient } from '@/lib/apiClient';
 
 export default function RegisterModal() {
-  const [form, setForm] = useState({ username: '', password: '', name: '' });
+  const [form, setForm] = useState({ username: '', password: '', name: '', orgName: '' });
   const [error, setError] = useState('');
   const [mode, setMode] = useState('register');
   const router = useRouter();
@@ -14,20 +15,22 @@ export default function RegisterModal() {
     e.preventDefault();
     setError('');
 
-    const endpoint = mode === 'login' ? '/api/auth/login' : '/api/auth/register';
-
     try {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
+      const data = mode === 'login' 
+        ? await apiClient.login(form.username, form.password)
+        : await apiClient.register(form.name, form.username, form.password, form.orgName);
 
       if (data.success) {
+        const userId = data.user?.id || data.user?.userId;
+        const orgId = data.user?.orgId || 'dialedin';
+        const role = data.user?.role || 'user';
         router.back();
         setTimeout(() => {
-          window.location.reload();
+          if (role === 'superAdmin' || (data.user?.username || '').toLowerCase() === 'admin') {
+            window.location.href = '/superadmin';
+          } else {
+            window.location.href = `/${orgId}/${userId}`;
+          }
         }, 100);
       } else {
         setError(data.error || 'Authentication failed');

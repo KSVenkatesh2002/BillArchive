@@ -10,17 +10,19 @@ export async function GET(request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const source = searchParams.get('source');
-    const project = searchParams.get('project');
-    const typeOfWork = searchParams.get('typeOfWork');
-    const timeframe = searchParams.get('timeframe');
+    const filters = {};
+    for (const [key, value] of searchParams.entries()) {
+      if (key !== 'page' && key !== 'limit') {
+        filters[key] = value;
+      }
+    }
 
     const page = searchParams.get('page') || '1';
     const limit = searchParams.get('limit') || '15';
 
     const result = await taskService.getTasks(
       user.userId,
-      { source, project, typeOfWork, timeframe },
+      filters,
       { page, limit }
     );
 

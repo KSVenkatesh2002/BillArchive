@@ -13,9 +13,12 @@ export default function TaskTable({
   handleCopyProjectDetails,
   openEditModal,
   deleteTask,
+  dynamicFields = [],
 }) {
+  const customCols = dynamicFields.filter(f => f.name !== 'project');
   const params = useParams();
-  const username = params?.username || 'admin';
+  const userId = params?.userId || 'admin';
+  const orgId = params?.orgId || 'dialedin';
   const [statuses, setStatuses] = useState([]);
 
   useEffect(() => {
@@ -75,8 +78,9 @@ export default function TaskTable({
                 <th className="py-3.5 px-3">Status</th>
                 <th className="py-3.5 px-3 text-center">Status History</th>
                 <th className="py-3.5 px-3 text-center">Hours (Alloc / Bill / Act)</th>
-                <th className="py-3.5 px-3 text-center">Source</th>
-                <th className="py-3.5 px-3 text-center">Work Type</th>
+                {customCols.map(col => (
+                  <th key={col.name} className="py-3.5 px-3 text-center">{col.label}</th>
+                ))}
                 <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
@@ -125,7 +129,7 @@ export default function TaskTable({
                     <td className="py-3.5 px-3">
                       <div className="flex items-center gap-2">
                         <Link
-                          href={`/${username}/project/${encodeURIComponent(task.project)}`}
+                          href={`/${orgId}/${userId}/project/${encodeURIComponent(task.project)}`}
                           className="font-semibold text-zinc-200 bg-black hover:bg-zinc-900 hover:text-white px-2.5 py-1 rounded-lg border border-zinc-800/80 transition-colors inline-flex items-center gap-1.5"
                           title={`View workspace tasks for project "${task.project}"`}
                         >
@@ -182,28 +186,24 @@ export default function TaskTable({
                         <span className="text-yellow-500 font-bold" title="Actual Hours">{task.bill?.actualHours || 0}h</span>
                       </div>
                     </td>
-
-                    {/* Source Badge */}
-                    <td className="py-3.5 px-3 text-center">
-                      <span className={`inline-block px-2.5 py-0.5 rounded-md font-bold uppercase text-[10px] ${
-                         task.source === 'fluent'
-                           ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
-                           : 'bg-orange-500/10 text-orange-300 border border-orange-500/20'
-                      }`}>
-                        {task.source}
-                      </span>
-                    </td>
-
-                    {/* Work Type Badge */}
-                    <td className="py-3.5 px-3 text-center">
-                      <span className={`inline-block px-2.5 py-0.5 rounded-md font-bold text-[10px] ${
-                         task.typeOfWork === 'qa'
-                           ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
-                           : 'bg-zinc-900 text-zinc-300 border border-zinc-800'
-                      }`}>
-                        {task.typeOfWork}
-                      </span>
-                    </td>
+                    
+                    {customCols.map(col => {
+                      const val = task.dynamicValues?.[col.name] ?? task[col.name] ?? 'N/A';
+                      const displayVal = typeof val === 'boolean' ? (val ? 'Yes' : 'No') : String(val);
+                      return (
+                        <td key={col.name} className="py-3.5 px-3 text-center">
+                          <span className={`inline-block px-2.5 py-0.5 rounded-md font-bold text-[10px] ${
+                            col.name === 'source'
+                              ? (val === 'fluent' ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20' : 'bg-orange-500/10 text-orange-300 border border-orange-500/20')
+                              : col.name === 'typeOfWork'
+                              ? (val === 'qa' ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20' : 'bg-zinc-900 text-zinc-350 border border-zinc-800')
+                              : 'bg-zinc-900 text-zinc-300 border border-zinc-850'
+                          }`}>
+                            {displayVal}
+                          </span>
+                        </td>
+                      );
+                    })}
 
                     {/* Action buttons */}
                     <td className="py-3.5 px-4 text-right">

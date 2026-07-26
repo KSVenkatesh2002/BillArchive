@@ -17,10 +17,12 @@ const TaskSchema = new mongoose.Schema({
     billedHours: { type: Number, default: 0 },
     actualHours: { type: Number, default: 0 }
   },
-  project: { type: String, required: true },
+  project: { type: String, default: '' },
   source: { type: mongoose.Schema.Types.ObjectId, ref: 'Source' },
   typeOfWork: { type: mongoose.Schema.Types.ObjectId, ref: 'TypeOfWork' },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  organization: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization' },
+  dynamicValues: { type: mongoose.Schema.Types.Mixed, default: {} },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });

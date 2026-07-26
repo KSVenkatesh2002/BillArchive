@@ -131,5 +131,30 @@ export const dbService = {
   async getTypesOfWork() {
     const adapter = await getAdapter();
     return adapter.getTypesOfWork();
+  },
+
+  async findOrganizationById(id) {
+    const adapter = await getAdapter();
+    return adapter.findOrganizationById(id);
+  },
+
+  async findOrganizationBySlug(slug) {
+    const adapter = await getAdapter();
+    return adapter.findOrganizationBySlug(slug);
+  },
+
+  async createOrganization(orgDoc) {
+    const adapter = await getAdapter();
+    return adapter.createOrganization(orgDoc);
+  },
+
+  async updateOrganizationConfig(id, dynamicFields) {
+    const adapter = await getAdapter();
+    return adapter.updateOrganizationConfig(id, dynamicFields);
+  },
+
+  async getOrganizations() {
+    const adapter = await getAdapter();
+    return adapter.getOrganizations();
   }
 };

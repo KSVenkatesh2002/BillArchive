@@ -19,11 +19,11 @@ export const apiClient = {
     return res.json();
   },
 
-  async register(name, username, password) {
+  async register(name, username, password, orgName) {
     const res = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, username, password }),
+      body: JSON.stringify({ name, username, password, orgName }),
     });
     return res.json();
   },
@@ -35,12 +35,14 @@ export const apiClient = {
 
   // Tasks
   async getTasks(params = {}) {
-    const { page = 1, limit = 15, timeframe = 'all', source, typeOfWork, project } = params;
+    const { page = 1, limit = 15, timeframe = 'all', ...filters } = params;
     let url = `/api/tasks?page=${page}&limit=${limit}&timeframe=${timeframe}`;
 
-    if (source && source !== 'all') url += `&source=${source}`;
-    if (typeOfWork && typeOfWork !== 'all') url += `&typeOfWork=${typeOfWork}`;
-    if (project && project !== 'all') url += `&project=${encodeURIComponent(project)}`;
+    Object.entries(filters).forEach(([key, val]) => {
+      if (val !== undefined && val !== null && val !== 'all' && val !== '') {
+        url += `&${key}=${encodeURIComponent(val)}`;
+      }
+    });
 
     const res = await fetch(url);
     return res.json();
@@ -120,6 +122,20 @@ export const apiClient = {
   async deleteAccount() {
     const res = await fetch('/api/auth/profile', {
       method: 'DELETE'
+    });
+    return res.json();
+  },
+
+  async getOrganizationUsers() {
+    const res = await fetch('/api/organization/users');
+    return res.json();
+  },
+
+  async createOrganizationUser(userData) {
+    const res = await fetch('/api/organization/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(userData)
     });
     return res.json();
   }

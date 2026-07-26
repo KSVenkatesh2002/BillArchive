@@ -55,22 +55,28 @@ export const authService = {
       role: user.role,
     });
 
+    const orgId = user.organization?._id 
+      ? user.organization._id.toString() 
+      : (user.organization ? user.organization.toString() : '');
+
     return {
       token,
       user: {
         id: user._id.toString(),
         username: user.username,
-        name: user.name
+        name: user.name,
+        role: user.role,
+        orgId
       }
     };
   },
 
   /**
-   * Register a new user
+   * Register a new user and create an organization
    */
-  async register(name, usernameInput, password) {
-    if (!name || !usernameInput || !password) {
-      throw new Error('Name, username, and password are required.');
+  async register(name, usernameInput, password, orgName) {
+    if (!name || !usernameInput || !password || !orgName) {
+      throw new Error('Name, username, password, and organization name are required.');
     }
 
     const existingUser = await dbService.findUserByUsername(usernameInput);
@@ -78,11 +84,32 @@ export const authService = {
       throw new Error('Username already taken.');
     }
 
+    // Auto-generate organization slug internally
+    let orgSlug = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    if (!orgSlug) {
+      orgSlug = `org-${Date.now().toString().slice(-4)}`;
+    }
+
+    let suffix = 1;
+    let finalSlug = orgSlug;
+    while (await dbService.findOrganizationBySlug(finalSlug)) {
+      finalSlug = `${orgSlug}-${suffix}`;
+      suffix++;
+    }
+
+    // Create the organization first
+    const createdOrg = await dbService.createOrganization({
+      name: orgName,
+      slug: finalSlug
+    });
+
     const hashedPassword = await hashPassword(password);
     const newUserDoc = {
       name,
       username: usernameInput.toLowerCase(),
       password: hashedPassword,
+      role: 'admin',
+      organization: createdOrg._id,
       createdAt: new Date()
     };
 
@@ -99,7 +126,9 @@ export const authService = {
       user: {
         id: createdUser._id.toString(),
         username: createdUser.username,
-        name: createdUser.name
+        name: createdUser.name,
+        role: createdUser.role,
+        orgId: createdOrg._id.toString()
       }
     };
   }

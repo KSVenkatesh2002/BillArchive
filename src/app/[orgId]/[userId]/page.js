@@ -2,20 +2,22 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { apiClient } from '@/lib/apiClient';
+import { Zap, LayoutGrid, List } from 'lucide-react';
+
+// Import child components
 import Header from '@/components/Header';
 import MetricsBar from '@/components/MetricsBar';
 import FilterControls from '@/components/FilterControls';
 import TaskTable from '@/components/TaskTable';
+import TaskCards from '@/components/TaskCards';
 import Toast from '@/components/Toast';
-import TaskFormModal from '@/components/TaskFormModal';
 import AuditLogModal from '@/components/AuditLogModal';
+import TaskFormModal from '@/components/TaskFormModal';
 import ReportPreviewModal from '@/components/ReportPreviewModal';
 
-export default function UserProjectPage() {
-  const { username, name } = useParams();
-  const decodedProjectName = decodeURIComponent(name);
+export default function UserDashboard() {
+  const { userId, orgId } = useParams();
   const router = useRouter();
 
   // Auth state
@@ -27,10 +29,14 @@ export default function UserProjectPage() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
+  const [dynamicFields, setDynamicFields] = useState([]);
   const [filterSource, setFilterSource] = useState('all');
   const [filterType, setFilterType] = useState('all');
+  const [filterProject, setFilterProject] = useState('all');
   const [filterTimeframe, setFilterTimeframe] = useState('all');
+  const [customFilters, setCustomFilters] = useState({});
   const [isDemo, setIsDemo] = useState(false);
+  const [viewMode, setViewMode] = useState('table');
   const [metrics, setMetrics] = useState({
     totalAllocated: 0,
     totalBilled: 0,
@@ -39,22 +45,27 @@ export default function UserProjectPage() {
     variance: 0
   });
 
-  // Modal states
+  // Edit Task Modal state (Creation uses /task-create route)
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [taskForm, setTaskForm] = useState({
     name: '',
     nickName: '',
     status: 'inprocess',
-    project: decodedProjectName,
+    project: '',
     source: 'dialedin',
     typeOfWork: 'dev',
     allocatedHours: '',
     billedHours: '',
     actualHours: '',
-    clickupId: ''
+    clickupId: '',
+    dynamicValues: {}
   });
+
+  // History Audit Modal state
   const [activeHistoryTask, setActiveHistoryTask] = useState(null);
+
+  // Copy Feedback Toast
   const [toastMessage, setToastMessage] = useState('');
 
   // Check auth
@@ -63,8 +74,8 @@ export default function UserProjectPage() {
       const data = await apiClient.checkAuth();
       if (data.authenticated) {
         setCurrentUser(data.user);
-        if (data.user.username !== username) {
-          router.push(`/${data.user.username}/project/${name}`);
+        if (data.user.userId !== userId || data.user.orgId !== orgId) {
+          router.push(`/${data.user.orgId || 'dialedin'}/${data.user.userId}`);
         }
       } else {
         router.push('/login');
@@ -75,7 +86,7 @@ export default function UserProjectPage() {
     }
   };
 
-  // Fetch paginated tasks for project
+  // Fetch paginated tasks
   const fetchTasks = async (pageNum, reset = false) => {
     setLoading(true);
     try {
@@ -85,7 +96,8 @@ export default function UserProjectPage() {
         timeframe: filterTimeframe,
         source: filterSource,
         typeOfWork: filterType,
-        project: decodedProjectName
+        project: filterProject,
+        ...customFilters
       });
 
       if (data.success) {
@@ -104,12 +116,30 @@ export default function UserProjectPage() {
     }
   };
 
-  // Reset page and reload when filters change
+  const fetchOrgConfig = async () => {
+    try {
+      const res = await fetch('/api/organization/config').then((r) => r.json());
+      if (res.success && res.organization) {
+        setDynamicFields(res.organization.dynamicFields || []);
+      }
+    } catch (err) {
+      console.error('Failed to load organization config:', err);
+    }
+  };
+
   useEffect(() => {
     checkAuth();
+    fetchOrgConfig();
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setViewMode('cards');
+    }
+  }, []);
+
+  // Reset page and list on filter change
+  useEffect(() => {
     setPage(1);
     fetchTasks(1, true);
-  }, [filterSource, filterType, filterTimeframe]);
+  }, [filterSource, filterType, filterProject, filterTimeframe, customFilters]);
 
   // Load next page on scroll reach end
   const handleScroll = () => {
@@ -131,13 +161,23 @@ export default function UserProjectPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [hasMore, loading]);
 
+  // Handle Logout (Clear tasks & state)
   const handleLogout = async () => {
     await apiClient.logout();
     setCurrentUser(null);
     setTasks([]);
+    setMetrics({
+      totalAllocated: 0,
+      totalBilled: 0,
+      totalActual: 0,
+      completedCount: 0,
+      variance: 0
+    });
+    triggerToast('Logged out successfully');
     router.push('/');
   };
 
+  // Quick Status change directly from the desktop list
   const handleQuickStatusChange = async (taskId, newStatus) => {
     try {
       const data = await apiClient.updateTask(taskId, { status: newStatus });
@@ -150,6 +190,7 @@ export default function UserProjectPage() {
     }
   };
 
+  // Handle Save (Edit Mode)
   const handleSaveTask = async (e) => {
     e.preventDefault();
     if (!taskForm.name || !taskForm.project) return;
@@ -163,6 +204,7 @@ export default function UserProjectPage() {
         source: taskForm.source,
         typeOfWork: taskForm.typeOfWork,
         clickupId: taskForm.clickupId,
+        dynamicValues: taskForm.dynamicValues || {},
         bill: {
           allocatedHours: parseFloat(taskForm.allocatedHours || 0),
           billedHours: parseFloat(taskForm.billedHours || 0),
@@ -170,15 +212,12 @@ export default function UserProjectPage() {
         }
       };
 
-      const data = editingTask 
-        ? await apiClient.updateTask(editingTask._id, payload)
-        : await apiClient.createTask(payload);
-
+      const data = await apiClient.updateTask(editingTask._id, payload);
       if (data.success) {
         setShowTaskModal(false);
         setEditingTask(null);
         fetchTasks(1, true);
-        triggerToast(editingTask ? 'Task updated successfully!' : 'New task created!');
+        triggerToast('Task updated successfully!');
       } else {
         alert(data.error || 'Failed to save task.');
       }
@@ -201,6 +240,7 @@ export default function UserProjectPage() {
       billedHours: task.bill?.billedHours || '',
       actualHours: task.bill?.actualHours || '',
       clickupId: task.clickupId || '',
+      dynamicValues: task.dynamicValues || {}
     });
     setShowTaskModal(true);
   };
@@ -223,78 +263,143 @@ export default function UserProjectPage() {
     setTimeout(() => setToastMessage(''), 3500);
   };
 
+  // Report Preview Modal state
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [reportModalProject, setReportModalProject] = useState('all');
+  const [reportModalTimeframe, setReportModalTimeframe] = useState('all');
+
+  const handleOpenReportModal = (tf = 'all', proj = 'all') => {
+    setReportModalTimeframe(tf);
+    setReportModalProject(proj);
+    setReportModalOpen(true);
+  };
+
   const copyToClipboard = (text, label) => {
     navigator.clipboard.writeText(text);
     triggerToast(`Copied ${label} to clipboard!`);
   };
 
-  // Report Preview Modal state
-  const [reportModalOpen, setReportModalOpen] = useState(false);
-  const [reportModalTimeframe, setReportModalTimeframe] = useState('all');
-
-  const handleOpenReportModal = (tf = 'all') => {
-    setReportModalTimeframe(tf);
-    setReportModalOpen(true);
+  // Generate Copy Text for Timeframe Report (1 Week or 1 Month)
+  const handleCopyTimeframeReport = (tf) => {
+    handleOpenReportModal(tf, 'all');
   };
+
+  // Generate Copy Text for a Specific Project
+  const handleCopyProjectDetails = (projectName) => {
+    handleOpenReportModal('all', projectName);
+  };
+
+  // Memoized derived calculations for unique projects
+  const uniqueProjects = useMemo(() => {
+    return Array.from(new Set(tasks.map(t => t.project))).filter(Boolean);
+  }, [tasks]);
 
   return (
     <div className="min-h-screen bg-black text-slate-100 font-sans selection:bg-orange-500 selection:text-white">
       <Toast message={toastMessage} />
 
       <div className="relative max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Header */}
+        {/* Top Navbar Header */}
         <Header
           currentUser={currentUser}
-          onCopy1Wk={() => handleOpenReportModal('1w')}
-          onCopy1Mo={() => handleOpenReportModal('1m')}
+          onCopy1Wk={() => handleOpenReportModal('1w', 'all')}
+          onCopy1Mo={() => handleOpenReportModal('1m', 'all')}
           onLogout={handleLogout}
         />
 
-        {/* Back navigation & Project Title */}
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-zinc-800 pb-4 gap-3">
-          <div className="flex items-center gap-3">
-            <Link href={`/${username}`} className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:text-white text-zinc-300 px-3 py-1.5 rounded-lg text-xs font-semibold transition">
-              ← Dashboard
-            </Link>
-            <h2 className="text-xl font-black text-white">
-              Project: <span className="text-orange-400 font-mono">{decodedProjectName}</span>
-            </h2>
+        {/* Status Notification for Demo Mode */}
+        {isDemo && (
+          <div className="mb-6 p-3 rounded-xl bg-amber-950/20 border border-amber-900/30 text-amber-300 text-xs flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Zap className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>Running in Live Demo Mode. Configure <code className="bg-amber-900/40 px-1 rounded">MONGODB_URI</code> in <code className="bg-amber-900/40 px-1 rounded">.env.local</code> for persistent Atlas database storage.</span>
+            </div>
           </div>
-          <span className="text-xs text-zinc-400">
-            Active workspace scoping
-          </span>
-        </div>
+        )}
 
-        {/* Metrics Bar */}
+        {/* Dashboard Metrics Bar */}
         <MetricsBar
           tasksLength={tasks.length}
           metrics={metrics}
         />
 
-        {/* Filters */}
+        {/* Filter Controls Bar */}
         <FilterControls
           filterSource={filterSource}
           setFilterSource={setFilterSource}
           filterType={filterType}
           setFilterType={setFilterType}
-          filterProject={decodedProjectName}
-          setFilterProject={() => {}}
+          filterProject={filterProject}
+          setFilterProject={setFilterProject}
           filterTimeframe={filterTimeframe}
           setFilterTimeframe={setFilterTimeframe}
-          uniqueProjects={[decodedProjectName]}
+          uniqueProjects={uniqueProjects}
           tasksLength={tasks.length}
+          dynamicFields={dynamicFields}
+          customFilters={customFilters}
+          setCustomFilters={setCustomFilters}
         />
 
-        {/* Tasks Table */}
-        <TaskTable
-          loading={loading && tasks.length === 0}
-          tasks={tasks}
-          handleQuickStatusChange={handleQuickStatusChange}
-          setActiveHistoryTask={setActiveHistoryTask}
-          handleCopyProjectDetails={() => {}}
-          openEditModal={openEditModal}
-          deleteTask={deleteTask}
-        />
+        {/* View Mode Toggle Header */}
+        <div className="flex items-center justify-between mb-4 mt-2">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-2">
+            <span>Task Directory</span>
+            <span className="text-[10px] lowercase font-normal px-2 py-0.5 rounded-full bg-zinc-900 text-zinc-500 border border-zinc-800">
+              {viewMode === 'table' ? 'table view' : 'card view'}
+            </span>
+          </h2>
+          <div className="flex items-center bg-zinc-950 border border-zinc-800 rounded-xl p-1 shadow-inner">
+            <button
+              onClick={() => setViewMode('table')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 ${
+                viewMode === 'table'
+                  ? 'bg-zinc-900 text-white border border-zinc-800 shadow'
+                  : 'text-zinc-500 hover:text-zinc-300'
+              }`}
+              title="Table View (Desktop Preferred)"
+            >
+              <List className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Table</span>
+            </button>
+            <button
+              onClick={() => setViewMode('cards')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 ${
+                viewMode === 'cards'
+                  ? 'bg-zinc-900 text-white border border-zinc-800 shadow'
+                  : 'text-zinc-500 hover:text-zinc-350'
+              }`}
+              title="Card View (Mobile Preferred)"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Cards</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Task Data Display */}
+        {viewMode === 'table' ? (
+          <TaskTable
+            loading={loading && tasks.length === 0}
+            tasks={tasks}
+            handleQuickStatusChange={handleQuickStatusChange}
+            setActiveHistoryTask={setActiveHistoryTask}
+            handleCopyProjectDetails={handleCopyProjectDetails}
+            openEditModal={openEditModal}
+            deleteTask={deleteTask}
+            dynamicFields={dynamicFields}
+          />
+        ) : (
+          <TaskCards
+            loading={loading && tasks.length === 0}
+            tasks={tasks}
+            handleQuickStatusChange={handleQuickStatusChange}
+            setActiveHistoryTask={setActiveHistoryTask}
+            handleCopyProjectDetails={handleCopyProjectDetails}
+            openEditModal={openEditModal}
+            deleteTask={deleteTask}
+            dynamicFields={dynamicFields}
+          />
+        )}
 
         {/* Infinite Scroll loading indicator */}
         {loading && tasks.length > 0 && (
@@ -304,10 +409,10 @@ export default function UserProjectPage() {
         )}
       </div>
 
-      {/* Task Create/Edit Modal */}
+      {/* Task Edit Modal */}
       <TaskFormModal
         show={showTaskModal}
-        isEdit={!!editingTask}
+        isEdit={true}
         form={taskForm}
         onChange={setTaskForm}
         onSubmit={handleSaveTask}
@@ -324,9 +429,9 @@ export default function UserProjectPage() {
       <ReportPreviewModal
         isOpen={reportModalOpen}
         onClose={() => setReportModalOpen(false)}
-        initialProject={decodedProjectName}
+        initialProject={reportModalProject}
         initialTimeframe={reportModalTimeframe}
-        projectsList={[decodedProjectName]}
+        projectsList={uniqueProjects}
       />
     </div>
   );

@@ -6,10 +6,28 @@ import TypeOfWork from './models/TypeOfWork';
 import Task from './models/Task';
 import Bill from './models/Bill';
 import Setting from './models/Setting';
+import Organization from './models/Organization';
 
 const uri = process.env.MONGODB_URI;
 
 let isConnected = false;
+
+async function ensureDefaultOrganization() {
+  await connectMongoose();
+  let org = await Organization.findOne({ slug: 'dialedin' });
+  if (!org) {
+    org = await Organization.create({
+      name: 'DialedIn',
+      slug: 'dialedin',
+      dynamicFields: [
+        { name: 'source', label: 'Source', type: 'dropdown', options: ['dialedin', 'fluent'], defaultValue: 'dialedin' },
+        { name: 'typeOfWork', label: 'Type Of Work', type: 'dropdown', options: ['dev', 'qa'], defaultValue: 'dev' },
+        { name: 'project', label: 'Project', type: 'dropdown', options: ['BillArchive'], defaultValue: 'BillArchive' }
+      ]
+    });
+  }
+  return org;
+}
 
 async function connectMongoose() {
   if (isConnected && mongoose.connection.readyState === 1) {
@@ -40,20 +58,27 @@ export const mongoAdapter = {
 
   async findUserByUsername(username) {
     await connectMongoose();
-    const user = await User.findOne({ username: username.toLowerCase() }).lean();
+    let user = await User.findOne({ username: username.toLowerCase() }).populate('organization').lean();
+    if (user && !user.organization) {
+      const org = await ensureDefaultOrganization();
+      await User.updateOne({ _id: user._id }, { $set: { organization: org._id } });
+      user.organization = org.toObject ? org.toObject() : org;
+    }
     return user ? { ...user, _id: user._id.toString() } : null;
   },
 
   async findUsers() {
     await connectMongoose();
-    const users = await User.find({}).select('-password').lean();
+    const users = await User.find({}).populate('organization').select('-password').lean();
     return users.map(u => ({ ...u, _id: u._id.toString() }));
   },
 
   async createUser(userDoc) {
     await connectMongoose();
+    const org = await ensureDefaultOrganization();
     const created = await User.create({
       ...userDoc,
+      organization: userDoc.organization || org._id,
       createdAt: userDoc.createdAt || new Date()
     });
     const obj = created.toObject();
@@ -97,6 +122,13 @@ export const mongoAdapter = {
         mongoQuery.typeOfWork = new mongoose.Types.ObjectId();
       }
     }
+
+    // Dynamic custom fields filters
+    Object.keys(query).forEach(key => {
+      if (key !== 'userId' && key !== 'project' && key !== 'createdAt' && key !== 'source' && key !== 'typeOfWork') {
+        mongoQuery[key] = query[key];
+      }
+    });
 
     const allMatching = await Task.find(mongoQuery).lean();
 
@@ -328,5 +360,44 @@ export const mongoAdapter = {
       types = await TypeOfWork.find({}).lean();
     }
     return types.map(t => ({ ...t, _id: t._id.toString() }));
+  },
+
+  async findOrganizationById(id) {
+    await connectMongoose();
+    const org = await Organization.findById(id).lean();
+    return org ? { ...org, _id: org._id.toString() } : null;
+  },
+
+  async findOrganizationBySlug(slug) {
+    await connectMongoose();
+    const org = await Organization.findOne({ slug: slug.toLowerCase() }).lean();
+    return org ? { ...org, _id: org._id.toString() } : null;
+  },
+
+  async createOrganization(orgDoc) {
+    await connectMongoose();
+    const created = await Organization.create({
+      ...orgDoc,
+      slug: orgDoc.slug.toLowerCase(),
+      createdAt: orgDoc.createdAt || new Date()
+    });
+    const obj = created.toObject();
+    return { ...obj, _id: obj._id.toString() };
+  },
+
+  async updateOrganizationConfig(id, dynamicFields) {
+    await connectMongoose();
+    const updated = await Organization.findByIdAndUpdate(
+      id,
+      { $set: { dynamicFields, updatedAt: new Date() } },
+      { new: true }
+    ).lean();
+    return updated ? { ...updated, _id: updated._id.toString() } : null;
+  },
+
+  async getOrganizations() {
+    await connectMongoose();
+    const orgs = await Organization.find({}).lean();
+    return orgs.map(o => ({ ...o, _id: o._id.toString() }));
   }
 };

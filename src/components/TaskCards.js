@@ -13,9 +13,11 @@ export default function TaskCards({
   handleCopyProjectDetails,
   openEditModal,
   deleteTask,
+  dynamicFields = [],
 }) {
   const params = useParams();
-  const username = params?.username || 'admin';
+  const userId = params?.userId || 'admin';
+  const orgId = params?.orgId || 'dialedin';
   const [statuses, setStatuses] = useState([]);
 
   useEffect(() => {
@@ -119,7 +121,7 @@ export default function TaskCards({
                   {/* Project Tag */}
                   <div className="flex items-center gap-2 mb-4">
                     <Link
-                      href={`/${username}/project/${encodeURIComponent(task.project)}`}
+                      href={`/${orgId}/${userId}/project/${encodeURIComponent(task.project)}`}
                       className="text-xs font-semibold text-zinc-350 bg-zinc-950 hover:bg-zinc-900 hover:text-white px-2.5 py-1.5 rounded-lg border border-zinc-800/80 transition-colors inline-flex items-center gap-1.5 max-w-full truncate"
                       title={`View tasks for project "${task.project}"`}
                     >
@@ -162,21 +164,23 @@ export default function TaskCards({
 
                   {/* Tags & History bar */}
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-                    <div className="flex gap-1.5">
-                      <span className={`inline-block px-2.5 py-0.5 rounded-md font-bold uppercase text-[9px] ${
-                        task.source === 'fluent'
-                          ? 'bg-amber-500/10 text-amber-350 border border-amber-500/20'
-                          : 'bg-orange-500/10 text-orange-350 border border-orange-500/20'
-                      }`}>
-                        {task.source}
-                      </span>
-                      <span className={`inline-block px-2.5 py-0.5 rounded-md font-bold text-[9px] uppercase ${
-                        task.typeOfWork === 'qa'
-                          ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
-                          : 'bg-zinc-900 text-zinc-350 border border-zinc-800'
-                      }`}>
-                        {task.typeOfWork}
-                      </span>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {dynamicFields.filter(f => f.name !== 'project').map(col => {
+                        const val = task.dynamicValues?.[col.name] ?? task[col.name];
+                        if (val === undefined || val === null || val === '') return null;
+                        const displayVal = typeof val === 'boolean' ? (val ? 'Yes' : 'No') : String(val);
+                        return (
+                          <span key={col.name} className={`inline-block px-2.5 py-0.5 rounded-md font-bold text-[9px] uppercase ${
+                            col.name === 'source'
+                              ? (val === 'fluent' ? 'bg-amber-500/10 text-amber-355 border border-amber-500/20' : 'bg-orange-500/10 text-orange-350 border border-orange-500/20')
+                              : col.name === 'typeOfWork'
+                              ? (val === 'qa' ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20' : 'bg-zinc-900 text-zinc-355 border border-zinc-800')
+                              : 'bg-zinc-900 text-zinc-350 border border-zinc-850'
+                          }`}>
+                            {col.label}: {displayVal}
+                          </span>
+                        );
+                      })}
                     </div>
 
                     <button

@@ -7,7 +7,7 @@ export const taskService = {
    */
   async getTasks(userId, filters = {}, pagination = {}) {
     const query = { userId };
-    const { source, project, typeOfWork, timeframe } = filters;
+    const { source, project, typeOfWork, timeframe, ...customFilters } = filters;
 
     if (source && source !== 'all') query.source = source;
     if (project && project !== 'all') query.project = project;
@@ -22,6 +22,13 @@ export const taskService = {
       oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
       query.createdAt = { $gte: oneMonthAgo };
     }
+
+    // Apply custom dynamic fields filters
+    Object.entries(customFilters).forEach(([key, val]) => {
+      if (val && val !== 'all') {
+        query[`dynamicValues.${key}`] = val;
+      }
+    });
 
     const page = parseInt(pagination.page || '1');
     const limit = parseInt(pagination.limit || '15');
@@ -43,15 +50,18 @@ export const taskService = {
    * Create a new task
    */
   async createTask(userId, username, name, taskData) {
-    const { name: taskName, nickName, status, bill, project, source, typeOfWork, clickupId } = taskData;
+    const { name: taskName, nickName, status, bill, project, source, typeOfWork, clickupId, dynamicValues } = taskData;
 
-    if (!taskName || !project) {
-      throw new Error('Task name and project are required');
+    if (!taskName) {
+      throw new Error('Task name is required');
     }
 
     const validStatuses = await dbService.getStatuses();
     const initialStatus = validStatuses.includes(status) ? status : (validStatuses[0] || 'inprocess');
     const now = new Date();
+
+    const dbUser = await dbService.findUserByUsername(username);
+    const orgId = dbUser?.organization?._id || dbUser?.organization || null;
 
     const newTask = {
       name: taskName,
@@ -70,12 +80,14 @@ export const taskService = {
         billedHours: parseFloat(bill?.billedHours || 0),
         actualHours: parseFloat(bill?.actualHours || 0),
       },
-      project,
-      source: source === 'fluent' ? 'fluent' : 'dialedin',
-      typeOfWork: typeOfWork === 'qa' ? 'qa' : 'dev',
+      project: project || '',
+      source: source || undefined,
+      typeOfWork: typeOfWork || undefined,
       userId,
       username,
       user: name,
+      organization: orgId,
+      dynamicValues: dynamicValues || {},
       createdAt: now,
       updatedAt: now,
     };
@@ -104,7 +116,7 @@ export const taskService = {
       throw new Error('Forbidden');
     }
 
-    const { status, name, nickName, bill, project, source, typeOfWork, clickupId } = updateData;
+    const { status, name, nickName, bill, project, source, typeOfWork, clickupId, dynamicValues } = updateData;
     const now = new Date();
     
     const updateDoc = {
@@ -119,6 +131,7 @@ export const taskService = {
     if (source) updateDoc.$set.source = source;
     if (typeOfWork) updateDoc.$set.typeOfWork = typeOfWork;
     if (clickupId !== undefined) updateDoc.$set.clickupId = clickupId;
+    if (dynamicValues) updateDoc.$set.dynamicValues = dynamicValues;
 
     if (bill) {
       updateDoc.$set.bill = {

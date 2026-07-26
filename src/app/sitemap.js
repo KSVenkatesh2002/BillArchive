@@ -9,8 +9,7 @@ export default async function sitemap() {
     '/login',
     '/register',
     '/sitemap',
-    '/profile',
-    '/admin',
+    '/superadmin',
   ].map((route) => ({
     url: `${baseUrl}${route}`,
     lastModified: new Date(),

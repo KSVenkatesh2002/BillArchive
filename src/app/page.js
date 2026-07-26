@@ -49,7 +49,7 @@ export default function LandingPage() {
               <div className="flex items-center gap-3">
                 <span className="text-xs text-zinc-400 font-medium hidden sm:inline">Logged in as <strong className="text-zinc-200">{currentUser.name}</strong></span>
                 <Link
-                  href={`/${currentUser.username}`}
+                  href={currentUser.role === 'superAdmin' || currentUser.username.toLowerCase() === 'admin' ? '/superadmin' : `/${currentUser.orgId || 'dialedin'}/${currentUser.userId || currentUser.id}`}
                   className="bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow-lg shadow-orange-600/25 flex items-center gap-1.5"
                 >
                   <span>Go to Dashboard</span>
@@ -95,7 +95,7 @@ export default function LandingPage() {
           <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
             {currentUser ? (
               <Link
-                href={`/${currentUser.username}`}
+                href={currentUser.role === 'superAdmin' || currentUser.username.toLowerCase() === 'admin' ? '/superadmin' : `/${currentUser.orgId || 'dialedin'}/${currentUser.userId || currentUser.id}`}
                 className="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-sm px-7 py-3.5 rounded-xl shadow-xl shadow-orange-600/30 transition flex items-center gap-2"
               >
                 <span>Access Personal Workspace</span>
@@ -183,7 +183,7 @@ export default function LandingPage() {
           </p>
           <div className="pt-2">
             <Link
-              href={currentUser ? `/${currentUser.username}` : "/register"}
+              href={currentUser ? (currentUser.role === 'superAdmin' || currentUser.username.toLowerCase() === 'admin' ? '/superadmin' : `/${currentUser.orgId || 'dialedin'}/${currentUser.userId || currentUser.id}`) : "/register"}
               className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold px-6 py-3 rounded-xl transition shadow-lg shadow-orange-600/20"
             >
               <span>{currentUser ? 'Go to Dashboard' : 'Get Started Now'}</span>

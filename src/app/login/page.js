@@ -23,9 +23,14 @@ export default function LoginPage() {
       const data = await apiClient.login(form.username, form.password);
 
       if (data.success) {
-        // Redirect to user namespace dashboard
-        const targetUsername = data.user?.username || form.username;
-        router.push(`/${targetUsername}`);
+        const userId = data.user?.id || data.user?.userId;
+        const orgId = data.user?.orgId || 'dialedin';
+        const role = data.user?.role || 'user';
+        if (role === 'superAdmin' || (data.user?.username || '').toLowerCase() === 'admin') {
+          router.push('/superadmin');
+        } else {
+          router.push(`/${orgId}/${userId}`);
+        }
         router.refresh();
       } else {
         setError(data.error || 'Invalid credentials');

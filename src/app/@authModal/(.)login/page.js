@@ -6,7 +6,7 @@ import AuthModal from '@/components/AuthModal';
 import { apiClient } from '@/lib/apiClient';
 
 export default function LoginModal() {
-  const [form, setForm] = useState({ username: '', password: '', name: '' });
+  const [form, setForm] = useState({ username: '', password: '', name: '', orgName: '' });
   const [error, setError] = useState('');
   const [mode, setMode] = useState('login');
   const router = useRouter();
@@ -18,13 +18,19 @@ export default function LoginModal() {
     try {
       const data = mode === 'login' 
         ? await apiClient.login(form.username, form.password)
-        : await apiClient.register(form.name, form.username, form.password);
+        : await apiClient.register(form.name, form.username, form.password, form.orgName);
 
       if (data.success) {
-        // Go back (closes modal) and refresh parent page state
+        const userId = data.user?.id || data.user?.userId;
+        const orgId = data.user?.orgId || 'dialedin';
+        const role = data.user?.role || 'user';
         router.back();
         setTimeout(() => {
-          window.location.reload();
+          if (role === 'superAdmin' || (data.user?.username || '').toLowerCase() === 'admin') {
+            window.location.href = '/superadmin';
+          } else {
+            window.location.href = `/${orgId}/${userId}`;
+          }
         }, 100);
       } else {
         setError(data.error || 'Authentication failed');

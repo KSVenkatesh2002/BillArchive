@@ -101,6 +101,20 @@ function ensureStoreInitialized() {
       { _id: 'type-qa', name: 'qa' }
     ];
   }
+  if (!dbStore.organizations) {
+    dbStore.organizations = [
+      {
+        _id: 'org-dialedin',
+        name: 'DialedIn',
+        slug: 'dialedin',
+        dynamicFields: [
+          { name: 'source', label: 'Source', type: 'dropdown', options: ['dialedin', 'fluent'], defaultValue: 'dialedin' },
+          { name: 'typeOfWork', label: 'Type Of Work', type: 'dropdown', options: ['dev', 'qa'], defaultValue: 'dev' },
+          { name: 'project', label: 'Project', type: 'dropdown', options: ['BillArchive'], defaultValue: 'BillArchive' }
+        ]
+      }
+    ];
+  }
 }
 
 async function normalizeMemoryTaskDoc(taskDoc) {
@@ -142,14 +156,27 @@ export const memoryAdapter = {
   },
 
   async findUserByUsername(username) {
+    ensureStoreInitialized();
     const user = dbStore.users.find(u => u.username === username.toLowerCase());
-    return user ? { ...user } : null;
+    if (user) {
+      if (!user.organization) {
+        user.organization = 'org-dialedin';
+      }
+      const org = dbStore.organizations.find(o => o._id === user.organization);
+      return {
+        ...user,
+        organization: org ? { ...org } : null
+      };
+    }
+    return null;
   },
 
   async createUser(userDoc) {
+    ensureStoreInitialized();
     const newUser = {
       _id: 'mem-' + Math.random().toString(36).substr(2, 9),
       ...userDoc,
+      organization: userDoc.organization || 'org-dialedin',
       createdAt: userDoc.createdAt || new Date()
     };
     dbStore.users.push(newUser);
@@ -164,6 +191,7 @@ export const memoryAdapter = {
   },
 
   async findTasks(query = {}, options = {}) {
+    ensureStoreInitialized();
     let filtered = [...dbStore.tasks];
 
     if (query.userId) {
@@ -192,6 +220,20 @@ export const memoryAdapter = {
       const gteDate = new Date(query.createdAt.$gte);
       filtered = filtered.filter(t => new Date(t.createdAt) >= gteDate);
     }
+
+    // Filter by custom dynamic fields
+    Object.keys(query).forEach(key => {
+      if (key !== 'userId' && key !== 'project' && key !== 'source' && key !== 'typeOfWork' && key !== 'createdAt') {
+        const val = query[key];
+        if (val && val !== 'all') {
+          const fieldName = key.startsWith('dynamicValues.') ? key.split('.')[1] : key;
+          filtered = filtered.filter(t => {
+            const tVal = t.dynamicValues?.[fieldName] !== undefined ? t.dynamicValues[fieldName] : t[fieldName];
+            return String(tVal).toLowerCase() === String(val).toLowerCase();
+          });
+        }
+      }
+    });
 
     // Metrics calculation
     let totalAllocated = 0;
@@ -255,6 +297,7 @@ export const memoryAdapter = {
   },
 
   async findTaskById(id) {
+    ensureStoreInitialized();
     const t = dbStore.tasks.find(tk => tk._id.toString() === id.toString());
     if (!t) return null;
 
@@ -360,10 +403,53 @@ export const memoryAdapter = {
   },
 
   async getSources() {
+    ensureStoreInitialized();
     return [...dbStore.sources];
   },
 
   async getTypesOfWork() {
+    ensureStoreInitialized();
     return [...dbStore.typesOfWork];
+  },
+
+  async findOrganizationById(id) {
+    ensureStoreInitialized();
+    const org = dbStore.organizations.find(o => o._id === id);
+    return org ? { ...org } : null;
+  },
+
+  async findOrganizationBySlug(slug) {
+    ensureStoreInitialized();
+    const org = dbStore.organizations.find(o => o.slug === slug.toLowerCase());
+    return org ? { ...org } : null;
+  },
+
+  async createOrganization(orgDoc) {
+    ensureStoreInitialized();
+    const newOrg = {
+      _id: 'org-' + Math.random().toString(36).substr(2, 9),
+      ...orgDoc,
+      slug: orgDoc.slug.toLowerCase(),
+      createdAt: orgDoc.createdAt || new Date()
+    };
+    dbStore.organizations.push(newOrg);
+    return { ...newOrg };
+  },
+
+  async updateOrganizationConfig(id, dynamicFields) {
+    ensureStoreInitialized();
+    const idx = dbStore.organizations.findIndex(o => o._id === id);
+    if (idx === -1) return null;
+    dbStore.organizations[idx] = {
+      ...dbStore.organizations[idx],
+      dynamicFields,
+      updatedAt: new Date()
+    };
+    return { ...dbStore.organizations[idx] };
+  },
+
+  async getOrganizations() {
+    ensureStoreInitialized();
+    return dbStore.organizations.map(o => ({ ...o }));
   }
 };

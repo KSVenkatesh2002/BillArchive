@@ -2,22 +2,20 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { apiClient } from '@/lib/apiClient';
-import { Zap, LayoutGrid, List } from 'lucide-react';
-
-// Import child components
 import Header from '@/components/Header';
 import MetricsBar from '@/components/MetricsBar';
 import FilterControls from '@/components/FilterControls';
 import TaskTable from '@/components/TaskTable';
-import TaskCards from '@/components/TaskCards';
 import Toast from '@/components/Toast';
-import AuditLogModal from '@/components/AuditLogModal';
 import TaskFormModal from '@/components/TaskFormModal';
+import AuditLogModal from '@/components/AuditLogModal';
 import ReportPreviewModal from '@/components/ReportPreviewModal';
 
-export default function UserDashboard() {
-  const { username } = useParams();
+export default function UserProjectPage() {
+  const { userId, orgId, name } = useParams();
+  const decodedProjectName = decodeURIComponent(name);
   const router = useRouter();
 
   // Auth state
@@ -29,12 +27,10 @@ export default function UserDashboard() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
-  const [filterSource, setFilterSource] = useState('dialedin');
+  const [filterSource, setFilterSource] = useState('all');
   const [filterType, setFilterType] = useState('all');
-  const [filterProject, setFilterProject] = useState('all');
   const [filterTimeframe, setFilterTimeframe] = useState('all');
   const [isDemo, setIsDemo] = useState(false);
-  const [viewMode, setViewMode] = useState('table');
   const [metrics, setMetrics] = useState({
     totalAllocated: 0,
     totalBilled: 0,
@@ -43,26 +39,23 @@ export default function UserDashboard() {
     variance: 0
   });
 
-  // Edit Task Modal state (Creation uses /task-create route)
+  // Modal states
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [taskForm, setTaskForm] = useState({
     name: '',
     nickName: '',
     status: 'inprocess',
-    project: '',
+    project: decodedProjectName,
     source: 'dialedin',
     typeOfWork: 'dev',
     allocatedHours: '',
     billedHours: '',
     actualHours: '',
-    clickupId: ''
+    clickupId: '',
+    dynamicValues: {}
   });
-
-  // History Audit Modal state
   const [activeHistoryTask, setActiveHistoryTask] = useState(null);
-
-  // Copy Feedback Toast
   const [toastMessage, setToastMessage] = useState('');
 
   // Check auth
@@ -71,8 +64,8 @@ export default function UserDashboard() {
       const data = await apiClient.checkAuth();
       if (data.authenticated) {
         setCurrentUser(data.user);
-        if (data.user.username !== username) {
-          router.push(`/${data.user.username}`);
+        if (data.user.userId !== userId) {
+          router.push(`/${data.user.orgId || 'dialedin'}/${data.user.userId}/project/${name}`);
         }
       } else {
         router.push('/login');
@@ -83,7 +76,7 @@ export default function UserDashboard() {
     }
   };
 
-  // Fetch paginated tasks
+  // Fetch paginated tasks for project
   const fetchTasks = async (pageNum, reset = false) => {
     setLoading(true);
     try {
@@ -93,7 +86,7 @@ export default function UserDashboard() {
         timeframe: filterTimeframe,
         source: filterSource,
         typeOfWork: filterType,
-        project: filterProject
+        project: decodedProjectName
       });
 
       if (data.success) {
@@ -112,18 +105,12 @@ export default function UserDashboard() {
     }
   };
 
+  // Reset page and reload when filters change
   useEffect(() => {
     checkAuth();
-    if (typeof window !== 'undefined' && window.innerWidth < 768) {
-      setViewMode('cards');
-    }
-  }, []);
-
-  // Reset page and list on filter change
-  useEffect(() => {
     setPage(1);
     fetchTasks(1, true);
-  }, [filterSource, filterType, filterProject, filterTimeframe]);
+  }, [filterSource, filterType, filterTimeframe]);
 
   // Load next page on scroll reach end
   const handleScroll = () => {
@@ -145,23 +132,13 @@ export default function UserDashboard() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [hasMore, loading]);
 
-  // Handle Logout (Clear tasks & state)
   const handleLogout = async () => {
     await apiClient.logout();
     setCurrentUser(null);
     setTasks([]);
-    setMetrics({
-      totalAllocated: 0,
-      totalBilled: 0,
-      totalActual: 0,
-      completedCount: 0,
-      variance: 0
-    });
-    triggerToast('Logged out successfully');
     router.push('/');
   };
 
-  // Quick Status change directly from the desktop list
   const handleQuickStatusChange = async (taskId, newStatus) => {
     try {
       const data = await apiClient.updateTask(taskId, { status: newStatus });
@@ -174,7 +151,6 @@ export default function UserDashboard() {
     }
   };
 
-  // Handle Save (Edit Mode)
   const handleSaveTask = async (e) => {
     e.preventDefault();
     if (!taskForm.name || !taskForm.project) return;
@@ -188,6 +164,7 @@ export default function UserDashboard() {
         source: taskForm.source,
         typeOfWork: taskForm.typeOfWork,
         clickupId: taskForm.clickupId,
+        dynamicValues: taskForm.dynamicValues || {},
         bill: {
           allocatedHours: parseFloat(taskForm.allocatedHours || 0),
           billedHours: parseFloat(taskForm.billedHours || 0),
@@ -195,12 +172,15 @@ export default function UserDashboard() {
         }
       };
 
-      const data = await apiClient.updateTask(editingTask._id, payload);
+      const data = editingTask 
+        ? await apiClient.updateTask(editingTask._id, payload)
+        : await apiClient.createTask(payload);
+
       if (data.success) {
         setShowTaskModal(false);
         setEditingTask(null);
         fetchTasks(1, true);
-        triggerToast('Task updated successfully!');
+        triggerToast(editingTask ? 'Task updated successfully!' : 'New task created!');
       } else {
         alert(data.error || 'Failed to save task.');
       }
@@ -223,6 +203,7 @@ export default function UserDashboard() {
       billedHours: task.bill?.billedHours || '',
       actualHours: task.bill?.actualHours || '',
       clickupId: task.clickupId || '',
+      dynamicValues: task.dynamicValues || {}
     });
     setShowTaskModal(true);
   };
@@ -245,138 +226,78 @@ export default function UserDashboard() {
     setTimeout(() => setToastMessage(''), 3500);
   };
 
-  // Report Preview Modal state
-  const [reportModalOpen, setReportModalOpen] = useState(false);
-  const [reportModalProject, setReportModalProject] = useState('all');
-  const [reportModalTimeframe, setReportModalTimeframe] = useState('all');
-
-  const handleOpenReportModal = (tf = 'all', proj = 'all') => {
-    setReportModalTimeframe(tf);
-    setReportModalProject(proj);
-    setReportModalOpen(true);
-  };
-
   const copyToClipboard = (text, label) => {
     navigator.clipboard.writeText(text);
     triggerToast(`Copied ${label} to clipboard!`);
   };
 
-  // Generate Copy Text for Timeframe Report (1 Week or 1 Month)
-  const handleCopyTimeframeReport = (tf) => {
-    handleOpenReportModal(tf, 'all');
-  };
+  // Report Preview Modal state
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [reportModalTimeframe, setReportModalTimeframe] = useState('all');
 
-  // Generate Copy Text for a Specific Project
-  const handleCopyProjectDetails = (projectName) => {
-    handleOpenReportModal('all', projectName);
+  const handleOpenReportModal = (tf = 'all') => {
+    setReportModalTimeframe(tf);
+    setReportModalOpen(true);
   };
-
-  // Memoized derived calculations for unique projects
-  const uniqueProjects = useMemo(() => {
-    return Array.from(new Set(tasks.map(t => t.project))).filter(Boolean);
-  }, [tasks]);
 
   return (
     <div className="min-h-screen bg-black text-slate-100 font-sans selection:bg-orange-500 selection:text-white">
       <Toast message={toastMessage} />
 
       <div className="relative max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Top Navbar Header */}
+        {/* Header */}
         <Header
           currentUser={currentUser}
-          onCopy1Wk={() => handleOpenReportModal('1w', 'all')}
-          onCopy1Mo={() => handleOpenReportModal('1m', 'all')}
+          onCopy1Wk={() => handleOpenReportModal('1w')}
+          onCopy1Mo={() => handleOpenReportModal('1m')}
           onLogout={handleLogout}
         />
 
-        {/* Status Notification for Demo Mode */}
-        {isDemo && (
-          <div className="mb-6 p-3 rounded-xl bg-amber-950/20 border border-amber-900/30 text-amber-300 text-xs flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Zap className="w-4 h-4 text-amber-400 shrink-0" />
-              <span>Running in Live Demo Mode. Configure <code className="bg-amber-900/40 px-1 rounded">MONGODB_URI</code> in <code className="bg-amber-900/40 px-1 rounded">.env.local</code> for persistent Atlas database storage.</span>
-            </div>
+        {/* Back navigation & Project Title */}
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-zinc-800 pb-4 gap-3">
+          <div className="flex items-center gap-3">
+            <Link href={`/${orgId || 'dialedin'}/${userId}`} className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:text-white text-zinc-300 px-3 py-1.5 rounded-lg text-xs font-semibold transition">
+              ← Dashboard
+            </Link>
+            <h2 className="text-xl font-black text-white">
+              Project: <span className="text-orange-400 font-mono">{decodedProjectName}</span>
+            </h2>
           </div>
-        )}
+          <span className="text-xs text-zinc-400">
+            Active workspace scoping
+          </span>
+        </div>
 
-        {/* Dashboard Metrics Bar */}
+        {/* Metrics Bar */}
         <MetricsBar
           tasksLength={tasks.length}
           metrics={metrics}
         />
 
-        {/* Filter Controls Bar */}
+        {/* Filters */}
         <FilterControls
           filterSource={filterSource}
           setFilterSource={setFilterSource}
           filterType={filterType}
           setFilterType={setFilterType}
-          filterProject={filterProject}
-          setFilterProject={setFilterProject}
+          filterProject={decodedProjectName}
+          setFilterProject={() => {}}
           filterTimeframe={filterTimeframe}
           setFilterTimeframe={setFilterTimeframe}
-          uniqueProjects={uniqueProjects}
+          uniqueProjects={[decodedProjectName]}
           tasksLength={tasks.length}
         />
 
-        {/* View Mode Toggle Header */}
-        <div className="flex items-center justify-between mb-4 mt-2">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-2">
-            <span>Task Directory</span>
-            <span className="text-[10px] lowercase font-normal px-2 py-0.5 rounded-full bg-zinc-900 text-zinc-500 border border-zinc-800">
-              {viewMode === 'table' ? 'table view' : 'card view'}
-            </span>
-          </h2>
-          <div className="flex items-center bg-zinc-950 border border-zinc-800 rounded-xl p-1 shadow-inner">
-            <button
-              onClick={() => setViewMode('table')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 ${
-                viewMode === 'table'
-                  ? 'bg-zinc-900 text-white border border-zinc-800 shadow'
-                  : 'text-zinc-500 hover:text-zinc-300'
-              }`}
-              title="Table View (Desktop Preferred)"
-            >
-              <List className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Table</span>
-            </button>
-            <button
-              onClick={() => setViewMode('cards')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 ${
-                viewMode === 'cards'
-                  ? 'bg-zinc-900 text-white border border-zinc-800 shadow'
-                  : 'text-zinc-500 hover:text-zinc-350'
-              }`}
-              title="Card View (Mobile Preferred)"
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Cards</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Task Data Display */}
-        {viewMode === 'table' ? (
-          <TaskTable
-            loading={loading && tasks.length === 0}
-            tasks={tasks}
-            handleQuickStatusChange={handleQuickStatusChange}
-            setActiveHistoryTask={setActiveHistoryTask}
-            handleCopyProjectDetails={handleCopyProjectDetails}
-            openEditModal={openEditModal}
-            deleteTask={deleteTask}
-          />
-        ) : (
-          <TaskCards
-            loading={loading && tasks.length === 0}
-            tasks={tasks}
-            handleQuickStatusChange={handleQuickStatusChange}
-            setActiveHistoryTask={setActiveHistoryTask}
-            handleCopyProjectDetails={handleCopyProjectDetails}
-            openEditModal={openEditModal}
-            deleteTask={deleteTask}
-          />
-        )}
+        {/* Tasks Table */}
+        <TaskTable
+          loading={loading && tasks.length === 0}
+          tasks={tasks}
+          handleQuickStatusChange={handleQuickStatusChange}
+          setActiveHistoryTask={setActiveHistoryTask}
+          handleCopyProjectDetails={() => {}}
+          openEditModal={openEditModal}
+          deleteTask={deleteTask}
+        />
 
         {/* Infinite Scroll loading indicator */}
         {loading && tasks.length > 0 && (
@@ -386,10 +307,10 @@ export default function UserDashboard() {
         )}
       </div>
 
-      {/* Task Edit Modal */}
+      {/* Task Create/Edit Modal */}
       <TaskFormModal
         show={showTaskModal}
-        isEdit={true}
+        isEdit={!!editingTask}
         form={taskForm}
         onChange={setTaskForm}
         onSubmit={handleSaveTask}
@@ -406,9 +327,9 @@ export default function UserDashboard() {
       <ReportPreviewModal
         isOpen={reportModalOpen}
         onClose={() => setReportModalOpen(false)}
-        initialProject={reportModalProject}
+        initialProject={decodedProjectName}
         initialTimeframe={reportModalTimeframe}
-        projectsList={uniqueProjects}
+        projectsList={[decodedProjectName]}
       />
     </div>
   );

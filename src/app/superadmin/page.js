@@ -22,7 +22,7 @@ import {
   LogOut
 } from 'lucide-react';
 
-export default function AdminPage() {
+export default function SuperAdminPage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [adminData, setAdminData] = useState(null);
@@ -54,11 +54,12 @@ export default function AdminPage() {
     async function init() {
       try {
         const auth = await apiClient.checkAuth();
-        if (auth.authenticated && auth.user?.role === 'admin') {
+        const isSuperAdmin = auth.user?.role === 'superAdmin' || auth.user?.username?.toLowerCase() === 'admin';
+        if (auth.authenticated && isSuperAdmin) {
           setCurrentUser(auth.user);
           fetchAdminData();
         } else {
-          setError('Access Denied: You must be logged in as an administrator.');
+          setError('Access Denied: You must be logged in as a super administrator.');
         }
       } catch (err) {
         setError('Authentication check failed.');
@@ -192,7 +193,7 @@ export default function AdminPage() {
           </p>
           <div className="mt-6 flex flex-col gap-2">
             <Link
-              href={currentUser ? `/${currentUser.username}` : "/"}
+              href={currentUser ? `/${currentUser.orgId || 'dialedin'}/${currentUser.userId || currentUser.id}` : "/"}
               className="bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs py-3 rounded-xl transition border border-zinc-800 flex items-center justify-center gap-2"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -228,7 +229,7 @@ export default function AdminPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-6 border-b border-zinc-800/80 gap-4">
           <div className="flex items-center gap-3">
             <Link
-              href={currentUser ? `/${currentUser.username}` : "/"}
+              href={currentUser ? `/${currentUser.orgId || 'dialedin'}/${currentUser.userId || currentUser.id}` : "/"}
               className="h-10 w-10 bg-zinc-900 hover:bg-zinc-800 rounded-xl border border-zinc-800 flex items-center justify-center transition-colors"
               title="Return to main dashboard"
             >

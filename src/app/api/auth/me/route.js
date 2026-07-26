@@ -30,7 +30,8 @@ export async function GET() {
       phone: dbUser.phone || '',
       title: dbUser.title || '',
       clickUpToken: dbUser.clickUpToken || '',
-      avatarUrl: dbUser.avatarUrl || ''
+      avatarUrl: dbUser.avatarUrl || '',
+      orgId: dbUser.organization?._id ? dbUser.organization._id.toString() : (dbUser.organization ? dbUser.organization.toString() : '')
     }
   });
 }
