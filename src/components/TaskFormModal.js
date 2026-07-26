@@ -1,9 +1,21 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import { Edit3, PlusCircle, Lightbulb, ChevronDown } from 'lucide-react';
 
 export default function TaskFormModal({ show, onClose, onSubmit, form, onChange, isEdit, inline = false }) {
+  const storeEnabledFields = useSelector((state) => state.org?.enabledFields);
+  const enabledFields = storeEnabledFields || {
+    allocatedHours: true,
+    billedHours: true,
+    actualHours: true,
+    source: true,
+    typeOfWork: true,
+    project: true,
+    clickupId: true
+  };
+
   const [projects, setProjects] = useState([]);
   const [statuses, setStatuses] = useState([]);
   const [isAddingNewProject, setIsAddingNewProject] = useState(false);
@@ -190,7 +202,6 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
         {/* Dynamic Fields Section */}
         {dynamicFields.length > 0 ? (
           <div className="space-y-4 pt-2 border-t border-zinc-900">
-            <div className="text-[11px] font-bold text-orange-450 uppercase tracking-wider">Custom Fields</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {dynamicFields.map((field) => {
                 const val = form.dynamicValues?.[field.name] ?? userPrefs[field.name] ?? field.defaultValue ?? '';
@@ -312,44 +323,52 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
         ) : null}
 
         {/* Billing Hours Breakdown */}
-        <div className="p-3.5 rounded-xl bg-black border border-zinc-800 space-y-3">
-          <div className="text-xs font-bold text-orange-450 uppercase tracking-wider">Billing Hours Metrics</div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block text-[11px] text-zinc-400 mb-1">Allocated</label>
-              <input
-                type="number"
-                step="0.5"
-                placeholder="0"
-                value={form.allocatedHours || ''}
-                onChange={(e) => onChange({ ...form, allocatedHours: e.target.value })}
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-orange-500"
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] text-zinc-400 mb-1">Billed</label>
-              <input
-                type="number"
-                step="0.5"
-                placeholder="0"
-                value={form.billedHours || ''}
-                onChange={(e) => onChange({ ...form, billedHours: e.target.value })}
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-orange-500"
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] text-zinc-400 mb-1">Actual</label>
-              <input
-                type="number"
-                step="0.5"
-                placeholder="0"
-                value={form.actualHours || ''}
-                onChange={(e) => onChange({ ...form, actualHours: e.target.value })}
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-orange-500"
-              />
+        {(enabledFields.allocatedHours !== false || enabledFields.billedHours !== false || enabledFields.actualHours !== false) && (
+          <div className="p-3.5 rounded-xl bg-black border border-zinc-800 space-y-3">
+            <div className="text-xs font-bold text-orange-450 uppercase tracking-wider">Billing Hours Metrics</div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {enabledFields.allocatedHours !== false && (
+                <div>
+                  <label className="block text-[11px] text-zinc-400 mb-1">Allocated</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    placeholder="0"
+                    value={form.allocatedHours || ''}
+                    onChange={(e) => onChange({ ...form, allocatedHours: e.target.value })}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-orange-500"
+                  />
+                </div>
+              )}
+              {enabledFields.billedHours !== false && (
+                <div>
+                  <label className="block text-[11px] text-zinc-400 mb-1">Billed</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    placeholder="0"
+                    value={form.billedHours || ''}
+                    onChange={(e) => onChange({ ...form, billedHours: e.target.value })}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-orange-500"
+                  />
+                </div>
+              )}
+              {enabledFields.actualHours !== false && (
+                <div>
+                  <label className="block text-[11px] text-zinc-400 mb-1">Actual</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    placeholder="0"
+                    value={form.actualHours || ''}
+                    onChange={(e) => onChange({ ...form, actualHours: e.target.value })}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-orange-500"
+                  />
+                </div>
+              )}
             </div>
           </div>
-        </div>
+        )}
 
         {/* Advanced Collapsible Section */}
         <div className="pt-2">

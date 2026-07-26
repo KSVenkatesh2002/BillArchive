@@ -385,11 +385,13 @@ export const mongoAdapter = {
     return { ...obj, _id: obj._id.toString() };
   },
 
-  async updateOrganizationConfig(id, dynamicFields) {
+  async updateOrganizationConfig(id, dynamicFields, enabledFields) {
     await connectMongoose();
+    const updatePayload = { dynamicFields, updatedAt: new Date() };
+    if (enabledFields) updatePayload.enabledFields = enabledFields;
     const updated = await Organization.findByIdAndUpdate(
       id,
-      { $set: { dynamicFields, updatedAt: new Date() } },
+      { $set: updatePayload },
       { new: true }
     ).lean();
     return updated ? { ...updated, _id: updated._id.toString() } : null;

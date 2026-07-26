@@ -199,21 +199,30 @@ export const memoryAdapter = {
     }
 
     if (query.source && query.source !== 'all') {
-      let filterSourceId = query.source;
-      const sDoc = dbStore.sources.find(s => s.name === query.source.toLowerCase() || s._id === query.source);
-      if (sDoc) filterSourceId = sDoc._id;
-      filtered = filtered.filter(t => t.source === filterSourceId);
+      const qSource = query.source.toLowerCase();
+      filtered = filtered.filter(t => {
+        const val = (t.source || t.dynamicValues?.source || '').toLowerCase();
+        const sDoc = dbStore.sources.find(s => s._id === t.source);
+        const sourceName = sDoc ? sDoc.name.toLowerCase() : '';
+        return val === qSource || sourceName === qSource || t.source === query.source;
+      });
     }
 
     if (query.project && query.project !== 'all') {
-      filtered = filtered.filter(t => t.project.toLowerCase() === query.project.toLowerCase());
+      filtered = filtered.filter(t => {
+        const pVal = (t.project || t.dynamicValues?.project || '').toLowerCase();
+        return pVal === query.project.toLowerCase();
+      });
     }
 
     if (query.typeOfWork && query.typeOfWork !== 'all') {
-      let filterTypeId = query.typeOfWork;
-      const tDoc = dbStore.typesOfWork.find(t => t.name === query.typeOfWork.toLowerCase() || t._id === query.typeOfWork);
-      if (tDoc) filterTypeId = tDoc._id;
-      filtered = filtered.filter(t => t.typeOfWork === filterTypeId);
+      const qType = query.typeOfWork.toLowerCase();
+      filtered = filtered.filter(t => {
+        const val = (t.typeOfWork || t.dynamicValues?.typeOfWork || '').toLowerCase();
+        const tDoc = dbStore.typesOfWork.find(s => s._id === t.typeOfWork);
+        const typeName = tDoc ? tDoc.name.toLowerCase() : '';
+        return val === qType || typeName === qType || t.typeOfWork === query.typeOfWork;
+      });
     }
 
     if (query.createdAt && query.createdAt.$gte) {
@@ -436,13 +445,14 @@ export const memoryAdapter = {
     return { ...newOrg };
   },
 
-  async updateOrganizationConfig(id, dynamicFields) {
+  async updateOrganizationConfig(id, dynamicFields, enabledFields) {
     ensureStoreInitialized();
     const idx = dbStore.organizations.findIndex(o => o._id === id);
     if (idx === -1) return null;
     dbStore.organizations[idx] = {
       ...dbStore.organizations[idx],
       dynamicFields,
+      ...(enabledFields ? { enabledFields } : {}),
       updatedAt: new Date()
     };
     return { ...dbStore.organizations[idx] };

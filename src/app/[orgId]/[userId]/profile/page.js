@@ -60,6 +60,15 @@ export default function ProfilePage() {
   const [orgName, setOrgName] = useState('');
   const [orgDbId, setOrgDbId] = useState('');
   const [dynamicFields, setDynamicFields] = useState([]);
+  const [enabledFields, setEnabledFields] = useState({
+    allocatedHours: true,
+    billedHours: true,
+    actualHours: true,
+    source: true,
+    typeOfWork: true,
+    project: true,
+    clickupId: true
+  });
   const [userPrefs, setUserPrefs] = useState({});
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [savingOrg, setSavingOrg] = useState(false);
@@ -285,12 +294,15 @@ export default function ProfilePage() {
       const res = await fetch('/api/organization/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dynamicFields })
+        body: JSON.stringify({ dynamicFields, enabledFields })
       });
       const data = await res.json();
       if (data.success) {
-        setSuccess('Organization dynamic field configurations saved successfully!');
-        setDynamicFields(data.dynamicFields);
+        setSuccess('Organization configurations saved successfully!');
+        setDynamicFields(data.dynamicFields || []);
+        if (data.enabledFields) {
+          setEnabledFields(data.enabledFields);
+        }
       } else {
         setError(data.error || 'Failed to save organization configuration.');
       }
@@ -635,6 +647,40 @@ export default function ProfilePage() {
               >
                 <Plus className="w-3.5 h-3.5" /> Add New Field
               </button>
+            </div>
+
+            {/* Built-in Field Visibility Checkbox Toggles */}
+            <div className="bg-black/80 p-5 rounded-xl border border-zinc-800 space-y-3">
+              <div className="text-xs font-bold text-orange-400 uppercase tracking-wider">
+                Enabled Built-in Fields Checklist
+              </div>
+              <p className="text-[11px] text-zinc-400">
+                Check or uncheck options to control which standard fields are visible on team forms, task lists, and metrics:
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                {[
+                  { key: 'actualHours', label: 'Actual Hours' },
+                  { key: 'allocatedHours', label: 'Allocated Hours' },
+                  { key: 'billedHours', label: 'Billed Hours' },
+                  { key: 'source', label: 'Source' },
+                  { key: 'typeOfWork', label: 'Type of Work' },
+                  { key: 'project', label: 'Project' },
+                  { key: 'clickupId', label: 'ClickUp Link' }
+                ].map((item) => (
+                  <label key={item.key} className="flex items-center gap-2.5 cursor-pointer text-xs text-zinc-300 hover:text-white bg-zinc-900/60 p-2.5 rounded-lg border border-zinc-800/80 transition">
+                    <input
+                      type="checkbox"
+                      checked={enabledFields[item.key] !== false}
+                      onChange={(e) => {
+                        const updated = { ...enabledFields, [item.key]: e.target.checked };
+                        setEnabledFields(updated);
+                      }}
+                      className="w-4 h-4 rounded border-zinc-700 bg-black text-orange-500 focus:ring-orange-500 cursor-pointer"
+                    />
+                    <span className="font-medium">{item.label}</span>
+                  </label>
+                ))}
+              </div>
             </div>
 
             {dynamicFields.length === 0 ? (

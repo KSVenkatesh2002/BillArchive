@@ -2,6 +2,16 @@ import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { dbService } from '@/lib/db/dbService';
 
+const DEFAULT_ENABLED_FIELDS = {
+  allocatedHours: true,
+  billedHours: true,
+  actualHours: true,
+  source: true,
+  typeOfWork: true,
+  project: true,
+  clickupId: true
+};
+
 export async function GET() {
   try {
     const authUser = await getAuthUser();
@@ -20,7 +30,8 @@ export async function GET() {
         id: user.organization._id || user.organization.id,
         name: user.organization.name,
         slug: user.organization.slug,
-        dynamicFields: user.organization.dynamicFields || []
+        dynamicFields: user.organization.dynamicFields || [],
+        enabledFields: user.organization.enabledFields || DEFAULT_ENABLED_FIELDS
       }
     });
   } catch (error) {
@@ -40,7 +51,7 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
     }
 
-    const { dynamicFields } = await request.json();
+    const { dynamicFields, enabledFields } = await request.json();
     if (!Array.isArray(dynamicFields)) {
       return NextResponse.json({ success: false, error: 'Invalid dynamic fields structure' }, { status: 400 });
     }
@@ -61,11 +72,12 @@ export async function POST(request) {
     }
 
     const orgId = user.organization._id || user.organization.id;
-    const updatedOrg = await dbService.updateOrganizationConfig(orgId, dynamicFields);
+    const updatedOrg = await dbService.updateOrganizationConfig(orgId, dynamicFields, enabledFields);
 
     return NextResponse.json({
       success: true,
-      dynamicFields: updatedOrg.dynamicFields
+      dynamicFields: updatedOrg.dynamicFields,
+      enabledFields: updatedOrg.enabledFields || DEFAULT_ENABLED_FIELDS
     });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

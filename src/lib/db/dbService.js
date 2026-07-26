@@ -148,9 +148,9 @@ export const dbService = {
     return adapter.createOrganization(orgDoc);
   },
 
-  async updateOrganizationConfig(id, dynamicFields) {
+  async updateOrganizationConfig(id, dynamicFields, enabledFields) {
     const adapter = await getAdapter();
-    return adapter.updateOrganizationConfig(id, dynamicFields);
+    return adapter.updateOrganizationConfig(id, dynamicFields, enabledFields);
   },
 
   async getOrganizations() {
