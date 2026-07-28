@@ -74,9 +74,18 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
       fetch('/api/organization/config').then((res) => res.json()),
       fetch('/api/user/preferences').then((res) => res.json())
     ]).then(([orgData, prefData]) => {
-      const fields = orgData.success && orgData.organization?.dynamicFields ? orgData.organization.dynamicFields : [];
+      let fields = orgData.success && orgData.organization?.dynamicFields ? orgData.organization.dynamicFields : [];
+
+      // Ensure Project field is always present, since it is a core property
+      if (!fields.some(f => f.name === 'project')) {
+        fields = [
+          { name: 'project', label: 'Project', type: 'dropdown', options: [] },
+          ...fields
+        ];
+      }
+
       const prefs = prefData.success && prefData.preferences?.fieldDefaults ? prefData.preferences.fieldDefaults : {};
-      
+
       setDynamicFields(fields);
       setUserPrefs(prefs);
 
@@ -135,7 +144,10 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
   };
 
   const formContent = (
-    <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-xl p-6 shadow-2xl animate-fadeIn">
+    <div 
+      className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-xl p-6 shadow-2xl animate-fadeIn"
+      onClick={(e) => e.stopPropagation()}
+    >
       <div className="flex items-center justify-between pb-4 border-b border-zinc-800 mb-4">
         <h3 className="text-lg font-bold text-white flex items-center gap-2">
           {isEdit ? <Edit3 className="w-5 h-5 text-orange-500" /> : <PlusCircle className="w-5 h-5 text-orange-500" />}
@@ -404,7 +416,10 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div 
+      className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
       {formContent}
     </div>
   );

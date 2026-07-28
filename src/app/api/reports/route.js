@@ -43,12 +43,9 @@ export async function GET(request) {
     const result = await dbService.findTasks(query, { limit: 1000 });
     let rawTasks = result.tasks || [];
 
-    // Filter out excluded tasks
-    let filteredTasks = rawTasks.filter(t => !excludedIds.has(t._id || t.id));
-
     // Flatten tasks by date of work entry
     const dailyEntries = [];
-    filteredTasks.forEach(t => {
+    rawTasks.forEach(t => {
       if (t.timeEntries && t.timeEntries.length > 0) {
         t.timeEntries.forEach(entry => {
           const entryDate = new Date(entry.date);
@@ -58,6 +55,7 @@ export async function GET(request) {
 
           if (inRange) {
             dailyEntries.push({
+              uniqueId: `${t._id || t.id}_${entry.date}`,
               taskId: t._id || t.id,
               taskName: t.name,
               nickName: t.nickName,
@@ -81,7 +79,9 @@ export async function GET(request) {
         if (maxDate && taskDate > maxDate) inRange = false;
 
         if (inRange) {
+          const dateStr = taskDate.toISOString().split('T')[0];
           dailyEntries.push({
+            uniqueId: `${t._id || t.id}_${dateStr}`,
             taskId: t._id || t.id,
             taskName: t.name,
             nickName: t.nickName,
@@ -102,6 +102,9 @@ export async function GET(request) {
     // Sort entries chronologically by workDate
     dailyEntries.sort((a, b) => new Date(b.workDate) - new Date(a.workDate));
 
+    // Filter for text report generation
+    const filteredEntries = dailyEntries.filter(e => !excludedIds.has(e.uniqueId));
+
     // Title formatting
     let title = 'SUMMARY REPORT';
     if (project && project !== 'all') {
@@ -121,10 +124,10 @@ export async function GET(request) {
     textBuffer += `Generated: ${new Date().toLocaleDateString()}\n`;
     textBuffer += `=========================================\n\n`;
 
-    if (dailyEntries.length === 0) {
+    if (filteredEntries.length === 0) {
       textBuffer += `No work log entries recorded for this timeline/project selection.\n`;
     } else {
-      dailyEntries.forEach((entry, index) => {
+      filteredEntries.forEach((entry, index) => {
         totalAllocated += entry.allocated;
         totalBilled += entry.billed;
         totalActual += entry.actual;
@@ -160,7 +163,7 @@ export async function GET(request) {
 
     if (includeTotals) {
       textBuffer += `\nTOTAL SUMMARY:\n`;
-      textBuffer += `Total Log Entries: ${dailyEntries.length}\n`;
+      textBuffer += `Total Log Entries: ${filteredEntries.length}\n`;
       if (includeHours) {
         textBuffer += `Total Allocated Hours: ${totalAllocated.toFixed(2)} hrs\n`;
         textBuffer += `Total Billed Hours: ${totalBilled.toFixed(2)} hrs\n`;
@@ -176,10 +179,10 @@ export async function GET(request) {
       success: true,
       timeframe,
       project: project || 'All Projects',
-      tasksCount: tasks.length,
+      tasksCount: filteredEntries.length,
       totals: { totalAllocated, totalBilled, totalActual, variance: totalBilled - totalActual },
       reportText: textBuffer,
-      tasks,
+      tasks: dailyEntries,
       isDemo
     });
   } catch (error) {

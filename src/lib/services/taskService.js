@@ -229,6 +229,20 @@ export const taskService = {
       }
     };
 
+    if (entryData.status && entryData.status !== existingTask.status) {
+      const validStatuses = await dbService.getStatuses();
+      if (validStatuses.includes(entryData.status)) {
+        updateDoc.$set.status = entryData.status;
+        updateDoc.$push = {
+          statusHistory: {
+            status: entryData.status,
+            timestamp: new Date().toISOString(),
+            changedBy: userNameOrUsername
+          }
+        };
+      }
+    }
+
     const updatedTask = await dbService.updateTask(taskId, updateDoc);
     return { success: true, task: updatedTask };
   },

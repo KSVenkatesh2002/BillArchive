@@ -74,6 +74,22 @@ export const updateTask = createAsyncThunk(
   }
 );
 
+export const addTimeEntry = createAsyncThunk(
+  'tasks/addTimeEntry',
+  async ({ taskId, entry }, { dispatch, rejectWithValue }) => {
+    try {
+      const data = await apiClient.addTimeEntry(taskId, entry);
+      if (data.success) {
+        dispatch(fetchTasks({ pageNum: 1, reset: true }));
+        return data;
+      }
+      throw new Error(data.error || 'Failed to add time entry');
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
 export const deleteTask = createAsyncThunk(
   'tasks/deleteTask',
   async (taskId, { dispatch, rejectWithValue }) => {

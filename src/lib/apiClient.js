@@ -66,6 +66,15 @@ export const apiClient = {
     return res.json();
   },
 
+  async addTimeEntry(taskId, entry) {
+    const res = await fetch(`/api/tasks/${taskId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'addTimeEntry', entry }),
+    });
+    return res.json();
+  },
+
   async deleteTask(taskId) {
     const res = await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
     return res.json();

@@ -151,23 +151,21 @@ export default function FilterControls(props) {
           })}
 
         {/* Project Filter */}
-        {projectField && (
-          <div>
-            <label className="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Project</label>
-            <select
-              value={filterProject}
-              onChange={(e) => handleProjectChange(e.target.value)}
-              className="bg-black border border-zinc-800 rounded-xl px-3 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-indigo-500"
-            >
-              <option value="all">All Projects</option>
-              {projectOptions.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
+        <div>
+          <label className="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Project</label>
+          <select
+            value={filterProject}
+            onChange={(e) => handleProjectChange(e.target.value)}
+            className="bg-black border border-zinc-800 rounded-xl px-3 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-indigo-500"
+          >
+            <option value="all">All Projects</option>
+            {projectOptions.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        </div>
 
         {/* Timeframe Filter */}
         <div>

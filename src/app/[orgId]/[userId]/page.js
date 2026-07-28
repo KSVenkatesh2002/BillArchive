@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useSelector, useDispatch } from 'react-redux';
 import { Zap, LayoutGrid, List } from 'lucide-react';
@@ -17,7 +18,8 @@ import {
   setCustomFilters,
   setActiveHistoryTask,
   deleteTask,
-  updateTask
+  updateTask,
+  addTimeEntry
 } from '@/lib/store/taskSlice';
 
 // Import child components
@@ -29,7 +31,7 @@ import TaskCards from '@/components/TaskCards';
 import Toast from '@/components/Toast';
 import AuditLogModal from '@/components/AuditLogModal';
 import TaskFormModal from '@/components/TaskFormModal';
-import ReportPreviewModal from '@/components/ReportPreviewModal';
+import LogTimeModal from '@/components/LogTimeModal';
 
 export default function UserDashboard() {
   const { userId, orgId } = useParams();
@@ -57,6 +59,7 @@ export default function UserDashboard() {
   // Local UI states (viewMode, modals, toast)
   const [viewMode, setViewMode] = useState('table');
   const [showTaskModal, setShowTaskModal] = useState(false);
+  const [showLogTimeModal, setShowLogTimeModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [taskForm, setTaskForm] = useState({
     name: '',
@@ -70,9 +73,7 @@ export default function UserDashboard() {
   });
 
   const [toastMessage, setToastMessage] = useState('');
-  const [reportModalOpen, setReportModalOpen] = useState(false);
-  const [reportModalProject, setReportModalProject] = useState('all');
-  const [reportModalTimeframe, setReportModalTimeframe] = useState('all');
+
 
   // Check auth
   const handleCheckAuth = async () => {
@@ -221,6 +222,21 @@ export default function UserDashboard() {
     }
   };
 
+  const handleLogTimeSubmit = async (taskId, entryData) => {
+    try {
+      const data = await dispatch(addTimeEntry({ taskId, entry: entryData })).unwrap();
+      if (data.success) {
+        setShowLogTimeModal(false);
+        triggerToast('Time logged successfully!');
+      } else {
+        alert(data.error || 'Failed to log time.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('An error occurred while logging time.');
+    }
+  };
+
   const openEditModal = (task) => {
     // Find the original unflattened task to populate the edit form accurately
     const originalTask = tasks.find(t => t._id === (task._originalId || task._id)) || task;
@@ -308,8 +324,6 @@ export default function UserDashboard() {
         {/* Top Navbar Header */}
         <Header
           currentUser={currentUser}
-          onCopy1Wk={() => handleOpenReportModal('1w', 'all')}
-          onCopy1Mo={() => handleOpenReportModal('1m', 'all')}
           onLogout={handleLogout}
         />
 
@@ -356,6 +370,12 @@ export default function UserDashboard() {
             <span className="text-[10px] lowercase font-normal px-2 py-0.5 rounded-full bg-zinc-900 text-zinc-500 border border-zinc-800">
               {viewMode === 'table' ? 'table view' : 'card view'}
             </span>
+            <button
+              onClick={() => setShowLogTimeModal(true)}
+              className="ml-2 text-[10px] uppercase font-bold px-3 py-1 rounded-md bg-orange-500/10 text-orange-400 hover:bg-orange-500 hover:text-black border border-orange-500/20 transition-all flex items-center gap-1"
+            >
+              + Add Task
+            </button>
           </h2>
           <div className="flex items-center bg-zinc-950 border border-zinc-800 rounded-xl p-1 shadow-inner">
             <button
@@ -391,15 +411,15 @@ export default function UserDashboard() {
             loading={loading && flattenedTasks.length === 0}
             tasks={flattenedTasks}
             handleQuickStatusChange={(id, status) => {
-              const originalId = id.split('-')[0];
-              handleQuickStatusChange(originalId, status);
+              const task = flattenedTasks.find(t => t._id === id);
+              handleQuickStatusChange(task ? task._originalId : id, status);
             }}
             setActiveHistoryTask={(val) => dispatch(setActiveHistoryTask(val))}
             handleCopyProjectDetails={handleCopyProjectDetails}
             openEditModal={openEditModal}
             deleteTask={(id) => {
-              const originalId = id.split('-')[0];
-              handleDeleteTask(originalId);
+              const task = flattenedTasks.find(t => t._id === id);
+              handleDeleteTask(task ? task._originalId : id);
             }}
             dynamicFields={dynamicFields}
           />
@@ -408,15 +428,15 @@ export default function UserDashboard() {
             loading={loading && flattenedTasks.length === 0}
             tasks={flattenedTasks}
             handleQuickStatusChange={(id, status) => {
-              const originalId = id.split('-')[0];
-              handleQuickStatusChange(originalId, status);
+              const task = flattenedTasks.find(t => t._id === id);
+              handleQuickStatusChange(task ? task._originalId : id, status);
             }}
             setActiveHistoryTask={(val) => dispatch(setActiveHistoryTask(val))}
             handleCopyProjectDetails={handleCopyProjectDetails}
             openEditModal={openEditModal}
             deleteTask={(id) => {
-              const originalId = id.split('-')[0];
-              handleDeleteTask(originalId);
+              const task = flattenedTasks.find(t => t._id === id);
+              handleDeleteTask(task ? task._originalId : id);
             }}
             dynamicFields={dynamicFields}
           />
@@ -440,13 +460,15 @@ export default function UserDashboard() {
         onClose={() => setShowTaskModal(false)}
       />
 
-      {/* Report Preview Modal */}
-      <ReportPreviewModal
-        isOpen={reportModalOpen}
-        onClose={() => setReportModalOpen(false)}
-        initialProject={reportModalProject}
-        projectsList={uniqueProjects}
+      {/* Log Time Modal */}
+      <LogTimeModal
+        isOpen={showLogTimeModal}
+        onClose={() => setShowLogTimeModal(false)}
+        tasks={tasks}
+        onSubmit={handleLogTimeSubmit}
       />
+
+
 
       {/* History Audit Log Modal */}
       <AuditLogModal

@@ -16,9 +16,15 @@ const STATUS_OPTIONS = [
 export default function AuditLogModal({ task, onClose }) {
   if (!task) return null;
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
-        <div className="flex items-center justify-between pb-4 border-b border-zinc-800 mb-6">
+    <div 
+      className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between p-6 pb-4 border-b border-zinc-800">
           <div>
             <h3 className="text-base font-bold text-white flex items-center gap-2">
               <History className="w-5 h-5 text-indigo-400" />

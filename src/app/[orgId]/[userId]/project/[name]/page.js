@@ -28,7 +28,6 @@ import TaskTable from '@/components/TaskTable';
 import Toast from '@/components/Toast';
 import TaskFormModal from '@/components/TaskFormModal';
 import AuditLogModal from '@/components/AuditLogModal';
-import ReportPreviewModal from '@/components/ReportPreviewModal';
 
 export default function UserProjectPage() {
   const { userId, orgId, name } = useParams();
@@ -67,8 +66,6 @@ export default function UserProjectPage() {
   });
 
   const [toastMessage, setToastMessage] = useState('');
-  const [reportModalOpen, setReportModalOpen] = useState(false);
-  const [reportModalTimeframe, setReportModalTimeframe] = useState('all');
 
   // Check auth
   const handleCheckAuth = async () => {
@@ -245,11 +242,6 @@ export default function UserProjectPage() {
     setTimeout(() => setToastMessage(''), 3500);
   };
 
-  const handleOpenReportModal = (tf = 'all') => {
-    setReportModalTimeframe(tf);
-    setReportModalOpen(true);
-  };
-
   return (
     <div className="min-h-screen bg-black text-slate-100 font-sans selection:bg-orange-500 selection:text-white">
       <Toast message={toastMessage} />
@@ -258,8 +250,6 @@ export default function UserProjectPage() {
         {/* Header */}
         <Header
           currentUser={currentUser}
-          onCopy1Wk={() => handleOpenReportModal('1w')}
-          onCopy1Mo={() => handleOpenReportModal('1m')}
           onLogout={handleLogout}
         />
 
@@ -338,15 +328,6 @@ export default function UserProjectPage() {
       <AuditLogModal
         task={activeHistoryTask}
         onClose={() => dispatch(setActiveHistoryTask(null))}
-      />
-
-      {/* Report Preview Modal */}
-      <ReportPreviewModal
-        isOpen={reportModalOpen}
-        onClose={() => setReportModalOpen(false)}
-        initialProject={decodedProjectName}
-        initialTimeframe={reportModalTimeframe}
-        projectsList={[decodedProjectName]}
       />
     </div>
   );

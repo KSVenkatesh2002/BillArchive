@@ -23,8 +23,23 @@ const getRelativeTimeGroup = (dateString) => {
     return 'Yesterday';
   }
   
-  // Otherwise, exact date
   return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+};
+
+const getWeekRange = (dateString) => {
+  if (!dateString) return null;
+  const d = new Date(dateString);
+  const day = d.getDay(); // 0 is Sunday, 6 is Saturday
+  
+  const start = new Date(d);
+  start.setDate(d.getDate() - day);
+  
+  const end = new Date(d);
+  end.setDate(d.getDate() + (6 - day));
+  
+  const formatDate = (date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  
+  return `${formatDate(start)} - ${formatDate(end)}`;
 };
 
 
@@ -78,6 +93,28 @@ export default function TaskTable({
     return 'bg-zinc-900 text-zinc-300 border-zinc-800';
   };
 
+  const dateTotals = {};
+  const weekTotals = {};
+
+  tasks.forEach(t => {
+    const dateStr = t.workDate || t.createdAt;
+    const dateGrp = getRelativeTimeGroup(dateStr);
+    const weekGrp = getWeekRange(dateStr);
+    
+    if (!dateTotals[dateGrp]) dateTotals[dateGrp] = { alloc: 0, bill: 0, act: 0 };
+    if (weekGrp && !weekTotals[weekGrp]) weekTotals[weekGrp] = { alloc: 0, bill: 0, act: 0 };
+    
+    dateTotals[dateGrp].alloc += Number(t.bill?.allocatedHours || 0);
+    dateTotals[dateGrp].bill += Number(t.bill?.billedHours || 0);
+    dateTotals[dateGrp].act += Number(t.bill?.actualHours || 0);
+    
+    if (weekGrp) {
+      weekTotals[weekGrp].alloc += Number(t.bill?.allocatedHours || 0);
+      weekTotals[weekGrp].bill += Number(t.bill?.billedHours || 0);
+      weekTotals[weekGrp].act += Number(t.bill?.actualHours || 0);
+    }
+  });
+
   return (
     <div className="bg-[#0b0b0b] rounded-2xl border border-zinc-800/80 shadow-2xl overflow-hidden">
       {loading ? (
@@ -111,7 +148,14 @@ export default function TaskTable({
               {tasks.map((task, index) => {
                 const taskDate = task.workDate || task.createdAt;
                 const currentGroup = getRelativeTimeGroup(taskDate);
-                const prevGroup = index > 0 ? getRelativeTimeGroup(tasks[index - 1].workDate || tasks[index - 1].createdAt) : null;
+                const currentWeek = getWeekRange(taskDate);
+
+                const prevTask = index > 0 ? tasks[index - 1] : null;
+                const prevDate = prevTask ? (prevTask.workDate || prevTask.createdAt) : null;
+                const prevGroup = prevDate ? getRelativeTimeGroup(prevDate) : null;
+                const prevWeek = prevDate ? getWeekRange(prevDate) : null;
+
+                const showWeek = currentWeek && currentWeek !== prevWeek;
                 const showSeparator = currentGroup !== prevGroup;
                 const statusColor = getStatusColor(task.status);
                 
@@ -127,10 +171,17 @@ export default function TaskTable({
 
                 return (
                   <React.Fragment key={task._id}>
+                    {showWeek && (
+                      <tr className="bg-zinc-900/80">
+                        <td colSpan={6 + customCols.length} className="py-2.5 px-4 text-xs font-bold uppercase text-zinc-300 border-y border-zinc-800">
+                          Week of {currentWeek} <span className="ml-4 font-normal text-[10px] text-zinc-400">Alloc: {weekTotals[currentWeek].alloc.toFixed(2)}h | Bill: {weekTotals[currentWeek].bill.toFixed(2)}h | Act: {weekTotals[currentWeek].act.toFixed(2)}h</span>
+                        </td>
+                      </tr>
+                    )}
                     {showSeparator && (
                       <tr className="bg-black">
                         <td colSpan={6 + customCols.length} className="py-2.5 px-4 text-xs font-black tracking-widest uppercase text-orange-500 border-y border-orange-500/20 bg-gradient-to-r from-orange-500/10 to-transparent">
-                          {currentGroup}
+                          {currentGroup} <span className="ml-4 font-normal text-[10px] text-zinc-400">Alloc: {dateTotals[currentGroup].alloc.toFixed(2)}h | Bill: {dateTotals[currentGroup].bill.toFixed(2)}h | Act: {dateTotals[currentGroup].act.toFixed(2)}h</span>
                         </td>
                       </tr>
                     )}

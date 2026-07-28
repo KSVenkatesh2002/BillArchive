@@ -13,6 +13,8 @@ function getKnex() {
   return dbInstance;
 }
 
+const isUUID = (str) => typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
 export const pgAdapter = {
   async connect() {
     const db = getKnex();
@@ -82,7 +84,7 @@ export const pgAdapter = {
     // Resolve Org ID
     let orgId = null;
     const targetOrgSlug = typeof userDoc.organization === 'object' ? userDoc.organization?.slug || userDoc.organization?.id : (userDoc.organization || 'dialedin');
-    const org = await db('organizations').where({ slug: targetOrgSlug }).orWhere({ id: targetOrgSlug }).first();
+    const org = await db('organizations').where(isUUID(targetOrgSlug) ? { id: targetOrgSlug } : { slug: targetOrgSlug }).first();
     orgId = org?.id;
 
     const [user] = await db('users').insert({
@@ -156,7 +158,11 @@ export const pgAdapter = {
     if (query.organizationId || query.orgId) {
       const orgQuery = query.organizationId || query.orgId;
       q = q.where(builder => {
-        builder.where('o.slug', orgQuery).orWhere('t.organization_id', orgQuery);
+      if (isUUID(orgQuery)) {
+        builder.where('t.organization_id', orgQuery);
+      } else {
+        builder.where('o.slug', orgQuery);
+      }
       });
     }
 
@@ -265,7 +271,7 @@ export const pgAdapter = {
 
     // Resolve Org ID
     const targetOrgSlug = taskDoc.organization || 'dialedin';
-    const org = await db('organizations').where({ slug: targetOrgSlug }).orWhere({ id: targetOrgSlug }).first();
+    const org = await db('organizations').where(isUUID(targetOrgSlug) ? { id: targetOrgSlug } : { slug: targetOrgSlug }).first();
     const orgId = org?.id;
 
     const [newTask] = await db('tasks').insert({
@@ -398,7 +404,7 @@ export const pgAdapter = {
 
   async getStatuses(orgSlug = 'dialedin') {
     const db = getKnex();
-    const org = await db('organizations').where({ slug: orgSlug }).orWhere({ id: orgSlug }).first();
+    const org = await db('organizations').where(isUUID(orgSlug) ? { id: orgSlug } : { slug: orgSlug }).first();
     const orgId = org?.id;
 
     if (!orgId) return ['inprocess', 'dev', 'ready_for_qa', 'qa_complete', 'complete', 'need_approval'];
@@ -415,7 +421,7 @@ export const pgAdapter = {
 
   async saveStatuses(list, orgSlug = 'dialedin') {
     const db = getKnex();
-    const org = await db('organizations').where({ slug: orgSlug }).orWhere({ id: orgSlug }).first();
+    const org = await db('organizations').where(isUUID(orgSlug) ? { id: orgSlug } : { slug: orgSlug }).first();
     const orgId = org?.id;
 
     if (!orgId) return list;
@@ -456,7 +462,7 @@ export const pgAdapter = {
 
   async findOrganizationById(idOrSlug) {
     const db = getKnex();
-    const org = await db('organizations').where({ id: idOrSlug }).orWhere({ slug: idOrSlug }).first();
+    const org = await db('organizations').where(isUUID(idOrSlug) ? { id: idOrSlug } : { slug: idOrSlug }).first();
     if (!org) return null;
 
     const fields = await db('organization_fields').where({ organization_id: org.id });
@@ -498,7 +504,7 @@ export const pgAdapter = {
 
   async updateOrganizationConfig(idOrSlug, dynamicFields) {
     const db = getKnex();
-    const org = await db('organizations').where({ id: idOrSlug }).orWhere({ slug: idOrSlug }).first();
+    const org = await db('organizations').where(isUUID(idOrSlug) ? { id: idOrSlug } : { slug: idOrSlug }).first();
     if (!org) return null;
 
     if (dynamicFields && Array.isArray(dynamicFields)) {

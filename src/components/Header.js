@@ -37,25 +37,16 @@ export default function Header(props) {
 
       {/* Right Action Bar (Auth & Actions) */}
       <div className="flex flex-wrap items-center gap-3">
-        {/* Copy Timeframe Reports */}
+        {/* Generate Report */}
         <div className="flex items-center bg-[#0d0d0d] border border-zinc-800 rounded-xl p-1">
-          <button
-            onClick={props.onCopy1Wk}
-            className="text-xs font-semibold px-3 py-1.5 rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-900 transition flex items-center gap-1.5"
-            title="Copy text summary of past 1 week tasks"
+          <Link
+            href={`/${activeOrgId}/${activeUserId}/reports`}
+            className="text-xs font-semibold px-4 py-1.5 rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-900 transition flex items-center gap-2"
+            title="Generate and copy timesheet reports"
           >
-            <FileText className="w-3.5 h-3.5 text-zinc-400" />
-            <span>Copy 1-Wk Report</span>
-          </button>
-          <div className="w-px h-4 bg-zinc-800"></div>
-          <button
-            onClick={props.onCopy1Mo}
-            className="text-xs font-semibold px-3 py-1.5 rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-900 transition flex items-center gap-1.5"
-            title="Copy text summary of past 1 month tasks"
-          >
-            <Calendar className="w-3.5 h-3.5 text-zinc-400" />
-            <span>Copy 1-Mo Report</span>
-          </button>
+            <FileText className="w-4 h-4 text-zinc-400" />
+            <span>Report</span>
+          </Link>
         </div>
 
         {/* Create Task Button */}

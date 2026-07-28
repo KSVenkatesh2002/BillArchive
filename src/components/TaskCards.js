@@ -23,8 +23,23 @@ const getRelativeTimeGroup = (dateString) => {
     return 'Yesterday';
   }
   
-  // Otherwise, exact date
   return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+};
+
+const getWeekRange = (dateString) => {
+  if (!dateString) return null;
+  const d = new Date(dateString);
+  const day = d.getDay();
+  
+  const start = new Date(d);
+  start.setDate(d.getDate() - day);
+  
+  const end = new Date(d);
+  end.setDate(d.getDate() + (6 - day));
+  
+  const formatDate = (date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  
+  return `${formatDate(start)} - ${formatDate(end)}`;
 };
 
 
@@ -77,6 +92,28 @@ export default function TaskCards({
     return 'bg-zinc-900 text-zinc-300 border-zinc-800';
   };
 
+  const dateTotals = {};
+  const weekTotals = {};
+
+  tasks.forEach(t => {
+    const dateStr = t.workDate || t.createdAt;
+    const dateGrp = getRelativeTimeGroup(dateStr);
+    const weekGrp = getWeekRange(dateStr);
+    
+    if (!dateTotals[dateGrp]) dateTotals[dateGrp] = { alloc: 0, bill: 0, act: 0 };
+    if (weekGrp && !weekTotals[weekGrp]) weekTotals[weekGrp] = { alloc: 0, bill: 0, act: 0 };
+    
+    dateTotals[dateGrp].alloc += Number(t.bill?.allocatedHours || 0);
+    dateTotals[dateGrp].bill += Number(t.bill?.billedHours || 0);
+    dateTotals[dateGrp].act += Number(t.bill?.actualHours || 0);
+    
+    if (weekGrp) {
+      weekTotals[weekGrp].alloc += Number(t.bill?.allocatedHours || 0);
+      weekTotals[weekGrp].bill += Number(t.bill?.billedHours || 0);
+      weekTotals[weekGrp].act += Number(t.bill?.actualHours || 0);
+    }
+  });
+
   return (
     <div className="w-full">
       {loading ? (
@@ -95,7 +132,14 @@ export default function TaskCards({
           {tasks.map((task, index) => {
             const taskDate = task.workDate || task.createdAt;
             const currentGroup = getRelativeTimeGroup(taskDate);
-            const prevGroup = index > 0 ? getRelativeTimeGroup(tasks[index - 1].workDate || tasks[index - 1].createdAt) : null;
+            const currentWeek = getWeekRange(taskDate);
+
+            const prevTask = index > 0 ? tasks[index - 1] : null;
+            const prevDate = prevTask ? (prevTask.workDate || prevTask.createdAt) : null;
+            const prevGroup = prevDate ? getRelativeTimeGroup(prevDate) : null;
+            const prevWeek = prevDate ? getWeekRange(prevDate) : null;
+
+            const showWeek = currentWeek && currentWeek !== prevWeek;
             const showSeparator = currentGroup !== prevGroup;
             const statusColor = getStatusColor(task.status);
 
@@ -110,10 +154,20 @@ export default function TaskCards({
 
             return (
               <React.Fragment key={task._id}>
+                {showWeek && (
+                  <div className="col-span-full mt-4 mb-2">
+                    <h3 className="text-sm font-bold uppercase text-zinc-300 bg-zinc-900/80 p-2 rounded-lg border border-zinc-800 flex items-center gap-4">
+                      <span>Week of {currentWeek}</span>
+                      <span className="font-mono font-normal text-[10px] text-zinc-400">Alloc: {weekTotals[currentWeek].alloc.toFixed(2)}h | Bill: {weekTotals[currentWeek].bill.toFixed(2)}h | Act: {weekTotals[currentWeek].act.toFixed(2)}h</span>
+                    </h3>
+                  </div>
+                )}
                 {showSeparator && (
-                  <div className="col-span-full py-2 mt-2 mb-1 flex items-center gap-4">
-                    <div className="text-xs font-black tracking-widest uppercase text-orange-500">{currentGroup}</div>
-                    <div className="flex-1 h-px bg-gradient-to-r from-orange-500/20 to-transparent"></div>
+                  <div className="col-span-full mt-4 mb-2">
+                    <h3 className="text-sm font-black tracking-widest uppercase text-orange-500 border-b border-orange-500/20 pb-2 flex items-center gap-4">
+                      <span>{currentGroup}</span>
+                      <span className="font-mono font-normal text-[10px] text-zinc-400">Alloc: {dateTotals[currentGroup].alloc.toFixed(2)}h | Bill: {dateTotals[currentGroup].bill.toFixed(2)}h | Act: {dateTotals[currentGroup].act.toFixed(2)}h</span>
+                    </h3>
                   </div>
                 )}
                 <div
@@ -176,7 +230,7 @@ export default function TaskCards({
                   </div>
 
                   {/* Metadata and Hours breakdown */}
-                  <div className="bg-zinc-950/60 rounded-xl p-3 border border-zinc-905 mb-4 space-y-3">
+                  <div className="bg-zinc-950/60 rounded-xl p-3 border border-zinc-900 mb-4 space-y-3">
                     <div className="flex justify-between items-center text-[10px] text-zinc-500 uppercase tracking-wider font-bold">
                       <span>Hours Metrics</span>
                       <span className="text-zinc-650">(Alloc / Bill / Act)</span>

@@ -302,15 +302,21 @@ export default function TaskDetailPage() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-3 bg-black rounded-xl border border-zinc-800">
                   <span className="text-xs text-zinc-400 font-medium">Allocated Hours</span>
-                  <span className="text-base font-bold font-mono text-zinc-100">{task.bill?.allocatedHours || 0} hrs</span>
+                  <span className="text-base font-bold font-mono text-zinc-100">
+                    {((task.timeEntries || []).reduce((sum, e) => sum + (Number(e.allocatedHours) || 0), 0) + (Number(task.bill?.allocatedHours) || 0)).toFixed(2)} hrs
+                  </span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-black rounded-xl border border-zinc-800">
                   <span className="text-xs text-zinc-400 font-medium">Billed Hours</span>
-                  <span className="text-base font-bold font-mono text-amber-400">{task.bill?.billedHours || 0} hrs</span>
+                  <span className="text-base font-bold font-mono text-amber-400">
+                    {((task.timeEntries || []).reduce((sum, e) => sum + (Number(e.billedHours) || 0), 0) + (Number(task.bill?.billedHours) || 0)).toFixed(2)} hrs
+                  </span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-black rounded-xl border border-zinc-800">
                   <span className="text-xs text-zinc-400 font-medium">Actual Hours</span>
-                  <span className="text-base font-bold font-mono text-orange-400">{task.bill?.actualHours || 0} hrs</span>
+                  <span className="text-base font-bold font-mono text-orange-400">
+                    {((task.timeEntries || []).reduce((sum, e) => sum + (Number(e.actualHours) || 0), 0) + (Number(task.bill?.actualHours) || 0)).toFixed(2)} hrs
+                  </span>
                 </div>
               </div>
             </div>
