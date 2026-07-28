@@ -1,9 +1,32 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Pin, ExternalLink, Folder, Copy, Clock, Edit2, Trash2 } from 'lucide-react';
+
+
+const getRelativeTimeGroup = (dateString) => {
+  if (!dateString) return 'Older';
+  const date = new Date(dateString);
+  const now = new Date();
+  
+  // Check Today
+  if (date.getDate() === now.getDate() && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()) {
+    return 'Today';
+  }
+  
+  // Check Yesterday
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (date.getDate() === yesterday.getDate() && date.getMonth() === yesterday.getMonth() && date.getFullYear() === yesterday.getFullYear()) {
+    return 'Yesterday';
+  }
+  
+  // Otherwise, exact date
+  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+};
+
 
 export default function TaskCards({
   loading,
@@ -69,7 +92,11 @@ export default function TaskCards({
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {tasks.map((task) => {
+          {tasks.map((task, index) => {
+            const taskDate = task.workDate || task.createdAt;
+            const currentGroup = getRelativeTimeGroup(taskDate);
+            const prevGroup = index > 0 ? getRelativeTimeGroup(tasks[index - 1].workDate || tasks[index - 1].createdAt) : null;
+            const showSeparator = currentGroup !== prevGroup;
             const statusColor = getStatusColor(task.status);
 
             const hasClickup = !!task.clickupId;
@@ -82,8 +109,14 @@ export default function TaskCards({
             }
 
             return (
-              <div
-                key={task._id}
+              <React.Fragment key={task._id}>
+                {showSeparator && (
+                  <div className="col-span-full py-2 mt-2 mb-1 flex items-center gap-4">
+                    <div className="text-xs font-black tracking-widest uppercase text-orange-500">{currentGroup}</div>
+                    <div className="flex-1 h-px bg-gradient-to-r from-orange-500/20 to-transparent"></div>
+                  </div>
+                )}
+                <div
                 className="bg-[#0b0b0b] rounded-2xl border border-zinc-800 hover:border-zinc-700/80 shadow-lg p-5 flex flex-col justify-between transition-all duration-300 hover:shadow-orange-950/10 hover:shadow-xl group relative overflow-hidden"
               >
                 {/* Accent glow on hover */}
@@ -94,7 +127,9 @@ export default function TaskCards({
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="flex-1 min-w-0">
                       <h3 className="font-bold text-zinc-150 text-base leading-snug group-hover:text-orange-450 transition-colors duration-200 truncate" title={task.name}>
-                        {task.name}
+                        <Link href={`/${orgId}/${userId}/${task._originalId || task._id}`}>
+                          {task.name}
+                        </Link>
                       </h3>
                       <div className="text-[11px] text-zinc-500 font-mono mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                         <span>Nick: <strong className="text-zinc-300">{task.nickName || 'N/A'}</strong></span>
@@ -228,6 +263,7 @@ export default function TaskCards({
                   </div>
                 </div>
               </div>
+              </React.Fragment>
             );
           })}
         </div>

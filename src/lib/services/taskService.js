@@ -47,10 +47,19 @@ export const taskService = {
   },
 
   /**
+   * Get single task by ID
+   */
+  async getTaskById(taskId) {
+    const task = await dbService.findTaskById(taskId);
+    if (!task) throw new Error('Task not found');
+    return { success: true, task };
+  },
+
+  /**
    * Create a new task
    */
   async createTask(userId, username, name, taskData) {
-    const { name: taskName, nickName, status, bill, project, source, typeOfWork, clickupId, dynamicValues } = taskData;
+    const { name: taskName, nickName, status, bill, project, clickupId, dynamicValues, workDate } = taskData;
 
     if (!taskName) {
       throw new Error('Task name is required');
@@ -59,9 +68,26 @@ export const taskService = {
     const validStatuses = await dbService.getStatuses();
     const initialStatus = validStatuses.includes(status) ? status : (validStatuses[0] || 'inprocess');
     const now = new Date();
+    const taskWorkDate = workDate ? new Date(workDate) : now;
 
     const dbUser = await dbService.findUserByUsername(username);
     const orgId = dbUser?.organization?._id || dbUser?.organization || null;
+
+    const initialAlloc = parseFloat(bill?.allocatedHours || 0);
+    const initialBilled = parseFloat(bill?.billedHours || 0);
+    const initialActual = parseFloat(bill?.actualHours || 0);
+    const initialEntries = [];
+
+    if (initialAlloc > 0 || initialBilled > 0 || initialActual > 0) {
+      initialEntries.push({
+        date: taskWorkDate,
+        allocatedHours: initialAlloc,
+        billedHours: initialBilled,
+        actualHours: initialActual,
+        note: 'Initial hours logged',
+        loggedBy: name || username
+      });
+    }
 
     const newTask = {
       name: taskName,
@@ -75,14 +101,14 @@ export const taskService = {
           changedBy: name || username
         }
       ],
+      workDate: taskWorkDate,
+      timeEntries: initialEntries,
       bill: {
-        allocatedHours: parseFloat(bill?.allocatedHours || 0),
-        billedHours: parseFloat(bill?.billedHours || 0),
-        actualHours: parseFloat(bill?.actualHours || 0),
+        allocatedHours: initialAlloc,
+        billedHours: initialBilled,
+        actualHours: initialActual,
       },
       project: project || '',
-      source: source || undefined,
-      typeOfWork: typeOfWork || undefined,
       userId,
       username,
       user: name,
@@ -116,7 +142,7 @@ export const taskService = {
       throw new Error('Forbidden');
     }
 
-    const { status, name, nickName, bill, project, source, typeOfWork, clickupId, dynamicValues } = updateData;
+    const { status, name, nickName, bill, project, clickupId, dynamicValues, workDate } = updateData;
     const now = new Date();
     
     const updateDoc = {
@@ -128,10 +154,9 @@ export const taskService = {
     if (name) updateDoc.$set.name = name;
     if (nickName !== undefined) updateDoc.$set.nickName = nickName;
     if (project) updateDoc.$set.project = project;
-    if (source) updateDoc.$set.source = source;
-    if (typeOfWork) updateDoc.$set.typeOfWork = typeOfWork;
     if (clickupId !== undefined) updateDoc.$set.clickupId = clickupId;
     if (dynamicValues) updateDoc.$set.dynamicValues = dynamicValues;
+    if (workDate) updateDoc.$set.workDate = new Date(workDate);
 
     if (bill) {
       updateDoc.$set.bill = {
@@ -162,6 +187,79 @@ export const taskService = {
       success: true,
       task: updatedTask
     };
+  },
+
+  /**
+   * Add a Time Entry to a task
+   */
+  async addTimeEntry(taskId, userId, userNameOrUsername, entryData) {
+    const existingTask = await dbService.findTaskById(taskId);
+    if (!existingTask) throw new Error('Task not found');
+
+    const entryDate = entryData.date ? new Date(entryData.date) : new Date();
+    const allocated = parseFloat(entryData.allocatedHours || 0);
+    const billed = parseFloat(entryData.billedHours || 0);
+    const actual = parseFloat(entryData.actualHours || 0);
+
+    const newEntry = {
+      date: entryDate,
+      allocatedHours: allocated,
+      billedHours: billed,
+      actualHours: actual,
+      note: entryData.note || '',
+      loggedBy: userNameOrUsername
+    };
+
+    const updatedEntries = [...(existingTask.timeEntries || []), newEntry];
+    
+    // Recalculate bill totals
+    const totalAllocated = updatedEntries.reduce((sum, e) => sum + (e.allocatedHours || 0), 0);
+    const totalBilled = updatedEntries.reduce((sum, e) => sum + (e.billedHours || 0), 0);
+    const totalActual = updatedEntries.reduce((sum, e) => sum + (e.actualHours || 0), 0);
+
+    const updateDoc = {
+      $set: {
+        timeEntries: updatedEntries,
+        bill: {
+          allocatedHours: totalAllocated,
+          billedHours: totalBilled,
+          actualHours: totalActual
+        },
+        updatedAt: new Date()
+      }
+    };
+
+    const updatedTask = await dbService.updateTask(taskId, updateDoc);
+    return { success: true, task: updatedTask };
+  },
+
+  /**
+   * Delete a Time Entry from a task
+   */
+  async deleteTimeEntry(taskId, entryId, userId) {
+    const existingTask = await dbService.findTaskById(taskId);
+    if (!existingTask) throw new Error('Task not found');
+
+    const updatedEntries = (existingTask.timeEntries || []).filter(e => e._id.toString() !== entryId);
+
+    const totalAllocated = updatedEntries.reduce((sum, e) => sum + (e.allocatedHours || 0), 0);
+    const totalBilled = updatedEntries.reduce((sum, e) => sum + (e.billedHours || 0), 0);
+    const totalActual = updatedEntries.reduce((sum, e) => sum + (e.actualHours || 0), 0);
+
+    const updateDoc = {
+      $set: {
+        timeEntries: updatedEntries,
+        bill: {
+          allocatedHours: totalAllocated,
+          billedHours: totalBilled,
+          actualHours: totalActual
+        },
+        updatedAt: new Date()
+      }
+    };
+
+    const updatedTask = await dbService.updateTask(taskId, updateDoc);
+    return { success: true, task: updatedTask };
   },
 
   /**

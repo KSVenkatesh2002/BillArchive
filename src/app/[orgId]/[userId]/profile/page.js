@@ -102,8 +102,8 @@ export default function ProfilePage() {
       try {
         const auth = await apiClient.checkAuth();
         if (auth.authenticated && auth.user) {
-          if (auth.user.userId !== userId || auth.user.orgId !== orgId) {
-            router.push(`/${auth.user.orgId || 'dialedin'}/${auth.user.userId}/profile`);
+          if (auth.user.username !== userId || auth.user.orgId !== orgId) {
+            router.push(`/${auth.user.orgId || 'dialedin'}/${auth.user.username}/profile`);
             return;
           }
           setCurrentUser(auth.user);

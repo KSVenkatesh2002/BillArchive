@@ -1,8 +1,6 @@
 import mongoose from 'mongoose';
 import { CONFIG } from '../config';
 import User from './models/User';
-import Source from './models/Source';
-import TypeOfWork from './models/TypeOfWork';
 import Task from './models/Task';
 import Bill from './models/Bill';
 import Setting from './models/Setting';
@@ -93,37 +91,14 @@ export const mongoAdapter = {
     if (query.project && query.project !== 'all') mongoQuery.project = query.project;
     if (query.createdAt) mongoQuery.createdAt = query.createdAt;
 
-    // Source filter
-    if (query.source && query.source !== 'all') {
-      let sDoc = await Source.findOne({
-        $or: [
-          { _id: mongoose.Types.ObjectId.isValid(query.source) ? query.source : null },
-          { name: query.source.toLowerCase() }
-        ]
-      }).lean();
-      if (sDoc) {
-        mongoQuery.source = sDoc._id;
-      } else {
-        mongoQuery.source = new mongoose.Types.ObjectId();
+        // Dynamic fields filters
+    Object.keys(query).forEach(key => {
+      if (key !== 'userId' && key !== 'project' && key !== 'createdAt' && query[key] !== 'all') {
+        mongoQuery['dynamicValues.' + key] = query[key];
       }
-    }
-
-    // Type of work filter
-    if (query.typeOfWork && query.typeOfWork !== 'all') {
-      let tDoc = await TypeOfWork.findOne({
-        $or: [
-          { _id: mongoose.Types.ObjectId.isValid(query.typeOfWork) ? query.typeOfWork : null },
-          { name: query.typeOfWork.toLowerCase() }
-        ]
-      }).lean();
-      if (tDoc) {
-        mongoQuery.typeOfWork = tDoc._id;
-      } else {
-        mongoQuery.typeOfWork = new mongoose.Types.ObjectId();
-      }
-    }
-
-    // Dynamic custom fields filters
+    });
+    
+    // Fallback cleanup (prevent empty dynamicValues keys)
     Object.keys(query).forEach(key => {
       if (key !== 'userId' && key !== 'project' && key !== 'createdAt' && key !== 'source' && key !== 'typeOfWork') {
         mongoQuery[key] = query[key];
@@ -149,8 +124,6 @@ export const mongoAdapter = {
 
     const tasks = await Task.find(mongoQuery)
       .populate('userId', 'username name')
-      .populate('source', 'name')
-      .populate('typeOfWork', 'name')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -162,10 +135,8 @@ export const mongoAdapter = {
       userId: t.userId?._id ? t.userId._id.toString() : (t.userId ? t.userId.toString() : ''),
       username: t.userId?.username || '',
       user: t.userId?.name || '',
-      source: t.source?.name || (t.source ? t.source.toString() : ''),
-      sourceId: t.source?._id ? t.source._id.toString() : (t.source ? t.source.toString() : ''),
-      typeOfWork: t.typeOfWork?.name || (t.typeOfWork ? t.typeOfWork.toString() : ''),
-      typeOfWorkId: t.typeOfWork?._id ? t.typeOfWork._id.toString() : (t.typeOfWork ? t.typeOfWork.toString() : '')
+      source: t.dynamicValues?.source || '',
+      typeOfWork: t.dynamicValues?.typeOfWork || ''
     }));
 
     return {
@@ -183,39 +154,8 @@ export const mongoAdapter = {
 
   async createTask(taskDoc) {
     await connectMongoose();
-
-    let sourceId = taskDoc.source;
-    if (sourceId) {
-      let sDoc = await Source.findOne({
-        $or: [
-          { _id: mongoose.Types.ObjectId.isValid(sourceId) ? sourceId : null },
-          { name: String(sourceId).toLowerCase() }
-        ]
-      });
-      if (!sDoc) {
-        sDoc = await Source.create({ name: String(sourceId).toLowerCase() });
-      }
-      sourceId = sDoc._id;
-    }
-
-    let typeId = taskDoc.typeOfWork;
-    if (typeId) {
-      let tDoc = await TypeOfWork.findOne({
-        $or: [
-          { _id: mongoose.Types.ObjectId.isValid(typeId) ? typeId : null },
-          { name: String(typeId).toLowerCase() }
-        ]
-      });
-      if (!tDoc) {
-        tDoc = await TypeOfWork.create({ name: String(typeId).toLowerCase() });
-      }
-      typeId = tDoc._id;
-    }
-
     const newTask = await Task.create({
       ...taskDoc,
-      source: sourceId,
-      typeOfWork: typeId,
       createdAt: taskDoc.createdAt || new Date(),
       updatedAt: taskDoc.updatedAt || new Date()
     });
@@ -227,8 +167,6 @@ export const mongoAdapter = {
     await connectMongoose();
     const task = await Task.findById(id)
       .populate('userId', 'username name')
-      .populate('source', 'name')
-      .populate('typeOfWork', 'name')
       .lean();
 
     if (!task) return null;
@@ -238,11 +176,7 @@ export const mongoAdapter = {
       _id: task._id.toString(),
       userId: task.userId?._id ? task.userId._id.toString() : (task.userId ? task.userId.toString() : ''),
       username: task.userId?.username || '',
-      user: task.userId?.name || '',
-      source: task.source?.name || (task.source ? task.source.toString() : ''),
-      sourceId: task.source?._id ? task.source._id.toString() : (task.source ? task.source.toString() : ''),
-      typeOfWork: task.typeOfWork?.name || (task.typeOfWork ? task.typeOfWork.toString() : ''),
-      typeOfWorkId: task.typeOfWork?._id ? task.typeOfWork._id.toString() : (task.typeOfWork ? task.typeOfWork.toString() : '')
+      user: task.userId?.name || ''
     };
   },
 
@@ -312,17 +246,17 @@ export const mongoAdapter = {
     await connectMongoose();
     const doc = await Setting.findOne({ key: 'statuses' }).lean();
     if (!doc) {
-      await Setting.create({ key: 'statuses', list: [...CONFIG.VALID_STATUSES] });
+      await Setting.create({ key: 'statuses', value: [...CONFIG.VALID_STATUSES] });
       return [...CONFIG.VALID_STATUSES];
     }
-    return doc.list;
+    return doc.value;
   },
 
   async saveStatuses(list) {
     await connectMongoose();
     await Setting.findOneAndUpdate(
       { key: 'statuses' },
-      { $set: { list } },
+      { $set: { value: list } },
       { upsert: true }
     );
     return list;
@@ -343,28 +277,22 @@ export const mongoAdapter = {
   },
 
   async getSources() {
-    await connectMongoose();
-    let sources = await Source.find({}).lean();
-    if (sources.length === 0) {
-      await Source.insertMany([{ name: 'dialedin' }, { name: 'fluent' }]);
-      sources = await Source.find({}).lean();
-    }
-    return sources.map(s => ({ ...s, _id: s._id.toString() }));
+    return []; // Handled by dynamic fields config
   },
 
   async getTypesOfWork() {
-    await connectMongoose();
-    let types = await TypeOfWork.find({}).lean();
-    if (types.length === 0) {
-      await TypeOfWork.insertMany([{ name: 'dev' }, { name: 'qa' }]);
-      types = await TypeOfWork.find({}).lean();
-    }
-    return types.map(t => ({ ...t, _id: t._id.toString() }));
+    return []; // Handled by dynamic fields config
   },
 
-  async findOrganizationById(id) {
+  async findOrganizationById(idOrSlug) {
     await connectMongoose();
-    const org = await Organization.findById(id).lean();
+    let org = null;
+    if (mongoose.Types.ObjectId.isValid(idOrSlug)) {
+      org = await Organization.findById(idOrSlug).lean();
+    }
+    if (!org) {
+      org = await Organization.findOne({ slug: String(idOrSlug).toLowerCase() }).lean();
+    }
     return org ? { ...org, _id: org._id.toString() } : null;
   },
 
@@ -385,12 +313,17 @@ export const mongoAdapter = {
     return { ...obj, _id: obj._id.toString() };
   },
 
-  async updateOrganizationConfig(id, dynamicFields, enabledFields) {
+  async updateOrganizationConfig(idOrSlug, dynamicFields, enabledFields) {
     await connectMongoose();
     const updatePayload = { dynamicFields, updatedAt: new Date() };
     if (enabledFields) updatePayload.enabledFields = enabledFields;
-    const updated = await Organization.findByIdAndUpdate(
-      id,
+
+    const query = mongoose.Types.ObjectId.isValid(idOrSlug)
+      ? { _id: idOrSlug }
+      : { slug: String(idOrSlug).toLowerCase() };
+
+    const updated = await Organization.findOneAndUpdate(
+      query,
       { $set: updatePayload },
       { new: true }
     ).lean();

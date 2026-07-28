@@ -79,8 +79,8 @@ export default function UserDashboard() {
     try {
       const user = await dispatch(checkAuth()).unwrap();
       if (user) {
-        if (user.userId !== userId || user.orgId !== orgId) {
-          router.push(`/${user.orgId || 'dialedin'}/${user.userId}`);
+        if (user.username !== userId || user.orgId !== orgId) {
+          router.push(`/${user.orgId || 'dialedin'}/${user.username}`);
         }
       } else {
         router.push('/login');
@@ -207,7 +207,7 @@ export default function UserDashboard() {
         }
       };
 
-      const data = await dispatch(updateTask({ taskId: editingTask._id, updateData: payload })).unwrap();
+      const data = await dispatch(updateTask({ taskId: editingTask._originalId || editingTask._id, updateData: payload })).unwrap();
       if (data.success) {
         setShowTaskModal(false);
         setEditingTask(null);
@@ -222,19 +222,22 @@ export default function UserDashboard() {
   };
 
   const openEditModal = (task) => {
-    setEditingTask(task);
+    // Find the original unflattened task to populate the edit form accurately
+    const originalTask = tasks.find(t => t._id === (task._originalId || task._id)) || task;
+
+    setEditingTask(originalTask);
     setTaskForm({
-      name: task.name,
-      nickName: task.nickName || '',
-      status: task.status,
-      project: task.project,
-      source: task.source,
-      typeOfWork: task.typeOfWork,
-      allocatedHours: task.bill?.allocatedHours || '',
-      billedHours: task.bill?.billedHours || '',
-      actualHours: task.bill?.actualHours || '',
-      clickupId: task.clickupId || '',
-      dynamicValues: task.dynamicValues || {}
+      name: originalTask.name,
+      nickName: originalTask.nickName || '',
+      status: originalTask.status,
+      project: originalTask.project,
+      source: originalTask.source,
+      typeOfWork: originalTask.typeOfWork,
+      allocatedHours: originalTask.bill?.allocatedHours || '',
+      billedHours: originalTask.bill?.billedHours || '',
+      actualHours: originalTask.bill?.actualHours || '',
+      clickupId: originalTask.clickupId || '',
+      dynamicValues: originalTask.dynamicValues || {}
     });
     setShowTaskModal(true);
   };
@@ -270,6 +273,33 @@ export default function UserDashboard() {
     return Array.from(new Set(tasks.map(t => t.project))).filter(Boolean);
   }, [tasks]);
 
+  // Flatten tasks by time entries to show duplicate rows for multi-day tasks
+  const flattenedTasks = useMemo(() => {
+    const list = [];
+    tasks.forEach(task => {
+      if (task.timeEntries && task.timeEntries.length > 0) {
+        task.timeEntries.forEach(te => {
+          list.push({
+            ...task,
+            _id: `${task._id}-${te._id}`,
+            _originalId: task._id,
+            workDate: te.date,
+            bill: {
+              allocatedHours: te.allocatedHours || 0,
+              billedHours: te.billedHours || 0,
+              actualHours: te.actualHours || 0
+            }
+          });
+        });
+      } else {
+        list.push({ ...task, _originalId: task._id });
+      }
+    });
+    // Sort chronologically by date
+    list.sort((a, b) => new Date(b.workDate || b.createdAt) - new Date(a.workDate || a.createdAt));
+    return list;
+  }, [tasks]);
+
   return (
     <div className="min-h-screen bg-black text-slate-100 font-sans selection:bg-orange-500 selection:text-white">
       <Toast message={toastMessage} />
@@ -295,7 +325,7 @@ export default function UserDashboard() {
 
         {/* Dashboard Metrics Bar */}
         <MetricsBar
-          tasksLength={tasks.length}
+          tasksLength={flattenedTasks.length}
           metrics={metrics}
         />
 
@@ -310,7 +340,7 @@ export default function UserDashboard() {
           filterTimeframe={filterTimeframe}
           setFilterTimeframe={(val) => dispatch(setFilterTimeframe(val))}
           uniqueProjects={uniqueProjects}
-          tasksLength={tasks.length}
+          tasksLength={flattenedTasks.length}
           dynamicFields={dynamicFields}
           customFilters={customFilters}
           setCustomFilters={(val) => {
@@ -358,30 +388,42 @@ export default function UserDashboard() {
         {/* Task Data Display */}
         {viewMode === 'table' ? (
           <TaskTable
-            loading={loading && tasks.length === 0}
-            tasks={tasks}
-            handleQuickStatusChange={handleQuickStatusChange}
+            loading={loading && flattenedTasks.length === 0}
+            tasks={flattenedTasks}
+            handleQuickStatusChange={(id, status) => {
+              const originalId = id.split('-')[0];
+              handleQuickStatusChange(originalId, status);
+            }}
             setActiveHistoryTask={(val) => dispatch(setActiveHistoryTask(val))}
             handleCopyProjectDetails={handleCopyProjectDetails}
             openEditModal={openEditModal}
-            deleteTask={handleDeleteTask}
+            deleteTask={(id) => {
+              const originalId = id.split('-')[0];
+              handleDeleteTask(originalId);
+            }}
             dynamicFields={dynamicFields}
           />
         ) : (
           <TaskCards
-            loading={loading && tasks.length === 0}
-            tasks={tasks}
-            handleQuickStatusChange={handleQuickStatusChange}
+            loading={loading && flattenedTasks.length === 0}
+            tasks={flattenedTasks}
+            handleQuickStatusChange={(id, status) => {
+              const originalId = id.split('-')[0];
+              handleQuickStatusChange(originalId, status);
+            }}
             setActiveHistoryTask={(val) => dispatch(setActiveHistoryTask(val))}
             handleCopyProjectDetails={handleCopyProjectDetails}
             openEditModal={openEditModal}
-            deleteTask={handleDeleteTask}
+            deleteTask={(id) => {
+              const originalId = id.split('-')[0];
+              handleDeleteTask(originalId);
+            }}
             dynamicFields={dynamicFields}
           />
         )}
 
         {/* Infinite Scroll loading indicator */}
-        {loading && tasks.length > 0 && (
+        {loading && flattenedTasks.length > 0 && (
           <div className="py-6 text-center text-zinc-500 text-xs">
             Loading next page...
           </div>
@@ -398,19 +440,18 @@ export default function UserDashboard() {
         onClose={() => setShowTaskModal(false)}
       />
 
-      {/* History Audit Modal */}
-      <AuditLogModal
-        task={activeHistoryTask}
-        onClose={() => dispatch(setActiveHistoryTask(null))}
-      />
-
       {/* Report Preview Modal */}
       <ReportPreviewModal
         isOpen={reportModalOpen}
         onClose={() => setReportModalOpen(false)}
         initialProject={reportModalProject}
-        initialTimeframe={reportModalTimeframe}
         projectsList={uniqueProjects}
+      />
+
+      {/* History Audit Log Modal */}
+      <AuditLogModal
+        task={activeHistoryTask}
+        onClose={() => dispatch(setActiveHistoryTask(null))}
       />
     </div>
   );

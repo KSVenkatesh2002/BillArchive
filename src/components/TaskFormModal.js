@@ -89,8 +89,6 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
         onChange({
           ...form,
           dynamicValues: initialVals,
-          source: initialVals.source || form.source || undefined,
-          typeOfWork: initialVals.typeOfWork || form.typeOfWork || undefined,
           project: initialVals.project || form.project || ''
         });
       }
@@ -179,23 +177,35 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
           />
         </div>
 
-        <div>
-          <label className="block text-xs font-semibold text-zinc-300 mb-1">Task Status</label>
-          <div className="relative">
-            <select
-              value={form.status || 'inprocess'}
-              onChange={(e) => onChange({ ...form, status: e.target.value })}
-              className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-orange-500 appearance-none cursor-pointer"
-            >
-              {statuses.map((s) => (
-                <option key={s || ''} value={s || ''} className="bg-black text-white">
-                  {(s || '').toUpperCase()}
-                </option>
-              ))}
-            </select>
-            <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-zinc-400">
-              <ChevronDown className="w-4 h-4" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-semibold text-zinc-300 mb-1">Task Status</label>
+            <div className="relative">
+              <select
+                value={form.status || 'inprocess'}
+                onChange={(e) => onChange({ ...form, status: e.target.value })}
+                className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-orange-500 appearance-none cursor-pointer"
+              >
+                {statuses.map((s) => (
+                  <option key={s || ''} value={s || ''} className="bg-black text-white">
+                    {(s || '').toUpperCase()}
+                  </option>
+                ))}
+              </select>
+              <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-zinc-400">
+                <ChevronDown className="w-4 h-4" />
+              </div>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-zinc-300 mb-1">Work Date / Start Date</label>
+            <input
+              type="date"
+              value={form.workDate ? new Date(form.workDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+              onChange={(e) => onChange({ ...form, workDate: e.target.value })}
+              className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-orange-500 text-zinc-200"
+            />
           </div>
         </div>
 
@@ -230,23 +240,8 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
                       ...(form.dynamicValues || {}),
                       [field.name]: newVal,
                     },
-                    ...(field.name === 'source' ? { source: newVal } : {}),
-                    ...(field.name === 'typeOfWork' ? { typeOfWork: newVal } : {}),
                     ...(field.name === 'project' ? { project: newVal } : {}),
                   });
-
-                  // Auto-save user preference overrides
-                  try {
-                    await fetch('/api/user/preferences', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        fieldDefaults: { [field.name]: newVal },
-                      }),
-                    });
-                  } catch (e) {
-                    console.error('Failed to save user preference:', e);
-                  }
                 };
 
                 return (

@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 
 const OrganizationSchema = new mongoose.Schema({
+  _id: { type: String },
   name: { type: String, required: true },
   slug: { type: String, required: true, unique: true, lowercase: true },
   dynamicFields: [

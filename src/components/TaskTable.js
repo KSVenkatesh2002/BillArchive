@@ -1,9 +1,32 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Pin, ExternalLink, Folder, Copy, Clock, Edit2, Trash2 } from 'lucide-react';
+
+
+const getRelativeTimeGroup = (dateString) => {
+  if (!dateString) return 'Older';
+  const date = new Date(dateString);
+  const now = new Date();
+  
+  // Check Today
+  if (date.getDate() === now.getDate() && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()) {
+    return 'Today';
+  }
+  
+  // Check Yesterday
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (date.getDate() === yesterday.getDate() && date.getMonth() === yesterday.getMonth() && date.getFullYear() === yesterday.getFullYear()) {
+    return 'Yesterday';
+  }
+  
+  // Otherwise, exact date
+  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+};
+
 
 export default function TaskTable({
   loading,
@@ -85,7 +108,11 @@ export default function TaskTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800/60 bg-[#070707]">
-              {tasks.map((task) => {
+              {tasks.map((task, index) => {
+                const taskDate = task.workDate || task.createdAt;
+                const currentGroup = getRelativeTimeGroup(taskDate);
+                const prevGroup = index > 0 ? getRelativeTimeGroup(tasks[index - 1].workDate || tasks[index - 1].createdAt) : null;
+                const showSeparator = currentGroup !== prevGroup;
                 const statusColor = getStatusColor(task.status);
                 
                 // Parse clickupId to get last slug and full url
@@ -99,13 +126,24 @@ export default function TaskTable({
                 }
 
                 return (
-                  <tr key={task._id} className="hover:bg-zinc-900/40 transition-colors group">
+                  <React.Fragment key={task._id}>
+                    {showSeparator && (
+                      <tr className="bg-black">
+                        <td colSpan={6 + customCols.length} className="py-2.5 px-4 text-xs font-black tracking-widest uppercase text-orange-500 border-y border-orange-500/20 bg-gradient-to-r from-orange-500/10 to-transparent">
+                          {currentGroup}
+                        </td>
+                      </tr>
+                    )}
+                    <tr className="hover:bg-zinc-900/40 transition-colors group">
                     {/* Task Details */}
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-2">
-                        <div className="font-bold text-zinc-100 text-sm group-hover:text-orange-450 transition-colors">
+                        <Link
+                          href={`/${orgId}/${userId}/${task._originalId || task._id}`}
+                          className="font-bold text-zinc-100 text-sm hover:text-orange-450 transition-colors"
+                        >
                           {task.name}
-                        </div>
+                        </Link>
                         {hasClickup && (
                           <a
                             href={clickupUrl}
@@ -225,6 +263,7 @@ export default function TaskTable({
                         </div>
                     </td>
                   </tr>
+                  </React.Fragment>
                 );
               })}
             </tbody>

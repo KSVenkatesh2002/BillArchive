@@ -75,8 +75,8 @@ export default function UserProjectPage() {
     try {
       const user = await dispatch(checkAuth()).unwrap();
       if (user) {
-        if (user.userId !== userId) {
-          router.push(`/${user.orgId || 'dialedin'}/${user.userId}/project/${name}`);
+        if (user.username !== userId) {
+          router.push(`/${user.orgId || 'dialedin'}/${user.username}/project/${name}`);
         }
       } else {
         router.push('/login');

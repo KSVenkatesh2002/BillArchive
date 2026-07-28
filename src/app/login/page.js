@@ -23,7 +23,7 @@ export default function LoginPage() {
       const data = await apiClient.login(form.username, form.password);
 
       if (data.success) {
-        const userId = data.user?.id || data.user?.userId;
+        const userId = data.user?.username; // Use vanity URL
         const orgId = data.user?.orgId || 'dialedin';
         const role = data.user?.role || 'user';
         if (role === 'superAdmin' || (data.user?.username || '').toLowerCase() === 'admin') {
