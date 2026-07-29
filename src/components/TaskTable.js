@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Pin, ExternalLink, Folder, Copy, Clock, Edit2, Trash2 } from 'lucide-react';
+import { apiClient } from '@/lib/apiClient';
 
 
 const getRelativeTimeGroup = (dateString) => {
@@ -53,15 +54,19 @@ export default function TaskTable({
   deleteTask,
   dynamicFields = [],
 }) {
-  const customCols = dynamicFields.filter(f => f.name !== 'project');
+  const customCols = dynamicFields.filter(f => 
+    f.name !== 'source' && 
+    f.name !== 'typeOfWork' && 
+    f.name !== 'project' &&
+    (f.displayLocation === 'table' || f.displayLocation === 'both' || !f.displayLocation)
+  );
   const params = useParams();
   const userId = params?.userId || 'admin';
   const orgId = params?.orgId || 'dialedin';
   const [statuses, setStatuses] = useState([]);
 
   useEffect(() => {
-    fetch('/api/admin/statuses')
-      .then((res) => res.json())
+    apiClient.getStatuses()
       .then((data) => {
         if (data.success) {
           setStatuses(data.statuses || []);

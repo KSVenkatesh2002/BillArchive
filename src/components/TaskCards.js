@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Pin, ExternalLink, Folder, Copy, Clock, Edit2, Trash2 } from 'lucide-react';
+import { apiClient } from '@/lib/apiClient';
 
 
 const getRelativeTimeGroup = (dateString) => {
@@ -59,8 +60,7 @@ export default function TaskCards({
   const [statuses, setStatuses] = useState([]);
 
   useEffect(() => {
-    fetch('/api/admin/statuses')
-      .then((res) => res.json())
+    apiClient.getStatuses()
       .then((data) => {
         if (data.success) {
           setStatuses(data.statuses || []);
@@ -254,7 +254,7 @@ export default function TaskCards({
                   {/* Tags & History bar */}
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
                     <div className="flex gap-1.5 flex-wrap">
-                      {dynamicFields.filter(f => f.name !== 'project').map(col => {
+                      {dynamicFields.filter(f => f.name !== 'project' && (!f.displayLocation || f.displayLocation === 'card' || f.displayLocation === 'both')).map(col => {
                         const val = task.dynamicValues?.[col.name] ?? task[col.name];
                         if (val === undefined || val === null || val === '') return null;
                         const displayVal = typeof val === 'boolean' ? (val ? 'Yes' : 'No') : String(val);

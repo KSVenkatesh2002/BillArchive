@@ -6,8 +6,6 @@ const DEFAULT_ENABLED_FIELDS = {
   allocatedHours: true,
   billedHours: true,
   actualHours: true,
-  source: true,
-  typeOfWork: true,
   project: true,
   clickupId: true
 };

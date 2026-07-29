@@ -1,9 +1,9 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { apiClient } from '../apiClient';
 
 export const fetchOrgConfig = createAsyncThunk('org/fetchOrgConfig', async (_, { rejectWithValue }) => {
   try {
-    const res = await fetch('/api/organization/config');
-    const data = await res.json();
+    const data = await apiClient.getOrganizationConfig();
     if (data.success) {
       return data.organization;
     }
@@ -16,12 +16,7 @@ export const fetchOrgConfig = createAsyncThunk('org/fetchOrgConfig', async (_, {
 export const updateOrgConfig = createAsyncThunk('org/updateOrgConfig', async (payload, { rejectWithValue }) => {
   try {
     const body = Array.isArray(payload) ? { dynamicFields: payload } : payload;
-    const res = await fetch('/api/organization/config', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    const data = await res.json();
+    const data = await apiClient.updateOrganizationConfig(body);
     if (data.success) {
       return data;
     }
@@ -31,14 +26,20 @@ export const updateOrgConfig = createAsyncThunk('org/updateOrgConfig', async (pa
   }
 });
 
-const DEFAULT_ENABLED_FIELDS = {
+export const DEFAULT_ENABLED_FIELDS = {
   allocatedHours: true,
   billedHours: true,
   actualHours: true,
-  source: true,
-  typeOfWork: true,
   project: true,
   clickupId: true
+};
+
+export const BUILTIN_FIELD_LABELS = {
+  actualHours: 'Actual Hours',
+  allocatedHours: 'Allocated Hours',
+  billedHours: 'Billed Hours',
+  project: 'Project',
+  clickupId: 'ClickUp Link'
 };
 
 const initialState = {

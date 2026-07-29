@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { apiClient } from '@/lib/apiClient';
 import { 
   ArrowLeft, 
   Clock, 
@@ -51,8 +52,7 @@ export default function TaskDetailPage() {
   const fetchTask = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/tasks/${taskId}`);
-      const data = await res.json();
+      const data = await apiClient.getTask(taskId);
       if (data.success) {
         setTask(data.task);
       } else {
@@ -67,8 +67,7 @@ export default function TaskDetailPage() {
 
   const fetchStatuses = async () => {
     try {
-      const res = await fetch('/api/admin/statuses');
-      const data = await res.json();
+      const data = await apiClient.getStatuses();
       if (data.success) {
         setStatuses(data.statuses || []);
       }
@@ -86,12 +85,7 @@ export default function TaskDetailPage() {
     if (!task) return;
     setStatusLoading(true);
     try {
-      const res = await fetch(`/api/tasks/${taskId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
-      });
-      const data = await res.json();
+      const data = await apiClient.updateTask(taskId, { status: newStatus });
       if (data.success) {
         setTask(data.task);
         triggerToast(`Status updated to "${newStatus.toUpperCase()}"`);
@@ -109,15 +103,7 @@ export default function TaskDetailPage() {
     e.preventDefault();
     setSubmittingEntry(true);
     try {
-      const res = await fetch(`/api/tasks/${taskId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'addTimeEntry',
-          entry: entryForm
-        })
-      });
-      const data = await res.json();
+      const data = await apiClient.addTimeEntry(taskId, entryForm);
       if (data.success) {
         setTask(data.task);
         setEntryForm({
@@ -141,15 +127,7 @@ export default function TaskDetailPage() {
   const handleDeleteTimeEntry = async (entryId) => {
     if (!confirm('Are you sure you want to delete this time entry?')) return;
     try {
-      const res = await fetch(`/api/tasks/${taskId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'deleteTimeEntry',
-          entryId
-        })
-      });
-      const data = await res.json();
+      const data = await apiClient.deleteTimeEntry(taskId, entryId);
       if (data.success) {
         setTask(data.task);
         triggerToast('Time entry removed.');
@@ -163,25 +141,19 @@ export default function TaskDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black text-white flex flex-col">
-        <Header />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="animate-spin w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full mb-3" />
-        </div>
+      <div className="flex-1 flex items-center justify-center min-h-[50vh]">
+        <div className="animate-spin w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full mb-3" />
       </div>
     );
   }
 
   if (error || !task) {
     return (
-      <div className="min-h-screen bg-black text-white flex flex-col">
-        <Header />
-        <div className="max-w-4xl mx-auto py-20 px-4 text-center">
-          <p className="text-rose-400 font-bold text-lg mb-4">{error || 'Task not found'}</p>
-          <Link href={`/${orgId}/${userId}`} className="inline-flex items-center gap-2 bg-zinc-900 border border-zinc-800 text-white px-4 py-2 rounded-xl">
-            <ArrowLeft className="w-4 h-4" /> Return to Dashboard
-          </Link>
-        </div>
+      <div className="max-w-4xl mx-auto py-20 px-4 text-center">
+        <p className="text-rose-400 font-bold text-lg mb-4">{error || 'Task not found'}</p>
+        <Link href={`/${orgId}/${userId}`} className="inline-flex items-center gap-2 bg-zinc-900 border border-zinc-800 text-white px-4 py-2 rounded-xl">
+          <ArrowLeft className="w-4 h-4" /> Return to Dashboard
+        </Link>
       </div>
     );
   }
@@ -191,10 +163,8 @@ export default function TaskDetailPage() {
   const clickupUrl = hasClickup ? (task.clickupId.startsWith('http') ? task.clickupId : `https://app.clickup.com/t/${task.clickupId}`) : '';
 
   return (
-    <div className="min-h-screen bg-black text-zinc-100 flex flex-col font-sans">
-      <Header />
-
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-8 space-y-6">
+    <>
+      <main className="max-w-7xl w-full mx-auto pb-8 space-y-6">
         {/* Navigation back & Header */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -300,24 +270,18 @@ export default function TaskDetailPage() {
               </h2>
 
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-black rounded-xl border border-zinc-800">
-                  <span className="text-xs text-zinc-400 font-medium">Allocated Hours</span>
-                  <span className="text-base font-bold font-mono text-zinc-100">
-                    {((task.timeEntries || []).reduce((sum, e) => sum + (Number(e.allocatedHours) || 0), 0) + (Number(task.bill?.allocatedHours) || 0)).toFixed(2)} hrs
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-black rounded-xl border border-zinc-800">
-                  <span className="text-xs text-zinc-400 font-medium">Billed Hours</span>
-                  <span className="text-base font-bold font-mono text-amber-400">
-                    {((task.timeEntries || []).reduce((sum, e) => sum + (Number(e.billedHours) || 0), 0) + (Number(task.bill?.billedHours) || 0)).toFixed(2)} hrs
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-black rounded-xl border border-zinc-800">
-                  <span className="text-xs text-zinc-400 font-medium">Actual Hours</span>
-                  <span className="text-base font-bold font-mono text-orange-400">
-                    {((task.timeEntries || []).reduce((sum, e) => sum + (Number(e.actualHours) || 0), 0) + (Number(task.bill?.actualHours) || 0)).toFixed(2)} hrs
-                  </span>
-                </div>
+                {[
+                  { label: 'Allocated', value: task.bill?.allocatedHours, color: 'text-zinc-100' },
+                  { label: 'Billed', value: task.bill?.billedHours, color: 'text-amber-400' },
+                  { label: 'Actual', value: task.bill?.actualHours, color: 'text-orange-400' }
+                ].map((item, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-3 bg-black rounded-xl border border-zinc-800">
+                    <span className="text-xs text-zinc-400 font-medium">{item.label} Hours</span>
+                    <span className={`text-base font-bold font-mono ${item.color}`}>
+                      {(Number(item.value) || 0).toFixed(2)} hrs
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -497,6 +461,6 @@ export default function TaskDetailPage() {
       </main>
 
       {toastMessage && <Toast message={toastMessage} onClose={() => setToastMessage('')} />}
-    </div>
+    </>
   );
 }

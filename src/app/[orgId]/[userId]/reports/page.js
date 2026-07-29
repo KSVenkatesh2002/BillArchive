@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Copy, Check, FileText, Calendar, Filter, Eye, Settings2, CheckSquare, Square, ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
+import { RefreshCw, Download, Filter, Settings, Link as LinkIcon, CheckCircle, Search, LayoutDashboard, Copy, Check, FileText, Calendar, Eye, Settings2, CheckSquare, Square, ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
+import { apiClient } from '@/lib/apiClient';
 import Link from 'next/link';
 
 export default function ReportsPage() {
@@ -39,8 +40,7 @@ export default function ReportsPage() {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const res = await fetch('/api/projects');
-        const data = await res.json();
+        const data = await apiClient.getProjects();
         if (data.success && data.projects) {
           setProjectsList(data.projects);
         }
@@ -69,8 +69,7 @@ export default function ReportsPage() {
       params.set('includeMeta', includeMeta ? 'true' : 'false');
       params.set('includeTotals', includeTotals ? 'true' : 'false');
 
-      const res = await fetch(`/api/reports?${params.toString()}`);
-      const data = await res.json();
+      const data = await apiClient.getReport(Object.fromEntries(params));
       if (data.success) {
         setReportText(data.reportText || '');
         setTasksCount(data.tasksCount || 0);

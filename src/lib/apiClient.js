@@ -57,6 +57,11 @@ export const apiClient = {
     return res.json();
   },
 
+  async getTask(taskId) {
+    const res = await fetch(`/api/tasks/${taskId}`);
+    return res.json();
+  },
+
   async updateTask(taskId, updateData) {
     const res = await fetch(`/api/tasks/${taskId}`, {
       method: 'PATCH',
@@ -75,18 +80,32 @@ export const apiClient = {
     return res.json();
   },
 
+  async deleteTimeEntry(taskId, entryId) {
+    const res = await fetch(`/api/tasks/${taskId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'deleteTimeEntry', entryId }),
+    });
+    return res.json();
+  },
+
   async deleteTask(taskId) {
     const res = await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
     return res.json();
   },
 
   // Reports
-  async getReport(timeframe, project = null) {
-    let url = `/api/reports?timeframe=${timeframe}`;
-    if (project) {
-      url += `&project=${encodeURIComponent(project)}`;
+  async getReport(optionsOrTimeframe, projectStr = null) {
+    const params = new URLSearchParams();
+    if (typeof optionsOrTimeframe === 'string') {
+      params.set('timeframe', optionsOrTimeframe);
+      if (projectStr && projectStr !== 'all') params.set('project', projectStr);
+    } else {
+      Object.entries(optionsOrTimeframe).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) params.set(k, v);
+      });
     }
-    const res = await fetch(url);
+    const res = await fetch(`/api/reports?${params.toString()}`);
     return res.json();
   },
 
@@ -107,6 +126,25 @@ export const apiClient = {
 
   async getAdminData() {
     const res = await fetch('/api/admin');
+    return res.json();
+  },
+
+  async getStatuses() {
+    const res = await fetch('/api/admin/statuses');
+    return res.json();
+  },
+
+  async getProjects() {
+    const res = await fetch('/api/projects');
+    return res.json();
+  },
+
+  async createProject(projectName) {
+    const res = await fetch('/api/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ project: projectName }),
+    });
     return res.json();
   },
 
@@ -145,6 +183,34 @@ export const apiClient = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(userData)
+    });
+    return res.json();
+  },
+
+  async getOrganizationConfig() {
+    const res = await fetch('/api/organization/config');
+    return res.json();
+  },
+
+  async updateOrganizationConfig(data) {
+    const res = await fetch('/api/organization/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
+  async getUserPreferences() {
+    const res = await fetch('/api/user/preferences');
+    return res.json();
+  },
+
+  async saveUserPreferences(prefs) {
+    const res = await fetch('/api/user/preferences', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fieldDefaults: prefs })
     });
     return res.json();
   }

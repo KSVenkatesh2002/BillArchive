@@ -3,6 +3,8 @@
 import { useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import FilterToggle from './FilterToggle';
+import Select from './Select';
+import Toggle from './Toggle';
 import {
   setFilterSource,
   setFilterType,
@@ -96,48 +98,69 @@ export default function FilterControls(props) {
   return (
     <div className="bg-[#0b0b0b] p-4 rounded-2xl border border-zinc-800/80 mb-6 flex flex-wrap items-center justify-between gap-4">
       <div className="flex flex-wrap items-center gap-3">
-        {/* Source Filter */}
-        {sourceField && (
-          <FilterToggle
-            label="Source"
-            value={filterSource}
-            options={sourceOptions}
-            onChange={handleSourceChange}
-          />
-        )}
-
-        {/* Type of Work Filter */}
-        {typeOfWorkField && (
-          <FilterToggle
-            label="Type of Work"
-            value={filterType}
-            options={workTypeOptions}
-            onChange={handleTypeChange}
-            activeColorClass="bg-cyan-600 text-white shadow"
-          />
-        )}
-
         {/* Dynamic Custom Filters */}
         {dynamicFields
-          .filter((f) => f.name !== 'source' && f.name !== 'typeOfWork' && f.name !== 'project')
+          .filter((f) => f.name !== 'project')
           .map((field) => {
             const value = customFilters[field.name] || 'all';
             const onChange = (val) => handleCustomFilterChange(field.name, val);
 
-            const options =
-              field.type === 'toggle'
-                ? [
-                    { id: 'all', label: 'All' },
-                    { id: 'true', label: 'Yes' },
-                    { id: 'false', label: 'No' }
-                  ]
-                : [
-                    { id: 'all', label: 'All' },
-                    ...(field.options || []).map((opt) => ({
-                      id: opt,
-                      label: opt.charAt(0).toUpperCase() + opt.slice(1)
-                    }))
-                  ];
+            if (field.type === 'text') {
+              return (
+                <div key={field.name} className="flex flex-col gap-1.5">
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider ml-1">
+                    {field.label}
+                  </span>
+                  <input
+                    type="text"
+                    placeholder={`Search ${field.label}...`}
+                    value={value === 'all' ? '' : value}
+                    onChange={(e) => onChange(e.target.value)}
+                    className="bg-black border border-zinc-800 text-xs text-white px-3 py-1.5 rounded-lg focus:outline-none focus:border-orange-500 w-48 placeholder-zinc-700"
+                  />
+                </div>
+              );
+            }
+
+            if (field.type === 'dropdown') {
+              const options = [
+                { value: 'all', label: 'All' },
+                ...(field.options || []).map(opt => ({
+                  value: opt,
+                  label: opt.charAt(0).toUpperCase() + opt.slice(1)
+                }))
+              ];
+
+              return (
+                <Select
+                  key={field.name}
+                  label={field.label}
+                  value={value}
+                  options={options}
+                  onChange={(e) => onChange(e.target.value)}
+                />
+              );
+            }
+
+            if (field.type === 'toggle') {
+              return (
+                <div key={field.name} className="flex flex-col gap-1.5 h-full justify-center mt-2">
+                  <Toggle
+                    label={field.label}
+                    checked={value === 'true'}
+                    onChange={(checked) => onChange(checked ? 'true' : 'all')}
+                  />
+                </div>
+              );
+            }
+
+            const options = [
+              { id: 'all', label: 'All' },
+              ...(field.options || []).map((opt) => ({
+                id: opt,
+                label: opt.charAt(0).toUpperCase() + opt.slice(1)
+              }))
+            ];
 
             return (
               <FilterToggle
@@ -151,35 +174,27 @@ export default function FilterControls(props) {
           })}
 
         {/* Project Filter */}
-        <div>
-          <label className="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Project</label>
-          <select
-            value={filterProject}
-            onChange={(e) => handleProjectChange(e.target.value)}
-            className="bg-black border border-zinc-800 rounded-xl px-3 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-indigo-500"
-          >
-            <option value="all">All Projects</option>
-            {projectOptions.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
-        </div>
+        <Select
+          label="Project"
+          value={filterProject}
+          onChange={(e) => handleProjectChange(e.target.value)}
+          options={[
+            { value: 'all', label: 'All Projects' },
+            ...projectOptions.map(p => ({ value: p, label: p }))
+          ]}
+        />
 
         {/* Timeframe Filter */}
-        <div>
-          <label className="block text-[10px] font-bold text-zinc-400 uppercase mb-1">Timeframe</label>
-          <select
-            value={filterTimeframe}
-            onChange={(e) => handleTimeframeChange(e.target.value)}
-            className="bg-black border border-zinc-800 rounded-xl px-3 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-indigo-500"
-          >
-            <option value="all">All Time</option>
-            <option value="1w">Past 1 Week</option>
-            <option value="1m">Past 1 Month</option>
-          </select>
-        </div>
+        <Select
+          label="Timeframe"
+          value={filterTimeframe}
+          onChange={(e) => handleTimeframeChange(e.target.value)}
+          options={[
+            { value: 'all', label: 'All Time' },
+            { value: '1w', label: 'Past 1 Week' },
+            { value: '1m', label: 'Past 1 Month' }
+          ]}
+        />
       </div>
 
       <div className="text-xs text-zinc-400 font-medium">

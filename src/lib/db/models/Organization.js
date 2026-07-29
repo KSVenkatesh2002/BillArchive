@@ -13,6 +13,7 @@ const OrganizationSchema = new mongoose.Schema({
       defaultValue: { type: mongoose.Schema.Types.Mixed }
     }
   ],
+  enabledFields: { type: mongoose.Schema.Types.Mixed },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });

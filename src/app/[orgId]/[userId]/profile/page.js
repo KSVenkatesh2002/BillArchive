@@ -2,9 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { useDispatch } from 'react-redux';
 import Link from 'next/link';
 import { apiClient } from '@/lib/apiClient';
+import { updateOrgConfig, DEFAULT_ENABLED_FIELDS, BUILTIN_FIELD_LABELS } from '@/lib/store/orgSlice';
 import { CONFIG } from '@/lib/config';
+import SectionCard from '@/components/SectionCard';
+import Select from '@/components/Select';
+import Toggle from '@/components/Toggle';
+import TeamManager from './components/TeamManager';
 import { LogOut } from 'lucide-react';
 
 import {
@@ -36,6 +42,7 @@ const AVATAR_PRESETS = [
 
 export default function ProfilePage() {
   const { userId, orgId } = useParams();
+  const dispatch = useDispatch();
   const [currentUser, setCurrentUser] = useState(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -60,42 +67,12 @@ export default function ProfilePage() {
   const [orgName, setOrgName] = useState('');
   const [orgDbId, setOrgDbId] = useState('');
   const [dynamicFields, setDynamicFields] = useState([]);
-  const [enabledFields, setEnabledFields] = useState({
-    allocatedHours: true,
-    billedHours: true,
-    actualHours: true,
-    source: true,
-    typeOfWork: true,
-    project: true,
-    clickupId: true
-  });
+  const [enabledFields, setEnabledFields] = useState({ ...DEFAULT_ENABLED_FIELDS });
   const [userPrefs, setUserPrefs] = useState({});
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [savingOrg, setSavingOrg] = useState(false);
 
-  // Organization users state
-  const [orgUsers, setOrgUsers] = useState([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
-  const [newUserForm, setNewUserForm] = useState({ name: '', username: '', password: '', role: 'user' });
-  const [creatingUser, setCreatingUser] = useState(false);
-  const [userFormSuccess, setUserFormSuccess] = useState('');
-  const [userFormError, setUserFormError] = useState('');
-
   const router = useRouter();
-
-  const fetchOrgUsers = async () => {
-    setLoadingUsers(true);
-    try {
-      const res = await apiClient.getOrganizationUsers();
-      if (res.success) {
-        setOrgUsers(res.users || []);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingUsers(false);
-    }
-  };
 
   useEffect(() => {
     async function init() {
@@ -117,29 +94,21 @@ export default function ProfilePage() {
             avatarUrl: auth.user.avatarUrl || AVATAR_PRESETS[0]
           });
 
-          const orgRes = await fetch('/api/organization/config').then((res) => res.json());
+          const orgRes = await apiClient.getOrganizationConfig();
           if (orgRes.success) {
             setOrgName(orgRes.organization.name);
             setOrgDbId(orgRes.organization._id || orgRes.organization.id);
             setDynamicFields(orgRes.organization.dynamicFields || []);
+            if (orgRes.organization.enabledFields) {
+              setEnabledFields({ ...DEFAULT_ENABLED_FIELDS, ...orgRes.organization.enabledFields });
+            }
           }
 
           // Fetch user preference overrides
-          const prefRes = await fetch('/api/user/preferences').then((res) => res.json());
+          const prefRes = await apiClient.getUserPreferences();
           if (prefRes.success) {
             setUserPrefs(prefRes.preferences.fieldDefaults || {});
           }
-
-          const isAdminRole = auth.user.role === 'admin' || auth.user.role === 'superAdmin';
-          if (isAdminRole) {
-            setLoadingUsers(true);
-            const userRes = await fetch('/api/organization/users').then((res) => res.json());
-            if (userRes.success) {
-              setOrgUsers(userRes.users || []);
-            }
-            setLoadingUsers(false);
-          }
-
         } else {
           router.push('/login');
         }
@@ -151,27 +120,6 @@ export default function ProfilePage() {
     }
     init();
   }, [router]);
-
-  const handleCreateOrgUser = async (e) => {
-    e.preventDefault();
-    setCreatingUser(true);
-    setUserFormSuccess('');
-    setUserFormError('');
-    try {
-      const res = await apiClient.createOrganizationUser(newUserForm);
-      if (res.success) {
-        setUserFormSuccess(`User @${newUserForm.username} created successfully!`);
-        setNewUserForm({ name: '', username: '', password: '', role: 'user' });
-        fetchOrgUsers();
-      } else {
-        setUserFormError(res.error || 'Failed to create user.');
-      }
-    } catch (err) {
-      setUserFormError('An error occurred.');
-    } finally {
-      setCreatingUser(false);
-    }
-  };
 
   const handleLogout = async () => {
     await apiClient.logout();
@@ -235,12 +183,7 @@ export default function ProfilePage() {
     setError('');
     setSuccess('');
     try {
-      const res = await fetch('/api/user/preferences', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fieldDefaults: userPrefs })
-      });
-      const data = await res.json();
+      const data = await apiClient.saveUserPreferences(userPrefs);
       if (data.success) {
         setSuccess('Personal default preferences saved successfully!');
         setUserPrefs(data.preferences.fieldDefaults || {});
@@ -257,11 +200,12 @@ export default function ProfilePage() {
   // Admin dynamic field schema management
   const handleAddDynamicField = () => {
     const newField = {
-      name: 'field_' + Math.random().toString(36).substr(2, 5),
-      label: 'New Custom Field',
+      name: 'field_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6),
+      label: '',
       type: 'dropdown',
-      options: ['Option A', 'Option B'],
-      defaultValue: 'Option A'
+      options: [],
+      defaultValue: '',
+      displayLocation: 'table'
     };
     setDynamicFields([...dynamicFields, newField]);
   };
@@ -286,28 +230,33 @@ export default function ProfilePage() {
     setDynamicFields(dynamicFields.filter((_, i) => i !== index));
   };
 
-  const handleSaveOrgConfig = async () => {
+  useEffect(() => {
+    if (success || error) {
+      const timer = setTimeout(() => {
+        setSuccess('');
+        setError('');
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [success, error]);
+
+  const handleSaveOrgConfig = async (overrideEnabledFields = null) => {
     setSavingOrg(true);
     setError('');
     setSuccess('');
     try {
-      const res = await fetch('/api/organization/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dynamicFields, enabledFields })
-      });
-      const data = await res.json();
+      const data = await dispatch(updateOrgConfig({ dynamicFields, enabledFields: overrideEnabledFields || enabledFields })).unwrap();
       if (data.success) {
         setSuccess('Organization configurations saved successfully!');
         setDynamicFields(data.dynamicFields || []);
         if (data.enabledFields) {
-          setEnabledFields(data.enabledFields);
+          setEnabledFields({ ...DEFAULT_ENABLED_FIELDS, ...data.enabledFields });
         }
       } else {
         setError(data.error || 'Failed to save organization configuration.');
       }
     } catch (err) {
-      setError('An error occurred while saving organization configuration.');
+      setError(err || 'An error occurred while saving organization configuration.');
     } finally {
       setSavingOrg(false);
     }
@@ -351,23 +300,25 @@ export default function ProfilePage() {
           </button>
         </div>
 
-        {/* Success/Error Alerts */}
-        {success && (
-          <div className="p-4 bg-emerald-950/25 border border-emerald-900/35 rounded-2xl text-emerald-350 text-xs flex items-center gap-2">
-            <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-            <span>{success}</span>
-          </div>
-        )}
-        {error && (
-          <div className="p-4 bg-rose-950/25 border border-rose-900/35 rounded-2xl text-rose-350 text-xs flex items-center gap-2">
-            <ShieldAlert className="w-4 h-4 text-rose-455 flex-shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
+        {/* Floating Success/Error Alerts (Toast) */}
+        <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3 pointer-events-none">
+          {success && (
+            <div className="p-4 bg-emerald-900/90 border border-emerald-500/50 rounded-2xl text-emerald-50 text-sm flex items-center gap-3 shadow-2xl shadow-emerald-900/50 animate-slideUp pointer-events-auto max-w-sm">
+              <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+              <span className="font-medium">{success}</span>
+            </div>
+          )}
+          {error && (
+            <div className="p-4 bg-rose-900/90 border border-rose-500/50 rounded-2xl text-rose-50 text-sm flex items-center gap-3 shadow-2xl shadow-rose-900/50 animate-slideUp pointer-events-auto max-w-sm">
+              <ShieldAlert className="w-5 h-5 text-rose-400 flex-shrink-0" />
+              <span className="font-medium">{error}</span>
+            </div>
+          )}
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left panel: Avatar / Quick Overview */}
-          <div className="bg-zinc-950 p-6 rounded-2xl border border-zinc-800/80 flex flex-col items-center text-center space-y-6 h-fit">
+          <SectionCard className="flex flex-col items-center text-center h-fit">
             <div className="relative group">
               <img
                 src={form.avatarUrl || AVATAR_PRESETS[0]}
@@ -412,10 +363,10 @@ export default function ProfilePage() {
                 ))}
               </div>
             </div>
-          </div>
+          </SectionCard>
 
           {/* Right panel: Profile Editor Form */}
-          <div className="lg:col-span-2 bg-zinc-950 p-6 rounded-2xl border border-zinc-800/80 space-y-6">
+          <SectionCard className="lg:col-span-2">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider pb-3 border-b border-zinc-800">
               Personal Information
             </h3>
@@ -538,12 +489,12 @@ export default function ProfilePage() {
                 </button>
               </div>
             </form>
-          </div>
+          </SectionCard>
         </div>
 
         {/* Dynamic Fields Overrides (Personal Preferences) */}
         {dynamicFields.length > 0 && (
-          <div className="bg-zinc-950 p-6 rounded-2xl border border-zinc-800/80 space-y-6">
+          <SectionCard>
             <div className="flex items-center gap-2 pb-3 border-b border-zinc-800">
               <Settings className="w-5 h-5 text-orange-500" />
               <div>
@@ -562,23 +513,18 @@ export default function ProfilePage() {
                   <div key={field.name} className="space-y-1.5">
                     <label className="block text-xs font-semibold text-zinc-350">{field.label}</label>
                     {field.type === 'dropdown' || field.type === 'selector' ? (
-                      <div className="relative">
-                        <select
-                          value={userPrefs[field.name] ?? ''}
-                          onChange={(e) => handlePrefChange(field.name, e.target.value)}
-                          className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-orange-500 appearance-none cursor-pointer"
-                        >
-                          <option value="">No personal override (Use organization default)</option>
-                          {(field.options || []).map((opt) => (
-                            <option key={opt} value={opt}>
-                              {opt}
-                            </option>
-                          ))}
-                        </select>
-                        <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-zinc-405">
-                          <ChevronDown className="w-4 h-4" />
-                        </div>
-                      </div>
+                      <Select
+                        value={userPrefs[field.name] ?? ''}
+                        onChange={(e) => handlePrefChange(field.name, e.target.value)}
+                        className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-orange-500 appearance-none cursor-pointer"
+                      >
+                        <option value="">No personal override (Use organization default)</option>
+                        {(field.options || []).map((opt, oIdx) => (
+                          <option key={`${opt}-${oIdx}`} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </Select>
                     ) : field.type === 'text' ? (
                       <input
                         type="text"
@@ -588,22 +534,22 @@ export default function ProfilePage() {
                         className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-700 focus:outline-none focus:border-orange-500"
                       />
                     ) : field.type === 'toggle' ? (
-                      <div className="relative">
-                        <select
-                          value={userPrefs[field.name] === undefined ? '' : String(userPrefs[field.name])}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            handlePrefChange(field.name, val === '' ? undefined : val === 'true');
-                          }}
-                          className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-orange-500 appearance-none cursor-pointer"
-                        >
-                          <option value="">No personal override (Use organization default)</option>
-                          <option value="true">ON / Enabled</option>
-                          <option value="false">OFF / Disabled</option>
-                        </select>
-                        <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-zinc-405">
-                          <ChevronDown className="w-4 h-4" />
-                        </div>
+                      <div className="flex items-center gap-4 py-1.5">
+                        <Toggle
+                          checked={userPrefs[field.name] === true}
+                          onChange={(checked) => handlePrefChange(field.name, checked)}
+                        />
+                        {userPrefs[field.name] !== undefined ? (
+                          <button
+                            type="button"
+                            onClick={() => handlePrefChange(field.name, undefined)}
+                            className="text-[10px] font-bold text-orange-500 hover:text-orange-400 bg-orange-500/10 px-2 py-1 rounded-md transition"
+                          >
+                            Clear Override
+                          </button>
+                        ) : (
+                          <span className="text-[10px] text-zinc-500 italic">Using Organization Default</span>
+                        )}
                       </div>
                     ) : null}
                   </div>
@@ -620,12 +566,12 @@ export default function ProfilePage() {
                 </button>
               </div>
             </form>
-          </div>
+          </SectionCard>
         )}
 
         {/* Organization Field Schema Manager (Admin and Super Admin only) */}
         {isAdmin && (
-          <div className="bg-[#0b0b0b] p-6 rounded-2xl border border-zinc-800/80 space-y-6 shadow-xl">
+          <SectionCard className="!bg-[#0b0b0b] shadow-xl">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-zinc-800 gap-4">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-orange-500/10 rounded-xl border border-orange-500/20 text-orange-500">
@@ -658,15 +604,7 @@ export default function ProfilePage() {
                 Check or uncheck options to control which standard fields are visible on team forms, task lists, and metrics:
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-                {[
-                  { key: 'actualHours', label: 'Actual Hours' },
-                  { key: 'allocatedHours', label: 'Allocated Hours' },
-                  { key: 'billedHours', label: 'Billed Hours' },
-                  { key: 'source', label: 'Source' },
-                  { key: 'typeOfWork', label: 'Type of Work' },
-                  { key: 'project', label: 'Project' },
-                  { key: 'clickupId', label: 'ClickUp Link' }
-                ].map((item) => (
+                {Object.entries(BUILTIN_FIELD_LABELS).map(([key, label]) => ({ key, label })).map((item) => (
                   <label key={item.key} className="flex items-center gap-2.5 cursor-pointer text-xs text-zinc-300 hover:text-white bg-zinc-900/60 p-2.5 rounded-lg border border-zinc-800/80 transition">
                     <input
                       type="checkbox"
@@ -674,6 +612,7 @@ export default function ProfilePage() {
                       onChange={(e) => {
                         const updated = { ...enabledFields, [item.key]: e.target.checked };
                         setEnabledFields(updated);
+                        handleSaveOrgConfig(updated);
                       }}
                       className="w-4 h-4 rounded border-zinc-700 bg-black text-orange-500 focus:ring-orange-500 cursor-pointer"
                     />
@@ -695,7 +634,7 @@ export default function ProfilePage() {
                   return (
                     <div
                       key={field.name || idx}
-                      className="p-5 bg-zinc-950/80 border border-zinc-850 rounded-xl space-y-4 relative hover:border-zinc-800 transition duration-200 group"
+                      className="p-5 bg-zinc-950/80 border border-zinc-800 rounded-xl space-y-4 relative transition duration-200 group"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -716,28 +655,7 @@ export default function ProfilePage() {
                         </button>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-                        {/* Field Key */}
-                        <div>
-                          <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
-                            Field Database Key
-                          </label>
-                          <input
-                            type="text"
-                            value={field.name}
-                            placeholder="e.g. work_type"
-                            onChange={(e) => {
-                              const val = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
-                              handleUpdateField(idx, 'name', val);
-                            }}
-                            className="w-full bg-black border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-orange-500 placeholder-zinc-700"
-                          />
-                          <p className="text-[9.5px] text-zinc-550 mt-1">
-                            Must be lowercase, letters & underscores only.
-                          </p>
-                        </div>
-
-                        {/* Field Display Label */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">                        {/* Field Display Label */}
                         <div>
                           <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
                             Display Label
@@ -759,27 +677,42 @@ export default function ProfilePage() {
                           <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
                             Input Control Type
                           </label>
-                          <div className="relative">
-                            <select
-                              value={field.type}
-                              onChange={(e) => {
-                                const type = e.target.value;
-                                handleUpdateField(idx, 'type', type);
+                          <Select
+                            value={field.type}
+                            onChange={(e) => {
+                              const type = e.target.value;
+                              setDynamicFields(prev => {
+                                const updated = [...prev];
+                                updated[idx] = { ...updated[idx], type };
                                 if (type === 'dropdown' || type === 'selector') {
-                                  handleUpdateField(idx, 'options', field.options || []);
+                                  updated[idx].options = updated[idx].options || [];
                                 }
-                              }}
-                              className="w-full bg-black border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-orange-500 appearance-none cursor-pointer"
-                            >
-                              <option value="dropdown">Dropdown Options</option>
-                              <option value="selector">Selector Pill Buttons</option>
-                              <option value="text">Text Input Line</option>
-                              <option value="toggle">Toggle Checkbox</option>
-                            </select>
-                            <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-zinc-500">
-                              <ChevronDown className="w-4 h-4" />
-                            </div>
-                          </div>
+                                return updated;
+                              });
+                            }}
+                            className="w-full bg-black border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-orange-500 appearance-none cursor-pointer"
+                          >
+                            <option value="dropdown">Dropdown Options</option>
+                            <option value="selector">Selector Pill Buttons</option>
+                            <option value="text">Text Input Line</option>
+                            <option value="toggle">Toggle Checkbox</option>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
+                            Display Location
+                          </label>
+                          <Select
+                            value={field.displayLocation || 'table'}
+                            onChange={(e) => handleUpdateField(idx, 'displayLocation', e.target.value)}
+                            className="w-full bg-black border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-orange-500 appearance-none cursor-pointer"
+                          >
+                            <option value="table">Table View Only</option>
+                            <option value="card">Card View Only</option>
+                            <option value="both">Table & Card Views</option>
+                            <option value="filter_only">Filter Bar Only (Hidden from views)</option>
+                          </Select>
                         </div>
                       </div>
 
@@ -792,18 +725,23 @@ export default function ProfilePage() {
                             </label>
                             <input
                               type="text"
-                              value={optionsList.join(', ')}
+                              value={field._rawOptions ?? optionsList.join(', ')}
                               onChange={(e) => {
-                                const opts = e.target.value.split(',').map(o => o.trim()).filter(Boolean);
-                                handleUpdateField(idx, 'options', opts);
+                                const raw = e.target.value;
+                                setDynamicFields(prev => {
+                                  const updated = [...prev];
+                                  const opts = raw.split(',').map(o => o.trim()).filter(Boolean);
+                                  updated[idx] = { ...updated[idx], _rawOptions: raw, options: opts };
+                                  return updated;
+                                });
                               }}
                               placeholder="e.g. Dev, QA, Design"
                               className="w-full bg-black border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-orange-500 placeholder-zinc-700"
                             />
                             {optionsList.length > 0 && (
                               <div className="flex flex-wrap gap-1.5 mt-2">
-                                {optionsList.map((opt) => (
-                                  <span key={opt} className="text-[9px] font-semibold bg-zinc-900 text-zinc-305 border border-zinc-800 px-2 py-0.5 rounded-full">
+                                {optionsList.map((opt, oIdx) => (
+                                  <span key={`${opt}-${oIdx}`} className="text-[9px] font-semibold bg-zinc-900 text-zinc-305 border border-zinc-800 px-2 py-0.5 rounded-full">
                                     {opt}
                                   </span>
                                 ))}
@@ -821,8 +759,8 @@ export default function ProfilePage() {
                                 className="w-full bg-black border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-orange-500 appearance-none cursor-pointer"
                               >
                                 <option value="" className="text-zinc-600">Select Default Option...</option>
-                                {optionsList.map((opt) => (
-                                  <option key={opt} value={opt}>
+                                {optionsList.map((opt, oIdx) => (
+                                  <option key={`${opt}-${oIdx}`} value={opt}>
                                     {opt}
                                   </option>
                                 ))}
@@ -884,141 +822,17 @@ export default function ProfilePage() {
             <div className="pt-4 border-t border-zinc-900 flex justify-end">
               <button
                 type="button"
-                onClick={handleSaveOrgConfig}
+                onClick={() => handleSaveOrgConfig()}
                 disabled={savingOrg}
                 className="bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs px-6 py-3 rounded-xl transition shadow-lg shadow-orange-600/15 disabled:opacity-50"
               >
                 {savingOrg ? 'Saving Configuration...' : 'Save Organization Schema'}
               </button>
             </div>
-          </div>
+          </SectionCard>
         )}
 
-        {/* Team Management (Admin and Super Admin only) */}
-        {isAdmin && (
-          <div className="bg-zinc-950 p-6 rounded-2xl border border-zinc-800/80 space-y-6">
-            <div>
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider pb-3 border-b border-zinc-800 flex items-center gap-2">
-                <Settings className="w-4 h-4 text-orange-500" />
-                <span>Team & User Management</span>
-              </h3>
-              <p className="text-[10.5px] text-zinc-405 mt-1">
-                Add, manage, and assign credentials for employees/workers under your organization namespace.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* User list */}
-              <div className="space-y-3">
-                <span className="text-[10px] font-bold text-orange-400 uppercase tracking-wider block">Organization Members</span>
-                {loadingUsers ? (
-                  <div className="text-center py-6 text-zinc-555 text-xs">
-                    <RefreshCw className="w-5 h-5 animate-spin mx-auto text-orange-500 mb-2" />
-                    <span>Loading team members...</span>
-                  </div>
-                ) : orgUsers.length === 0 ? (
-                  <div className="text-center py-6 text-zinc-555 text-xs">
-                    No users registered in this organization yet.
-                  </div>
-                ) : (
-                  <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-                    {orgUsers.map((u) => (
-                      <div key={u.id} className="p-3 bg-black border border-zinc-850 rounded-xl flex justify-between items-center">
-                        <div>
-                          <p className="text-xs font-bold text-white">{u.name}</p>
-                          <p className="text-[10.5px] text-orange-400 font-mono">@{u.username}</p>
-                        </div>
-                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${
-                          u.role === 'admin' 
-                            ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' 
-                            : 'bg-zinc-900 border border-zinc-800 text-zinc-400'
-                        }`}>
-                          {u.role.toUpperCase()}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Create User Form */}
-              <div className="space-y-3">
-                <span className="text-[10px] font-bold text-orange-400 uppercase tracking-wider block">Create New User</span>
-                
-                {userFormSuccess && (
-                  <div className="p-3 bg-emerald-955/20 border border-emerald-900/30 rounded-xl text-emerald-350 text-xs">
-                    {userFormSuccess}
-                  </div>
-                )}
-                {userFormError && (
-                  <div className="p-3 bg-rose-955/20 border border-rose-900/30 rounded-xl text-rose-350 text-xs">
-                    {userFormError}
-                  </div>
-                )}
-
-                <form onSubmit={handleCreateOrgUser} className="space-y-3">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-zinc-405 mb-1">Full Name</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Bob Smith"
-                      value={newUserForm.name}
-                      onChange={(e) => setNewUserForm({ ...newUserForm, name: e.target.value })}
-                      className="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-700 focus:outline-none focus:border-orange-500"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-zinc-405 mb-1">Username</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. bob_dev"
-                      value={newUserForm.username}
-                      onChange={(e) => setNewUserForm({ ...newUserForm, username: e.target.value })}
-                      className="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-700 focus:outline-none focus:border-orange-500"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-zinc-405 mb-1">Password</label>
-                    <input
-                      type="password"
-                      placeholder="••••••••"
-                      value={newUserForm.password}
-                      onChange={(e) => setNewUserForm({ ...newUserForm, password: e.target.value })}
-                      className="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-700 focus:outline-none focus:border-orange-500"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-zinc-405 mb-1">Role</label>
-                    <div className="relative">
-                      <select
-                        value={newUserForm.role}
-                        onChange={(e) => setNewUserForm({ ...newUserForm, role: e.target.value })}
-                        className="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-orange-500 appearance-none cursor-pointer"
-                      >
-                        <option value="user">User / Employee</option>
-                        <option value="admin">Admin</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={creatingUser}
-                    className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs py-2.5 rounded-xl transition shadow-lg shadow-orange-600/20 disabled:opacity-50"
-                  >
-                    {creatingUser ? 'Creating User...' : 'Create User Account'}
-                  </button>
-                </form>
-              </div>
-            </div>
-          </div>
-        )}
+        <TeamManager isAdmin={isAdmin} />
 
       </div>
 

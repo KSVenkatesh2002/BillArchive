@@ -1,20 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { Edit3, PlusCircle, Lightbulb, ChevronDown } from 'lucide-react';
+import Select from './Select';
+import Toggle from './Toggle';
+import { DEFAULT_ENABLED_FIELDS, fetchOrgConfig } from '@/lib/store/orgSlice';
+import { apiClient } from '@/lib/apiClient';
 
 export default function TaskFormModal({ show, onClose, onSubmit, form, onChange, isEdit, inline = false }) {
+  const dispatch = useDispatch();
+  const orgLoading = useSelector((state) => state.org?.loading);
+  const orgError = useSelector((state) => state.org?.error);
+  const organization = useSelector((state) => state.org?.organization);
   const storeEnabledFields = useSelector((state) => state.org?.enabledFields);
-  const enabledFields = storeEnabledFields || {
-    allocatedHours: true,
-    billedHours: true,
-    actualHours: true,
-    source: true,
-    typeOfWork: true,
-    project: true,
-    clickupId: true
-  };
+  const enabledFields = { ...DEFAULT_ENABLED_FIELDS, ...(storeEnabledFields || {}) };
 
   const [projects, setProjects] = useState([]);
   const [statuses, setStatuses] = useState([]);
@@ -28,8 +28,7 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
     if (!show) return;
 
     // Fetch projects (for fallback or general use)
-    fetch('/api/projects')
-      .then((res) => res.json())
+    apiClient.getProjects()
       .then((data) => {
         if (data.success) {
           setProjects(data.projects || []);
@@ -38,43 +37,26 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
       .catch((err) => console.error(err));
 
     // Fetch statuses
-    fetch('/api/admin/statuses')
-      .then((res) => res.json())
+    apiClient.getStatuses()
       .then((data) => {
         if (data.success) {
           setStatuses(data.statuses || []);
         } else {
-          setStatuses([
-            'inprocess',
-            'dev',
-            'ready for qa',
-            'qa complete',
-            'ready for code review',
-            'code review complete',
-            'complete',
-            'need approval',
-          ]);
+          console.error('Failed to load statuses:', data.error);
+          setStatuses([]);
         }
       })
-      .catch(() => {
-        setStatuses([
-          'inprocess',
-          'dev',
-          'ready for qa',
-          'qa complete',
-          'ready for code review',
-          'code review complete',
-          'complete',
-          'need approval',
-        ]);
+      .catch((err) => {
+        console.error('Network error loading statuses:', err);
+        setStatuses([]);
       });
 
-    // Fetch organization dynamic fields and user preferences
+    // Fetch organization dynamic fields and user preferences via Redux dispatch
     Promise.all([
-      fetch('/api/organization/config').then((res) => res.json()),
-      fetch('/api/user/preferences').then((res) => res.json())
+      dispatch(fetchOrgConfig()).unwrap(),
+      apiClient.getUserPreferences()
     ]).then(([orgData, prefData]) => {
-      let fields = orgData.success && orgData.organization?.dynamicFields ? orgData.organization.dynamicFields : [];
+      let fields = orgData?.dynamicFields ? orgData.dynamicFields : [];
 
       // Ensure Project field is always present, since it is a core property
       if (!fields.some(f => f.name === 'project')) {
@@ -131,17 +113,52 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
     e.preventDefault();
     if (isAddingNewProject && newProjectName.trim()) {
       try {
-        await fetch('/api/projects', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ project: newProjectName.trim() }),
-        });
+        await apiClient.createProject(newProjectName.trim());
       } catch (err) {
         console.error('Failed to save project to db:', err);
       }
     }
     onSubmit(e);
   };
+
+  const isLoading = orgLoading || !organization;
+
+  if (isLoading) {
+    const loadingContent = (
+      <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-xl p-8 shadow-2xl flex flex-col items-center justify-center min-h-[300px]">
+        <div className="animate-spin inline-block w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full mb-4"></div>
+        <p className="text-sm font-semibold text-zinc-400">Loading Task Configuration...</p>
+      </div>
+    );
+    if (inline) return loadingContent;
+    return (
+      <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+        {loadingContent}
+      </div>
+    );
+  }
+
+  if (orgError) {
+    const errorContent = (
+      <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-xl p-8 shadow-2xl flex flex-col items-center justify-center min-h-[300px]">
+        <div className="bg-red-900/20 border border-red-500/50 text-red-400 p-4 rounded-xl max-w-md w-full text-center">
+          <h3 className="font-bold mb-2">Configuration Error</h3>
+          <p className="text-sm">{orgError}</p>
+          {!inline && (
+            <button onClick={onClose} className="mt-5 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm font-semibold transition">
+              Close
+            </button>
+          )}
+        </div>
+      </div>
+    );
+    if (inline) return errorContent;
+    return (
+      <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
+        {errorContent}
+      </div>
+    );
+  }
 
   const formContent = (
     <div 
@@ -162,20 +179,22 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
 
       <form onSubmit={handleWrapperSubmit} className="space-y-4">
         {/* ClickUp Link Input */}
-        <div className="p-3.5 bg-black rounded-xl border border-zinc-800/80">
-          <label className="block text-xs font-semibold text-zinc-300 mb-1">ClickUp Link / Task ID</label>
-          <input
-            type="text"
-            placeholder="e.g. https://app.clickup.com/t/86d3tn93v or 86d3tn93v"
-            value={form.clickupId || ''}
-            onChange={handleLinkInput}
-            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500"
-          />
-          <p className="text-[10px] text-zinc-500 mt-1.5 flex items-start gap-1">
-            <Lightbulb className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-            <span>Pasting a link will store it as a clickable ClickUp ID shortcut in reports.</span>
-          </p>
-        </div>
+        {enabledFields.clickupId !== false && (
+          <div className="p-3.5 bg-black rounded-xl border border-zinc-800/80">
+            <label className="block text-xs font-semibold text-zinc-300 mb-1">ClickUp Link / Task ID</label>
+            <input
+              type="text"
+              placeholder="e.g. https://app.clickup.com/t/86d3tn93v or 86d3tn93v"
+              value={form.clickupId || ''}
+              onChange={handleLinkInput}
+              className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500"
+            />
+            <p className="text-[10px] text-zinc-500 mt-1.5 flex items-start gap-1">
+              <Lightbulb className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+              <span>Pasting a link will store it as a clickable ClickUp ID shortcut in reports.</span>
+            </p>
+          </div>
+        )}
 
         <div>
           <label className="block text-xs font-semibold text-zinc-300 mb-1">Task Name *</label>
@@ -190,25 +209,13 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-semibold text-zinc-300 mb-1">Task Status</label>
-            <div className="relative">
-              <select
-                value={form.status || 'inprocess'}
-                onChange={(e) => onChange({ ...form, status: e.target.value })}
-                className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-orange-500 appearance-none cursor-pointer"
-              >
-                {statuses.map((s) => (
-                  <option key={s || ''} value={s || ''} className="bg-black text-white">
-                    {(s || '').toUpperCase()}
-                  </option>
-                ))}
-              </select>
-              <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-zinc-400">
-                <ChevronDown className="w-4 h-4" />
-              </div>
-            </div>
-          </div>
+          <Select
+            label="Task Status"
+            value={form.status || 'inprocess'}
+            onChange={(e) => onChange({ ...form, status: e.target.value })}
+            options={statuses.map(s => ({ value: s || '', label: (s || '').toUpperCase() }))}
+            className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-orange-500 appearance-none cursor-pointer"
+          />
 
           <div>
             <label className="block text-xs font-semibold text-zinc-300 mb-1">Work Date / Start Date</label>
@@ -225,7 +232,7 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
         {dynamicFields.length > 0 ? (
           <div className="space-y-4 pt-2 border-t border-zinc-900">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {dynamicFields.map((field) => {
+              {dynamicFields.filter(f => f.name !== 'project' || enabledFields.project !== false).map((field) => {
                 const val = form.dynamicValues?.[field.name] ?? userPrefs[field.name] ?? field.defaultValue ?? '';
 
                 const handleFieldChange = async (newVal) => {
@@ -261,35 +268,30 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
                     <label className="block text-xs font-semibold text-zinc-350">{field.label}</label>
 
                     {field.type === 'dropdown' || field.type === 'selector' ? (
-                      <div className="relative">
-                        <select
-                          value={val}
-                          onChange={(e) => handleFieldChange(e.target.value)}
-                          className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-orange-500 appearance-none cursor-pointer"
-                        >
-                          <option value="" disabled className="bg-black text-zinc-650">Select Option</option>
-                          {(field.options || []).map((opt) => (
-                            <option key={opt} value={opt} className="bg-black text-white">
-                              {opt}
-                            </option>
-                          ))}
-                          {field.name === 'project' && (
-                            <>
-                              {projects.filter(proj => !(field.options || []).includes(proj)).map((proj) => (
-                                <option key={proj} value={proj} className="bg-black text-white">
-                                  {proj}
-                                </option>
-                              ))}
-                              <option value="__add_new__" className="bg-zinc-900 text-orange-400 font-bold">
-                                + Add New Project
+                      <Select
+                        value={val}
+                        onChange={(e) => handleFieldChange(e.target.value)}
+                        className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-orange-500 appearance-none cursor-pointer"
+                      >
+                        <option value="" disabled className="bg-black text-zinc-650">Select Option</option>
+                        {(field.options || []).map((opt) => (
+                          <option key={opt} value={opt} className="bg-black text-white">
+                            {opt}
+                          </option>
+                        ))}
+                        {field.name === 'project' && (
+                          <>
+                            {projects.filter(proj => !(field.options || []).includes(proj)).map((proj) => (
+                              <option key={proj} value={proj} className="bg-black text-white">
+                                {proj}
                               </option>
-                            </>
-                          )}
-                        </select>
-                        <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-zinc-400">
-                          <ChevronDown className="w-4 h-4" />
-                        </div>
-                      </div>
+                            ))}
+                            <option value="__add_new__" className="bg-zinc-900 text-orange-400 font-bold">
+                              + Add New Project
+                            </option>
+                          </>
+                        )}
+                      </Select>
                     ) : field.type === 'text' ? (
                       <input
                         type="text"
@@ -299,15 +301,12 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
                         placeholder={`Enter ${field.label}...`}
                       />
                     ) : field.type === 'toggle' ? (
-                      <label className="flex items-center gap-2 cursor-pointer select-none text-zinc-300 py-2">
-                        <input
-                          type="checkbox"
+                      <div className="py-2">
+                        <Toggle
                           checked={!!val}
-                          onChange={(e) => handleFieldChange(e.target.checked)}
-                          className="rounded border-zinc-700 bg-black text-orange-500 focus:ring-0 w-4 h-4 cursor-pointer"
+                          onChange={(checked) => handleFieldChange(checked)}
                         />
-                        <span className="text-xs text-zinc-405">{field.label}</span>
-                      </label>
+                      </div>
                     ) : null}
 
                     {field.name === 'project' && isAddingNewProject && (

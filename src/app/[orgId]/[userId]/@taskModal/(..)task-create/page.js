@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { useDispatch } from 'react-redux';
+import { apiClient } from '@/lib/apiClient';
 export const dynamic = 'force-dynamic';
 import TaskFormModal from '@/components/TaskFormModal';
 
@@ -26,7 +28,7 @@ export default function InterceptedTaskCreateModal() {
     if (!form.name || !projectVal) return;
 
     try {
-      const payload = {
+      const taskData = {
         name: form.name,
         nickName: form.nickName || '',
         status: form.status,
@@ -42,12 +44,7 @@ export default function InterceptedTaskCreateModal() {
         }
       };
 
-      const res = await fetch('/api/tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
+      const data = await apiClient.createTask(taskData);
       if (data.success) {
         router.back();
         // Give router a tiny moment to go back before refreshing

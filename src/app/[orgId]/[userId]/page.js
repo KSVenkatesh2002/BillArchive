@@ -23,7 +23,6 @@ import {
 } from '@/lib/store/taskSlice';
 
 // Import child components
-import Header from '@/components/Header';
 import MetricsBar from '@/components/MetricsBar';
 import FilterControls from '@/components/FilterControls';
 import TaskTable from '@/components/TaskTable';
@@ -120,13 +119,6 @@ export default function UserDashboard() {
         }
 
         const initialCustomFilters = {};
-        fields.forEach(f => {
-          if (f.name !== 'source' && f.name !== 'typeOfWork' && f.name !== 'project') {
-            if (f.defaultValue !== undefined && f.defaultValue !== null && f.defaultValue !== '') {
-              initialCustomFilters[f.name] = String(f.defaultValue);
-            }
-          }
-        });
         if (Object.keys(initialCustomFilters).length > 0) {
           dispatch(setCustomFilters(initialCustomFilters));
         }
@@ -317,15 +309,10 @@ export default function UserDashboard() {
   }, [tasks]);
 
   return (
-    <div className="min-h-screen bg-black text-slate-100 font-sans selection:bg-orange-500 selection:text-white">
+    <>
       <Toast message={toastMessage} />
 
-      <div className="relative max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Top Navbar Header */}
-        <Header
-          currentUser={currentUser}
-          onLogout={handleLogout}
-        />
+      <div className="relative space-y-6">
 
         {/* Status Notification for Demo Mode */}
         {isDemo && (
@@ -475,6 +462,6 @@ export default function UserDashboard() {
         task={activeHistoryTask}
         onClose={() => dispatch(setActiveHistoryTask(null))}
       />
-    </div>
+    </>
   );
 }

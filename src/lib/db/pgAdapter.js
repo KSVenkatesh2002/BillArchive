@@ -34,6 +34,7 @@ export const pgAdapter = {
 
     const userPref = await db('user_preferences').where({ user_id: user.id }).first();
     const userProjects = await db('user_projects').where({ user_id: user.id }).select('name');
+    const org = user.organization_id ? await this.findOrganizationById(user.organization_id) : null;
 
     return {
       _id: user.id,
@@ -43,7 +44,7 @@ export const pgAdapter = {
       email: user.email,
       password: user.password_hash,
       role: user.role_code || 'user',
-      organization: user.organization_id ? { _id: user.organization_id, id: user.organization_id, slug: user.org_slug, name: user.org_name } : null,
+      organization: org,
       orgId: user.org_slug || 'dialedin',
       preferences: {
         ...(userPref?.preferences || {}),
@@ -173,6 +174,19 @@ export const pgAdapter = {
     if (query.createdAt) {
       if (query.createdAt.$gte) q = q.where('t.created_at', '>=', query.createdAt.$gte);
       if (query.createdAt.$lte) q = q.where('t.created_at', '<=', query.createdAt.$lte);
+    }
+
+    const dynamicKeys = Object.keys(query).filter(k => k.startsWith('dynamicValues.'));
+    for (const key of dynamicKeys) {
+      const fieldName = key.split('.')[1];
+      const val = query[key];
+      q = q.whereExists(function() {
+        this.select('id')
+          .from('task_custom_values as cv')
+          .whereRaw('cv.task_id = t.id')
+          .where('cv.field_name', fieldName)
+          .where('cv.field_value', 'ilike', `%${val}%`);
+      });
     }
 
     q = q.orderBy('t.work_date', 'desc');
@@ -474,6 +488,7 @@ export const pgAdapter = {
       id: org.id,
       slug: org.slug,
       name: org.name,
+      enabledFields: typeof org.enabled_fields === 'string' ? JSON.parse(org.enabled_fields) : (org.enabled_fields || {}),
       dynamicFields: fields.map(f => {
         const fOptions = options.filter(o => o.field_id === f.id).map(o => o.option_value);
         return {
@@ -502,10 +517,19 @@ export const pgAdapter = {
     return this.findOrganizationById(org?.id || orgDoc.slug);
   },
 
-  async updateOrganizationConfig(idOrSlug, dynamicFields) {
+  async updateOrganizationConfig(idOrSlug, dynamicFields, enabledFields) {
     const db = getKnex();
     const org = await db('organizations').where(isUUID(idOrSlug) ? { id: idOrSlug } : { slug: idOrSlug }).first();
     if (!org) return null;
+
+    if (enabledFields !== undefined) {
+      await db('organizations')
+        .where({ id: org.id })
+        .update({
+          enabled_fields: typeof enabledFields === 'object' ? JSON.stringify(enabledFields) : enabledFields,
+          updated_at: new Date()
+        });
+    }
 
     if (dynamicFields && Array.isArray(dynamicFields)) {
       for (const f of dynamicFields) {

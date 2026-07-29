@@ -7,11 +7,9 @@ export const taskService = {
    */
   async getTasks(userId, filters = {}, pagination = {}) {
     const query = { userId };
-    const { source, project, typeOfWork, timeframe, ...customFilters } = filters;
+    const { project, timeframe, ...customFilters } = filters;
 
-    if (source && source !== 'all') query.source = source;
     if (project && project !== 'all') query.project = project;
-    if (typeOfWork && typeOfWork !== 'all') query.typeOfWork = typeOfWork;
 
     if (timeframe === '1w') {
       const oneWeekAgo = new Date();

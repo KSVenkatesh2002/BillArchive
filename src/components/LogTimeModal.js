@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { X, Calendar as CalendarIcon, Clock, Save, List, Activity } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, X, FileText, Activity, List, Save } from 'lucide-react';
+import { apiClient } from '@/lib/apiClient';
 
 export default function LogTimeModal({ isOpen, onClose, tasks, onSubmit }) {
   const [selectedTaskId, setSelectedTaskId] = useState('');
@@ -14,8 +15,7 @@ export default function LogTimeModal({ isOpen, onClose, tasks, onSubmit }) {
 
   useEffect(() => {
     if (isOpen) {
-      fetch('/api/admin/statuses')
-        .then(res => res.json())
+      apiClient.getStatuses()
         .then(data => {
           if (data.success && data.statuses) {
             setStatuses(data.statuses);
