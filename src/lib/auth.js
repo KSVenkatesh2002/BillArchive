@@ -36,6 +36,10 @@ export async function getAuthUser() {
   const cookieStore = await cookies();
   const token = cookieStore.get(CONFIG.JWT_COOKIE_NAME)?.value;
   if (!token) return null;
-  return verifyToken(token);
+  
+  const payload = await verifyToken(token);
+  // Invalidate legacy tokens that don't have an email
+  if (payload && !payload.email) return null;
+  return payload;
 }
 

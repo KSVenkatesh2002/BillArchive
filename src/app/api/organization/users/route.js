@@ -9,7 +9,7 @@ export async function GET() {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const dbUser = await dbService.findUserByUsername(auth.username);
+    const dbUser = await dbService.findUserByEmail(auth.email);
     if (!dbUser || dbUser.isDeleted) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
@@ -35,7 +35,7 @@ export async function GET() {
       users: orgUsers.map(u => ({
         id: u._id.toString(),
         name: u.name,
-        username: u.username,
+        email: u.email,
         role: u.role || 'user',
         createdAt: u.createdAt
       }))
@@ -52,7 +52,7 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const dbUser = await dbService.findUserByUsername(auth.username);
+    const dbUser = await dbService.findUserByEmail(auth.email);
     if (!dbUser || dbUser.isDeleted) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
@@ -67,20 +67,20 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'No organization scope found' }, { status: 400 });
     }
 
-    const { name, username, password, role } = await request.json();
-    if (!name || !username || !password) {
-      return NextResponse.json({ success: false, error: 'Name, username, and password are required.' }, { status: 400 });
+    const { name, email, password, role } = await request.json();
+    if (!name || !email || !password) {
+      return NextResponse.json({ success: false, error: 'Name, email, and password are required.' }, { status: 400 });
     }
 
-    const existingUser = await dbService.findUserByUsername(username);
+    const existingUser = await dbService.findUserByEmail(email);
     if (existingUser) {
-      return NextResponse.json({ success: false, error: 'Username already taken.' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Email already registered.' }, { status: 400 });
     }
 
     const hashedPassword = await hashPassword(password);
     const newUser = await dbService.createUser({
       name,
-      username: username.toLowerCase(),
+      email: email.toLowerCase(),
       password: hashedPassword,
       role: role || 'user',
       organization: authOrgId,
@@ -92,7 +92,7 @@ export async function POST(request) {
       user: {
         id: newUser._id.toString(),
         name: newUser.name,
-        username: newUser.username,
+        email: newUser.email,
         role: newUser.role
       }
     });

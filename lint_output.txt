@@ -1,0 +1,216 @@
+
+> bill@0.1.0 lint
+> eslint
+
+
+/home/dialedin/project/vercel/bill/src/app/[orgId]/[userId]/[taskId]/page.js
+   48:5   error    Error: Cannot access variable before it is declared
+
+`fetchTask` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+  46 |
+  47 |   useEffect(() => {
+> 48 |     fetchTask();
+     |     ^^^^^^^^^ `fetchTask` accessed before it is declared
+  49 |     fetchStatuses();
+  50 |   }, [taskId]);
+  51 |
+
+  50 |   }, [taskId]);
+  51 |
+> 52 |   const fetchTask = async () => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 53 |     setLoading(true);
+     | ^^^^^^^^^^^^^^^^^^^^^
+> 54 |     try {
+     …
+     | ^^^^^^^^^^^^^^^^^^^^^
+> 65 |     }
+     | ^^^^^^^^^^^^^^^^^^^^^
+> 66 |   };
+     | ^^^^^ `fetchTask` is declared here
+  67 |
+  68 |   const fetchStatuses = async () => {
+  69 |     try {                                                                                                                                                                                                                                                                                                                            react-hooks/immutability
+   49:5   error    Error: Cannot access variable before it is declared
+
+`fetchStatuses` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+  47 |   useEffect(() => {
+  48 |     fetchTask();
+> 49 |     fetchStatuses();
+     |     ^^^^^^^^^^^^^ `fetchStatuses` accessed before it is declared
+  50 |   }, [taskId]);
+  51 |
+  52 |   const fetchTask = async () => {
+
+  66 |   };
+  67 |
+> 68 |   const fetchStatuses = async () => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 69 |     try {
+     | ^^^^^^^^^
+> 70 |       const data = await apiClient.getStatuses();
+     | ^^^^^^^^^
+> 71 |       if (data.success) {
+     | ^^^^^^^^^
+> 72 |         setStatuses(data.statuses || []);
+     | ^^^^^^^^^
+> 73 |       }
+     | ^^^^^^^^^
+> 74 |     } catch (err) {
+     | ^^^^^^^^^
+> 75 |       console.error('Failed to fetch statuses', err);
+     | ^^^^^^^^^
+> 76 |     }
+     | ^^^^^^^^^
+> 77 |   };
+     | ^^^^^ `fetchStatuses` is declared here
+  78 |
+  79 |   const triggerToast = (msg) => {
+  80 |     setToastMessage(msg);  react-hooks/immutability
+   50:6   warning  React Hook useEffect has a missing dependency: 'fetchTask'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                react-hooks/exhaustive-deps
+  326:45  error    Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+  324 |                   <tbody className="divide-y divide-zinc-800/50">
+  325 |                     {task.timeEntries.map((entry) => (
+> 326 |                       <tr key={entry._id || Math.random()} className="hover:bg-zinc-900/40 transition">
+      |                                             ^^^^^^^^^^^^^ Cannot call impure function
+  327 |                         <td className="py-3 px-3 font-mono font-semibold text-orange-400">
+  328 |                           {new Date(entry.date).toLocaleDateString()}
+  329 |                         </td>                                                                                                                                                                                             react-hooks/purity
+
+/home/dialedin/project/vercel/bill/src/app/[orgId]/[userId]/page.js
+  135:7  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  133 |     handleFetchOrgConfig();
+  134 |     if (typeof window !== 'undefined' && window.innerWidth < 768) {
+> 135 |       setViewMode('cards');
+      |       ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  136 |     }
+  137 |   }, []);
+  138 |  react-hooks/set-state-in-effect
+  137:6  warning  React Hook useEffect has missing dependencies: 'handleCheckAuth' and 'handleFetchOrgConfig'. Either include them or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              react-hooks/exhaustive-deps
+  142:6  warning  React Hook useEffect has a missing dependency: 'handleFetchTasks'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          react-hooks/exhaustive-deps
+  159:6  warning  React Hook useEffect has a missing dependency: 'handleScroll'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              react-hooks/exhaustive-deps
+
+/home/dialedin/project/vercel/bill/src/app/[orgId]/[userId]/profile/components/TeamManager.js
+  32:7  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  30 |   useEffect(() => {
+  31 |     if (isAdmin) {
+> 32 |       fetchOrgUsers();
+     |       ^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  33 |     }
+  34 |   }, [isAdmin]);
+  35 |  react-hooks/set-state-in-effect
+
+/home/dialedin/project/vercel/bill/src/app/[orgId]/[userId]/profile/page.js
+  122:6   warning  React Hook useEffect has missing dependencies: 'orgId' and 'userId'. Either include them or remove the dependency array                                                                                                                                                                  react-hooks/exhaustive-deps
+  323:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  361:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  627:56  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                                                                                                                                                                                          react/no-unescaped-entities
+  627:70  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                                                                                                                                                                                          react/no-unescaped-entities
+
+/home/dialedin/project/vercel/bill/src/app/[orgId]/[userId]/project/[name]/page.js
+  130:6  warning  React Hook useEffect has missing dependencies: 'dispatch', 'handleCheckAuth', and 'handleFetchOrgConfig'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  135:6  warning  React Hook useEffect has a missing dependency: 'handleFetchTasks'. Either include it or remove the dependency array                                           react-hooks/exhaustive-deps
+  152:6  warning  React Hook useEffect has a missing dependency: 'handleScroll'. Either include it or remove the dependency array                                               react-hooks/exhaustive-deps
+
+/home/dialedin/project/vercel/bill/src/app/[orgId]/[userId]/reports/page.js
+  89:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  87 |
+  88 |   useEffect(() => {
+> 89 |     fetchReport();
+     |     ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  90 |   }, [fetchReport]);
+  91 |
+  92 |   const toggleTaskExclusion = (taskId) => {  react-hooks/set-state-in-effect
+
+/home/dialedin/project/vercel/bill/src/app/login/page.js
+  111:46  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+/home/dialedin/project/vercel/bill/src/app/page.js
+  127:11  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/home/dialedin/project/vercel/bill/src/app/superadmin/page.js
+  60:11  error  Error: Cannot access variable before it is declared
+
+`fetchAdminData` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+  58 |         if (auth.authenticated && isSuperAdmin) {
+  59 |           setCurrentUser(auth.user);
+> 60 |           fetchAdminData();
+     |           ^^^^^^^^^^^^^^ `fetchAdminData` accessed before it is declared
+  61 |         } else {
+  62 |           setError('Access Denied: You must be logged in as a super administrator.');
+  63 |         }
+
+  71 |   }, []);
+  72 |
+> 73 |   const fetchAdminData = async () => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 74 |     setLoadingData(true);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^
+> 75 |     try {
+     …
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^
+> 87 |     }
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^
+> 88 |   };
+     | ^^^^^ `fetchAdminData` is declared here
+  89 |
+  90 |   const handleLogout = async () => {
+  91 |     try {  react-hooks/immutability
+
+/home/dialedin/project/vercel/bill/src/components/LogTimeModal.js
+  77:9  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  75 |       const stillAvailable = availableTasks.some(t => (t._originalId || t._id) === selectedTaskId);
+  76 |       if (!stillAvailable) {
+> 77 |         setSelectedTaskId('');
+     |         ^^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  78 |       }
+  79 |     }
+  80 |   }, [date, availableTasks, selectedTaskId]);  react-hooks/set-state-in-effect
+
+/home/dialedin/project/vercel/bill/src/components/TaskCards.js
+  128:59  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  128:70  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+
+/home/dialedin/project/vercel/bill/src/components/TaskFormModal.js
+  88:6  warning  React Hook useEffect has missing dependencies: 'dispatch', 'form', and 'onChange'. Either include them or remove the dependency array. If 'onChange' changes too often, find the parent component that defines it and wrap that definition in useCallback  react-hooks/exhaustive-deps
+
+/home/dialedin/project/vercel/bill/src/components/TaskTable.js
+  134:59  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  134:70  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+
+✖ 27 problems (15 errors, 12 warnings)
+

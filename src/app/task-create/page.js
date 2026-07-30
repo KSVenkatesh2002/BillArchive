@@ -12,7 +12,7 @@ export default function RootTaskCreateRedirect() {
       try {
         const data = await apiClient.checkAuth();
         if (data.authenticated && data.user?.username) {
-          router.replace(`/${data.user.username}/task-create`);
+          router.replace(`/${data.user.id}/task-create`);
         } else {
           router.replace('/login?redirect=/task-create');
         }

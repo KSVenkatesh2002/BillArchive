@@ -124,8 +124,8 @@ export default function TaskCards({
       ) : tasks.length === 0 ? (
         <div className="py-20 text-center text-zinc-400 bg-[#0b0b0b] rounded-2xl border border-zinc-800/80 shadow-2xl">
           <Pin className="w-8 h-8 text-zinc-500 mx-auto mb-2" />
-          <p className="text-base font-semibold text-zinc-200">No tasks found matching criteria</p>
-          <p className="text-xs text-zinc-500 mt-1">Click "+ New Task" to create one!</p>
+          <p className="text-zinc-500 text-sm mb-4">No tasks match your current filters.</p>
+          <p className="text-xs text-zinc-600">Try adjusting your filters or click &quot;New Task&quot; to create one.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

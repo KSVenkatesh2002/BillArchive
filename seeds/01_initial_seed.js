@@ -65,31 +65,29 @@ exports.seed = async function(knex) {
 
   // 6. Seed Admin Users for Both Orgs
   await knex('users').insert([
-    { username: 'admin', name: 'DialedIn Admin', email: 'admin@dialedin.com', password_hash: passwordHash, role_id: superAdminRoleId, organization_id: dialedinId },
-    { username: 'acme_admin', name: 'Acme Admin', email: 'admin@acme.com', password_hash: passwordHash, role_id: adminRoleId, organization_id: acmeId }
-  ]).onConflict('username').ignore();
+    { name: 'DialedIn Admin', email: 'admin@dialedin.com', password_hash: passwordHash, role_id: superAdminRoleId, organization_id: dialedinId },
+    { name: 'Acme Admin', email: 'admin@acme.com', password_hash: passwordHash, role_id: adminRoleId, organization_id: acmeId }
+  ]).onConflict('email').ignore();
 
   // 7. Seed 2 Regular Users for 'dialedin'
   const [johnDev] = await knex('users').insert({
-    username: 'john_dev',
     name: 'John Developer',
-    email: 'john@dialedin.com',
+    email: 'john_dev@dialed.in',
     password_hash: passwordHash,
     role_id: userRoleId,
     organization_id: dialedinId
-  }).onConflict('username').merge().returning('*');
+  }).onConflict('email').merge().returning('*');
 
   const [sarahQa] = await knex('users').insert({
-    username: 'sarah_qa',
     name: 'Sarah QA Engineer',
-    email: 'sarah@dialedin.com',
+    email: 'sarah_qa@dialed.in',
     password_hash: passwordHash,
     role_id: userRoleId,
     organization_id: dialedinId
-  }).onConflict('username').merge().returning('*');
+  }).onConflict('email').merge().returning('*');
 
-  const johnId = johnDev?.id || (await knex('users').where({ username: 'john_dev' }).first()).id;
-  const sarahId = sarahQa?.id || (await knex('users').where({ username: 'sarah_qa' }).first()).id;
+  const johnId = johnDev?.id || (await knex('users').where({ email: 'john_dev@dialed.in' }).first()).id;
+  const sarahId = sarahQa?.id || (await knex('users').where({ email: 'sarah_qa@dialed.in' }).first()).id;
 
   // 8. Seed 5 Projects for John & Sarah
   const johnProjects = ['Web Portal', 'Mobile App', 'API Integration', 'Payment Engine', 'Analytics Dashboard'];
@@ -138,13 +136,13 @@ exports.seed = async function(knex) {
   for (let dayOffset = 15; dayOffset >= 0; dayOffset--) {
     const workDate = new Date(now);
     workDate.setDate(workDate.getDate() - dayOffset);
-    
+
     // Pick 2 random multi-day tasks to work on today
     const selectedMultiDay = [
       insertedMultiDayTasks[dayOffset % 5],
       insertedMultiDayTasks[(dayOffset + 1) % 5]
     ];
-    
+
     // Add time entries for the multi-day tasks
     for (const t of selectedMultiDay) {
       timeEntriesToInsert.push({
@@ -176,9 +174,9 @@ exports.seed = async function(knex) {
       });
       taskCounter++;
     }
-    
+
     const insertedDaily = await knex('tasks').insert(dailyTasks).returning('*');
-    
+
     for (const t of insertedDaily) {
       timeEntriesToInsert.push({
         task_id: t.id,
@@ -189,7 +187,7 @@ exports.seed = async function(knex) {
         note: `Completed daily task`,
         logged_by: 'john_dev'
       });
-      
+
       // Random doc link
       if (Math.random() > 0.5) {
         docLinksToInsert.push({

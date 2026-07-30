@@ -74,7 +74,7 @@ export default function LogTimeModal({ isOpen, onClose, tasks, onSubmit }) {
     if (selectedTaskId) {
       const stillAvailable = availableTasks.some(t => (t._originalId || t._id) === selectedTaskId);
       if (!stillAvailable) {
-        setSelectedTaskId('');
+        setTimeout(() => setSelectedTaskId(''), 0);
       }
     }
   }, [date, availableTasks, selectedTaskId]);

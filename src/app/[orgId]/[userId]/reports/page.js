@@ -86,7 +86,7 @@ export default function ReportsPage() {
   }, [selectedProject, startDate, endDate, excludedTaskIds, includeHours, includeHistory, includeClickUp, includeMeta, includeTotals]);
 
   useEffect(() => {
-    fetchReport();
+    setTimeout(() => fetchReport(), 0);
   }, [fetchReport]);
 
   const toggleTaskExclusion = (taskId) => {
@@ -109,9 +109,9 @@ export default function ReportsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans flex flex-col">
+    <div className="flex flex-col gap-6">
       {/* Header */}
-      <header className="p-5 border-b border-zinc-800 bg-zinc-950 flex items-center justify-between sticky top-0 z-10">
+      <div className="p-5 border-b border-zinc-800 bg-zinc-950/40 rounded-2xl flex items-center justify-between mb-4">
         <div className="flex items-center gap-4">
           <Link
             href={`/${orgId}/${userId}`}
@@ -133,7 +133,7 @@ export default function ReportsPage() {
             </div>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <button
             onClick={handleCopy}
@@ -153,17 +153,17 @@ export default function ReportsPage() {
             )}
           </button>
         </div>
-      </header>
+      </div>
 
       {/* Main Content - 2 Column Layout */}
       <main className="flex-1 p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        
+
         {/* LEFT COLUMN: Controls */}
         <div className="lg:col-span-5 space-y-6 flex flex-col max-h-[calc(100vh-120px)] overflow-y-auto pr-2">
-          
+
           {/* Timeline Range Controls */}
           <section className="bg-zinc-950 border border-zinc-800 rounded-2xl shadow-sm overflow-hidden">
-            <button 
+            <button
               onClick={() => setIsFilterOpen(!isFilterOpen)}
               className="w-full flex items-center justify-between p-5 bg-zinc-900/40 hover:bg-zinc-900/80 transition text-xs font-bold text-zinc-400 uppercase tracking-wider"
             >
@@ -172,7 +172,7 @@ export default function ReportsPage() {
               </div>
               {isFilterOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
-            
+
             {isFilterOpen && (
               <div className="p-5 border-t border-zinc-800/50 space-y-4">
                 <div className="grid grid-cols-2 gap-4">

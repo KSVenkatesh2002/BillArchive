@@ -18,7 +18,7 @@ import {
   User,
   History
 } from 'lucide-react';
-import Header from '@/components/Header';
+
 import Toast from '@/components/Toast';
 
 export default function TaskDetailPage() {
@@ -44,11 +44,6 @@ export default function TaskDetailPage() {
   const [statuses, setStatuses] = useState([]);
   const [statusLoading, setStatusLoading] = useState(false);
 
-  useEffect(() => {
-    fetchTask();
-    fetchStatuses();
-  }, [taskId]);
-
   const fetchTask = async () => {
     setLoading(true);
     try {
@@ -56,10 +51,11 @@ export default function TaskDetailPage() {
       if (data.success) {
         setTask(data.task);
       } else {
-        setError(data.error || 'Failed to load task details');
+        setError(data.message || 'Failed to load task');
       }
     } catch (err) {
       setError('An error occurred while loading the task.');
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -75,6 +71,13 @@ export default function TaskDetailPage() {
       console.error('Failed to fetch statuses', err);
     }
   };
+
+  useEffect(() => {
+    setTimeout(() => {
+      fetchTask();
+      fetchStatuses();
+    }, 0);
+  }, [taskId]);
 
   const triggerToast = (msg) => {
     setToastMessage(msg);
@@ -165,7 +168,7 @@ export default function TaskDetailPage() {
   return (
     <>
       <main className="max-w-7xl w-full mx-auto pb-8 space-y-6">
-        {/* Navigation back & Header */}
+        {/* Navigation back */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Link
@@ -322,8 +325,8 @@ export default function TaskDetailPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-800/50">
-                    {task.timeEntries.map((entry) => (
-                      <tr key={entry._id || Math.random()} className="hover:bg-zinc-900/40 transition">
+                    {task.timeEntries.map((entry, idx) => (
+                      <tr key={entry._id || idx} className="hover:bg-zinc-900/40 transition">
                         <td className="py-3 px-3 font-mono font-semibold text-orange-400">
                           {new Date(entry.date).toLocaleDateString()}
                         </td>

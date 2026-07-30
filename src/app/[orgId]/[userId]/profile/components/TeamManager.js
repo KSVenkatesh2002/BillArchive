@@ -8,7 +8,7 @@ import { apiClient } from '@/lib/apiClient';
 export default function TeamManager({ isAdmin }) {
   const [orgUsers, setOrgUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
-  const [newUserForm, setNewUserForm] = useState({ name: '', username: '', password: '', role: 'user' });
+  const [newUserForm, setNewUserForm] = useState({ name: '', email: '', password: '', role: 'user' });
   const [creatingUser, setCreatingUser] = useState(false);
   const [userFormSuccess, setUserFormSuccess] = useState('');
   const [userFormError, setUserFormError] = useState('');
@@ -29,7 +29,7 @@ export default function TeamManager({ isAdmin }) {
 
   useEffect(() => {
     if (isAdmin) {
-      fetchOrgUsers();
+      setTimeout(() => fetchOrgUsers(), 0);
     }
   }, [isAdmin]);
 
@@ -41,8 +41,8 @@ export default function TeamManager({ isAdmin }) {
     try {
       const res = await apiClient.createOrganizationUser(newUserForm);
       if (res.success) {
-        setUserFormSuccess(`User @${newUserForm.username} created successfully!`);
-        setNewUserForm({ name: '', username: '', password: '', role: 'user' });
+        setUserFormSuccess(`User ${newUserForm.email} created successfully!`);
+        setNewUserForm({ name: '', email: '', password: '', role: 'user' });
         fetchOrgUsers();
       } else {
         setUserFormError(res.error || 'Failed to create user.');
@@ -87,7 +87,7 @@ export default function TeamManager({ isAdmin }) {
                 <div key={u.id} className="p-3 bg-black border border-zinc-850 rounded-xl flex justify-between items-center">
                   <div>
                     <p className="text-xs font-bold text-white">{u.name}</p>
-                    <p className="text-[10.5px] text-orange-400 font-mono">@{u.username}</p>
+                    <p className="text-[10.5px] text-orange-400 font-mono">{u.email}</p>
                   </div>
                   <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${
                     u.role === 'admin' 
@@ -131,12 +131,12 @@ export default function TeamManager({ isAdmin }) {
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-zinc-405 mb-1">Username</label>
+              <label className="block text-[11px] font-semibold text-zinc-405 mb-1">Email</label>
               <input
-                type="text"
-                placeholder="e.g. bob_dev"
-                value={newUserForm.username}
-                onChange={(e) => setNewUserForm({ ...newUserForm, username: e.target.value })}
+                type="email"
+                placeholder="e.g. bob@example.com"
+                value={newUserForm.email}
+                onChange={(e) => setNewUserForm({ ...newUserForm, email: e.target.value })}
                 className="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-700 focus:outline-none focus:border-orange-500"
                 required
               />

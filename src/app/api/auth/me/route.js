@@ -6,11 +6,13 @@ import { CONFIG } from '@/lib/config';
 
 export async function GET() {
   const user = await getAuthUser();
-  if (!user) {
-    return NextResponse.json({ success: false, authenticated: false }, { status: 401 });
+  if (!user || !user.email) {
+    const response = NextResponse.json({ success: false, authenticated: false }, { status: 401 });
+    response.cookies.delete(CONFIG.JWT_COOKIE_NAME);
+    return response;
   }
 
-  const dbUser = await dbService.findUserByUsername(user.username);
+  const dbUser = await dbService.findUserByEmail(user.email);
   if (!dbUser || dbUser.isDeleted) {
     const response = NextResponse.json({ success: false, authenticated: false }, { status: 401 });
     response.cookies.delete(CONFIG.JWT_COOKIE_NAME);
@@ -21,8 +23,9 @@ export async function GET() {
     success: true,
     authenticated: true,
     user: {
+      id: dbUser._id.toString(),
       userId: dbUser._id.toString(),
-      username: dbUser.username,
+      email: dbUser.email,
       name: dbUser.name,
       role: dbUser.role || 'user',
       email: dbUser.email || '',

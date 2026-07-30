@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiClient } from '@/lib/apiClient';
 import { CONFIG } from '@/lib/config';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Mail } from 'lucide-react';
 
 export default function RegisterPage() {
-  const [form, setForm] = useState({ username: '', password: '', name: '', orgName: '' });
+  const [form, setForm] = useState({ email: '', password: '', name: '', orgName: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -20,7 +20,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const data = await apiClient.register(form.name, form.username, form.password, form.orgName);
+      const data = await apiClient.register(form.name, form.email, form.password, form.orgName);
 
       if (data.success) {
         router.push(`/${data.user.orgId}/${data.user.id}`);
@@ -64,6 +64,7 @@ export default function RegisterPage() {
                 onChange={(e) => setForm({ ...form, orgName: e.target.value })}
                 className="w-full bg-black border border-zinc-805 rounded-xl px-3.5 py-2 text-xs text-white placeholder-zinc-650 focus:outline-none focus:border-orange-500"
                 required
+                autoComplete="off"
               />
             </div>
           </div>
@@ -79,19 +80,25 @@ export default function RegisterPage() {
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 className="w-full bg-black border border-zinc-805 rounded-xl px-3.5 py-2 text-xs text-white placeholder-zinc-650 focus:outline-none focus:border-orange-500"
                 required
+                autoComplete="off"
               />
             </div>
 
             <div>
-              <label className="block text-xs text-zinc-300 font-semibold mb-1">Username</label>
-              <input
-                type="text"
-                placeholder="e.g. alex_dev"
-                value={form.username}
-                onChange={(e) => setForm({ ...form, username: e.target.value })}
-                className="w-full bg-black border border-zinc-805 rounded-xl px-3.5 py-2 text-xs text-white placeholder-zinc-650 focus:outline-none focus:border-orange-500"
-                required
-              />
+
+              <label className="block text-xs text-zinc-300 font-semibold mb-1">Email</label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                <input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  className="w-full bg-black border border-zinc-800 rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-zinc-700 focus:outline-none focus:border-orange-500 transition"
+                  required
+                  autoComplete="off"
+                />
+              </div>
             </div>
 
             <div>
@@ -104,6 +111,7 @@ export default function RegisterPage() {
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
                   className="w-full bg-black border border-zinc-805 rounded-xl pl-3.5 pr-10 py-2 text-xs text-white placeholder-zinc-650 focus:outline-none focus:border-orange-500"
                   required
+                  autoComplete="new-password"
                 />
                 <button
                   type="button"

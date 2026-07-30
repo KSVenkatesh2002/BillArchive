@@ -129,9 +129,10 @@ export default function TaskTable({
         </div>
       ) : tasks.length === 0 ? (
         <div className="py-20 text-center text-zinc-400">
-          <Pin className="w-8 h-8 text-zinc-500 mx-auto mb-2" />
-          <p className="text-base font-semibold text-zinc-200">No tasks found matching criteria</p>
-          <p className="text-xs text-zinc-500 mt-1">Click "+ New Task" to create one!</p>
+          <div className="text-center py-12">
+            <p className="text-zinc-500 text-sm mb-2">No tasks match your current filters.</p>
+            <p className="text-xs text-zinc-600">Try adjusting your filters or click &quot;New Task&quot; to create one.</p>
+          </div>
         </div>
       ) : (
         <div className="overflow-x-auto">

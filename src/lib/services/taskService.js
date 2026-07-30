@@ -56,7 +56,7 @@ export const taskService = {
   /**
    * Create a new task
    */
-  async createTask(userId, username, name, taskData) {
+  async createTask(userId, email, name, taskData) {
     const { name: taskName, nickName, status, bill, project, clickupId, dynamicValues, workDate } = taskData;
 
     if (!taskName) {
@@ -68,7 +68,7 @@ export const taskService = {
     const now = new Date();
     const taskWorkDate = workDate ? new Date(workDate) : now;
 
-    const dbUser = await dbService.findUserByUsername(username);
+    const dbUser = await dbService.findUserByEmail(email);
     const orgId = dbUser?.organization?._id || dbUser?.organization || null;
 
     const initialAlloc = parseFloat(bill?.allocatedHours || 0);
@@ -83,7 +83,7 @@ export const taskService = {
         billedHours: initialBilled,
         actualHours: initialActual,
         note: 'Initial hours logged',
-        loggedBy: name || username
+        loggedBy: name || email
       });
     }
 
@@ -96,7 +96,7 @@ export const taskService = {
         {
           status: initialStatus,
           timestamp: now.toISOString(),
-          changedBy: name || username
+          changedBy: name || email
         }
       ],
       workDate: taskWorkDate,
@@ -108,7 +108,7 @@ export const taskService = {
       },
       project: project || '',
       userId,
-      username,
+      email,
       user: name,
       organization: orgId,
       dynamicValues: dynamicValues || {},
@@ -129,7 +129,7 @@ export const taskService = {
   /**
    * Update an existing task
    */
-  async updateTask(taskId, userId, userNameOrUsername, updateData) {
+  async updateTask(taskId, userId, userNameOrEmail, updateData) {
     const existingTask = await dbService.findTaskById(taskId);
     if (!existingTask) {
       throw new Error('Task not found');
@@ -175,7 +175,7 @@ export const taskService = {
         statusHistory: {
           status,
           timestamp: now.toISOString(),
-          changedBy: userNameOrUsername
+          changedBy: userNameOrEmail
         }
       };
     }
@@ -190,7 +190,7 @@ export const taskService = {
   /**
    * Add a Time Entry to a task
    */
-  async addTimeEntry(taskId, userId, userNameOrUsername, entryData) {
+  async addTimeEntry(taskId, userId, userNameOrEmail, entryData) {
     const existingTask = await dbService.findTaskById(taskId);
     if (!existingTask) throw new Error('Task not found');
 
@@ -205,7 +205,7 @@ export const taskService = {
       billedHours: billed,
       actualHours: actual,
       note: entryData.note || '',
-      loggedBy: userNameOrUsername
+      loggedBy: userNameOrEmail
     };
 
     const updatedEntries = [...(existingTask.timeEntries || []), newEntry];
@@ -235,7 +235,7 @@ export const taskService = {
           statusHistory: {
             status: entryData.status,
             timestamp: new Date().toISOString(),
-            changedBy: userNameOrUsername
+            changedBy: userNameOrEmail
           }
         };
       }

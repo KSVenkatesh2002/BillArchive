@@ -31,7 +31,7 @@ export async function PUT(request) {
       success: true,
       user: {
         userId: updatedUser._id.toString(),
-        username: updatedUser.username,
+        username: updatedUser.email,
         name: updatedUser.name,
         role: updatedUser.role || 'user',
         email: updatedUser.email || '',

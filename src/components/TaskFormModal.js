@@ -8,7 +8,7 @@ import Toggle from './Toggle';
 import { DEFAULT_ENABLED_FIELDS, fetchOrgConfig } from '@/lib/store/orgSlice';
 import { apiClient } from '@/lib/apiClient';
 
-export default function TaskFormModal({ show, onClose, onSubmit, form, onChange, isEdit, inline = false }) {
+export default function TaskFormModal({ show, onClose, onSubmit, form, onChange, isEdit, inline = false, isSubmitting = false }) {
   const dispatch = useDispatch();
   const orgLoading = useSelector((state) => state.org?.loading);
   const orgError = useSelector((state) => state.org?.error);
@@ -162,7 +162,7 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
 
   const formContent = (
     <div 
-      className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-xl p-6 shadow-2xl animate-fadeIn"
+      className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-xl p-6 shadow-2xl animate-fadeIn max-h-[95vh] overflow-y-auto custom-scrollbar"
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-center justify-between pb-4 border-b border-zinc-800 mb-4">
@@ -267,7 +267,7 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
                   <div key={field.name} className="space-y-1">
                     <label className="block text-xs font-semibold text-zinc-350">{field.label}</label>
 
-                    {field.type === 'dropdown' || field.type === 'selector' ? (
+                    {field.type === 'dropdown' ? (
                       <Select
                         value={val}
                         onChange={(e) => handleFieldChange(e.target.value)}
@@ -292,6 +292,48 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
                           </>
                         )}
                       </Select>
+                    ) : field.type === 'pill' ? (
+                      <div className="flex flex-wrap gap-2">
+                        {(field.options || []).map((opt) => (
+                          <button
+                            key={opt}
+                            type="button"
+                            onClick={() => handleFieldChange(opt)}
+                            className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition border ${
+                              val === opt 
+                                ? 'bg-orange-600 text-white border-orange-500 shadow-md shadow-orange-600/20' 
+                                : 'bg-black text-zinc-400 border-zinc-800 hover:text-white hover:border-zinc-700'
+                            }`}
+                          >
+                            {opt}
+                          </button>
+                        ))}
+                        {field.name === 'project' && (
+                          <>
+                            {projects.filter(proj => !(field.options || []).includes(proj)).map((proj) => (
+                              <button
+                                key={proj}
+                                type="button"
+                                onClick={() => handleFieldChange(proj)}
+                                className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition border ${
+                                  val === proj 
+                                    ? 'bg-orange-600 text-white border-orange-500 shadow-md shadow-orange-600/20' 
+                                    : 'bg-black text-zinc-400 border-zinc-800 hover:text-white hover:border-zinc-700'
+                                }`}
+                              >
+                                {proj}
+                              </button>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => handleFieldChange('__add_new__')}
+                              className="px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition bg-zinc-900 border border-zinc-700 text-orange-400 hover:text-orange-300"
+                            >
+                              + Add New Project
+                            </button>
+                          </>
+                        )}
+                      </div>
                     ) : field.type === 'text' ? (
                       <input
                         type="text"
@@ -306,6 +348,16 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
                           checked={!!val}
                           onChange={(checked) => handleFieldChange(checked)}
                         />
+                      </div>
+                    ) : field.type === 'checkbox' ? (
+                      <div className="flex items-center gap-2 py-2">
+                        <input
+                          type="checkbox"
+                          checked={!!val}
+                          onChange={(e) => handleFieldChange(e.target.checked)}
+                          className="w-4 h-4 rounded border-zinc-700 text-orange-600 focus:ring-orange-500 bg-black accent-orange-600 cursor-pointer"
+                        />
+                        <span className="text-xs text-zinc-400">Enable {field.label}</span>
                       </div>
                     ) : null}
 
@@ -402,9 +454,21 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
 
         <button
           type="submit"
-          className="w-full bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-xs py-3 rounded-xl transition shadow-lg shadow-orange-600/25"
+          disabled={isSubmitting}
+          className={`w-full font-bold text-xs py-3 rounded-xl transition shadow-lg flex items-center justify-center gap-2 ${
+            isSubmitting 
+              ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed shadow-none' 
+              : 'bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white shadow-orange-600/25'
+          }`}
         >
-          {isEdit ? 'Save Changes' : 'Create Task'}
+          {isSubmitting ? (
+            <>
+              <div className="w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+              <span>Processing...</span>
+            </>
+          ) : (
+            isEdit ? 'Save Changes' : 'Create Task'
+          )}
         </button>
       </form>
     </div>

@@ -6,19 +6,21 @@ import AuthModal from '@/components/AuthModal';
 import { apiClient } from '@/lib/apiClient';
 
 export default function LoginModal() {
-  const [form, setForm] = useState({ username: '', password: '', name: '', orgName: '' });
+  const [form, setForm] = useState({ email: '', password: '', name: '', orgName: '' });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState('login');
   const router = useRouter();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
     try {
       const data = mode === 'login' 
-        ? await apiClient.login(form.username, form.password)
-        : await apiClient.register(form.name, form.username, form.password, form.orgName);
+        ? await apiClient.login(form.email, form.password)
+        : await apiClient.register(form.name, form.email, form.password, form.orgName);
 
       if (data.success) {
         const userId = data.user?.id || data.user?.userId;
@@ -26,7 +28,7 @@ export default function LoginModal() {
         const role = data.user?.role || 'user';
         router.back();
         setTimeout(() => {
-          if (role === 'superAdmin' || (data.user?.username || '').toLowerCase() === 'admin') {
+          if (role === 'superAdmin' || (data.user?.email || '').toLowerCase() === 'admin@dialed.in') {
             window.location.href = '/superadmin';
           } else {
             window.location.href = `/${orgId}/${userId}`;
@@ -37,6 +39,8 @@ export default function LoginModal() {
       }
     } catch (err) {
       setError('An unexpected error occurred');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -49,6 +53,7 @@ export default function LoginModal() {
       onChange={setForm}
       onSubmit={handleSubmit}
       error={error}
+      loading={loading}
       onClose={() => router.back()}
     />
   );

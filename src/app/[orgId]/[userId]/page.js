@@ -76,11 +76,16 @@ export default function UserDashboard() {
 
   // Check auth
   const handleCheckAuth = async () => {
+    if (userId === 'undefined' || orgId === 'undefined') {
+      router.push('/');
+      return;
+    }
+
     try {
       const user = await dispatch(checkAuth()).unwrap();
       if (user) {
-        if (user.username !== userId || user.orgId !== orgId) {
-          router.push(`/${user.orgId || 'dialedin'}/${user.username}`);
+        if (user.id !== userId || user.orgId !== orgId) {
+          router.push(`/${user.orgId || 'dialedin'}/${user.id}`);
         }
       } else {
         router.push('/login');
@@ -132,7 +137,7 @@ export default function UserDashboard() {
     handleCheckAuth();
     handleFetchOrgConfig();
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
-      setViewMode('cards');
+      setTimeout(() => setViewMode('cards'), 0);
     }
   }, []);
 

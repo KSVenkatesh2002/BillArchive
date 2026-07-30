@@ -17,7 +17,7 @@ export async function GET() {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const user = await dbService.findUserByUsername(authUser.username);
+    const user = await dbService.findUserByEmail(authUser.email);
     if (!user || !user.organization) {
       return NextResponse.json({ success: false, error: 'User organization not found' }, { status: 404 });
     }
@@ -59,12 +59,12 @@ export async function POST(request) {
       if (!field.name || !field.label || !field.type) {
         return NextResponse.json({ success: false, error: 'Fields must contain name, label and type' }, { status: 400 });
       }
-      if (!['dropdown', 'selector', 'text', 'toggle'].includes(field.type)) {
+      if (!['dropdown', 'pill', 'text', 'toggle', 'checkbox'].includes(field.type)) {
         return NextResponse.json({ success: false, error: `Unsupported field type: ${field.type}` }, { status: 400 });
       }
     }
 
-    const user = await dbService.findUserByUsername(authUser.username);
+    const user = await dbService.findUserByEmail(authUser.email);
     if (!user || !user.organization) {
       return NextResponse.json({ success: false, error: 'User organization not found' }, { status: 404 });
     }

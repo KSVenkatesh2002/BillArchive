@@ -21,13 +21,13 @@ export const pgAdapter = {
     await db.raw('SELECT 1');
   },
 
-  async findUserByUsername(username) {
+  async findUserByEmail(email) {
     const db = getKnex();
     const user = await db('users as u')
       .leftJoin('roles as r', 'u.role_id', 'r.id')
       .leftJoin('organizations as o', 'u.organization_id', 'o.id')
       .select('u.*', 'r.code as role_code', 'r.name as role_name', 'o.slug as org_slug', 'o.name as org_name')
-      .where('u.username', username)
+      .where('u.email', email)
       .first();
 
     if (!user) return null;
@@ -39,7 +39,6 @@ export const pgAdapter = {
     return {
       _id: user.id,
       id: user.id,
-      username: user.username,
       name: user.name,
       email: user.email,
       password: user.password_hash,
@@ -64,7 +63,6 @@ export const pgAdapter = {
     return users.map(u => ({
       _id: u.id,
       id: u.id,
-      username: u.username,
       name: u.name,
       email: u.email,
       role: u.role_code,
@@ -89,7 +87,6 @@ export const pgAdapter = {
     orgId = org?.id;
 
     const [user] = await db('users').insert({
-      username: userDoc.username,
       name: userDoc.name,
       email: userDoc.email,
       password_hash: userDoc.password,
@@ -105,7 +102,7 @@ export const pgAdapter = {
       });
     }
 
-    return this.findUserByUsername(user.username);
+    return this.findUserByEmail(user.email);
   },
 
   async updateUser(id, updateDoc) {
@@ -138,7 +135,7 @@ export const pgAdapter = {
     }
 
     const user = await db('users').where({ id }).first();
-    return this.findUserByUsername(user.username);
+    return this.findUserByEmail(user.email);
   },
 
   async findTasks(query = {}, options = {}) {
@@ -146,7 +143,7 @@ export const pgAdapter = {
     let q = db('tasks as t')
       .leftJoin('users as u', 't.user_id', 'u.id')
       .leftJoin('organizations as o', 't.organization_id', 'o.id')
-      .select('t.*', 'u.username as author_username', 'u.name as author_name', 'o.slug as org_slug');
+      .select('t.*', 'u.email as author_email', 'u.name as author_name', 'o.slug as org_slug');
 
     if (query.id) {
       q = q.where('t.id', query.id);
@@ -230,7 +227,7 @@ export const pgAdapter = {
         workDate: t.work_date,
         project: t.project || 'General',
         userId: t.user_id,
-        username: t.author_username || '',
+        email: t.author_email || '',
         user: t.author_name || '',
         organization: t.org_slug || t.organization_id,
         dynamicValues,
@@ -336,7 +333,7 @@ export const pgAdapter = {
     await db('status_history').insert({
       task_id: newTask.id,
       status: newTask.status,
-      changed_by: taskDoc.user || taskDoc.username || 'User'
+      changed_by: taskDoc.user || taskDoc.email || 'User'
     });
 
     return this.findTaskById(newTask.id);
@@ -497,7 +494,8 @@ export const pgAdapter = {
           type: f.type,
           options: fOptions,
           defaultValue: f.default_value,
-          isRequired: f.is_required
+          isRequired: f.is_required,
+          displayLocation: f.display_location
         };
       })
     };
@@ -540,14 +538,16 @@ export const pgAdapter = {
             label: f.label || f.name,
             type: f.type || 'text',
             default_value: f.defaultValue || '',
-            is_required: !!f.isRequired
+            is_required: !!f.isRequired,
+            display_location: f.displayLocation || 'table'
           })
           .onConflict(['organization_id', 'name'])
           .merge({
             label: f.label || f.name,
             type: f.type || 'text',
             default_value: f.defaultValue || '',
-            is_required: !!f.isRequired
+            is_required: !!f.isRequired,
+            display_location: f.displayLocation || 'table'
           })
           .returning('*');
 

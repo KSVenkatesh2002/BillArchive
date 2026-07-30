@@ -42,7 +42,7 @@ export async function POST(request) {
     const body = await request.json();
     const result = await taskService.createTask(
       user.userId,
-      user.username,
+      user.email,
       user.name,
       body
     );

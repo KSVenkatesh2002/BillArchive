@@ -7,18 +7,18 @@ export const authService = {
    * @param {string} username
    * @param {string} password
    */
-  async login(username, usernameInput, password) {
-    if (!usernameInput || !password) {
-      throw new Error('Username and password are required.');
+  async login(email, password) {
+    if (!email || !password) {
+      throw new Error('Email and password are required.');
     }
 
-    let user = await dbService.findUserByUsername(usernameInput);
+    let user = await dbService.findUserByEmail(email);
     if (!user || user.isDeleted) {
-      if (usernameInput.toLowerCase() === 'admin' && password === 'admin') {
+      if (email === 'admin@dialed.in' && password === 'admin') {
         const hashedPassword = await hashPassword('admin');
         const defaultAdmin = {
           name: 'Admin User',
-          username: 'admin',
+          email: 'admin@dialed.in',
           password: hashedPassword,
           role: 'admin',
           isDeleted: false,
@@ -30,27 +30,27 @@ export const authService = {
           user = await dbService.createUser(defaultAdmin);
         }
       } else {
-        throw new Error('Invalid username or password.');
+        throw new Error('Invalid email or password.');
       }
     }
 
-    // Force admin role in db and local object if username is admin
-    if (user && user.username.toLowerCase() === 'admin' && user.role !== 'admin') {
+    // Force admin role in db and local object if email is admin
+    if (user && user.email === 'admin@dialed.in' && user.role !== 'admin') {
       await dbService.updateUser(user._id, { $set: { role: 'admin' } });
       user.role = 'admin';
     }
 
     let isMatch = await comparePassword(password, user.password);
-    if (!isMatch && usernameInput.toLowerCase() === 'admin' && password === 'admin') {
+    if (!isMatch && email === 'admin@dialed.in' && password === 'admin') {
       isMatch = true;
     }
     if (!isMatch) {
-      throw new Error('Invalid username or password.');
+      throw new Error('Invalid email or password.');
     }
 
     const token = await signToken({
       userId: user._id.toString(),
-      username: user.username,
+      email: user.email,
       name: user.name,
       role: user.role,
     });
@@ -63,7 +63,7 @@ export const authService = {
       token,
       user: {
         id: user._id.toString(),
-        username: user.username,
+        email: user.email,
         name: user.name,
         role: user.role,
         orgId
@@ -74,14 +74,14 @@ export const authService = {
   /**
    * Register a new user and create an organization
    */
-  async register(name, usernameInput, password, orgName) {
-    if (!name || !usernameInput || !password || !orgName) {
-      throw new Error('Name, username, password, and organization name are required.');
+  async register(name, email, password, orgName) {
+    if (!name || !email || !password || !orgName) {
+      throw new Error('Name, email, password, and organization name are required.');
     }
 
-    const existingUser = await dbService.findUserByUsername(usernameInput);
+    const existingUser = await dbService.findUserByEmail(email);
     if (existingUser) {
-      throw new Error('Username already taken.');
+      throw new Error('Email already registered.');
     }
 
     // Auto-generate organization slug internally
@@ -106,7 +106,7 @@ export const authService = {
     const hashedPassword = await hashPassword(password);
     const newUserDoc = {
       name,
-      username: usernameInput.toLowerCase(),
+      email: email,
       password: hashedPassword,
       role: 'admin',
       organization: createdOrg._id,
@@ -116,7 +116,7 @@ export const authService = {
     const createdUser = await dbService.createUser(newUserDoc);
     const token = await signToken({
       userId: createdUser._id.toString(),
-      username: createdUser.username,
+      email: createdUser.email,
       name: createdUser.name,
       role: createdUser.role,
     });
@@ -125,7 +125,7 @@ export const authService = {
       token,
       user: {
         id: createdUser._id.toString(),
-        username: createdUser.username,
+        email: createdUser.email,
         name: createdUser.name,
         role: createdUser.role,
         orgId: createdOrg._id.toString()

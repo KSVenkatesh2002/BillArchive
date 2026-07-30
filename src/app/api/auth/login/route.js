@@ -4,16 +4,16 @@ import { CONFIG } from '@/lib/config';
 
 export async function POST(request) {
   try {
-    const { username, password } = await request.json();
+    const { email, password } = await request.json();
 
-    if (!username || !password) {
+    if (!email || !password) {
       return NextResponse.json(
-        { success: false, error: 'Username and password are required.' },
+        { success: false, error: 'Email and password are required.' },
         { status: 400 }
       );
     }
 
-    const { token, user } = await authService.login(username, username.toLowerCase(), password);
+    const { token, user } = await authService.login(email.toLowerCase(), password);
 
     const response = NextResponse.json({
       success: true,

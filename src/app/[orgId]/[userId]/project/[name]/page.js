@@ -72,8 +72,8 @@ export default function UserProjectPage() {
     try {
       const user = await dispatch(checkAuth()).unwrap();
       if (user) {
-        if (user.username !== userId) {
-          router.push(`/${user.orgId || 'dialedin'}/${user.username}/project/${name}`);
+        if (user.id !== userId) {
+          router.push(`/${user.orgId || 'dialedin'}/${user.id}/project/${name}`);
         }
       } else {
         router.push('/login');
@@ -243,16 +243,10 @@ export default function UserProjectPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-slate-100 font-sans selection:bg-orange-500 selection:text-white">
+    <>
       <Toast message={toastMessage} />
 
       <div className="relative max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Header */}
-        <Header
-          currentUser={currentUser}
-          onLogout={handleLogout}
-        />
-
         {/* Back navigation & Project Title */}
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-zinc-800 pb-4 gap-3">
           <div className="flex items-center gap-3">
@@ -329,6 +323,6 @@ export default function UserProjectPage() {
         task={activeHistoryTask}
         onClose={() => dispatch(setActiveHistoryTask(null))}
       />
-    </div>
+    </>
   );
 }

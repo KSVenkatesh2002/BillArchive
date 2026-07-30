@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Mail } from 'lucide-react';
 
-export default function AuthModal({ show, onClose, mode, setMode, form, onChange, onSubmit, error }) {
+export default function AuthModal({ show, onClose, mode, setMode, form, onChange, onSubmit, error, loading }) {
   const [showPassword, setShowPassword] = useState(false);
 
   if (!show) return null;
@@ -52,6 +52,7 @@ export default function AuthModal({ show, onClose, mode, setMode, form, onChange
                     onChange={(e) => onChange({ ...form, orgName: e.target.value })}
                     className="w-full bg-black border border-zinc-805 rounded-xl px-3.5 py-2 text-xs text-white placeholder-zinc-650 focus:outline-none focus:border-orange-500"
                     required
+                    autoComplete="off"
                   />
                 </div>
               </div>
@@ -67,6 +68,7 @@ export default function AuthModal({ show, onClose, mode, setMode, form, onChange
                     onChange={(e) => onChange({ ...form, name: e.target.value })}
                     className="w-full bg-black border border-zinc-805 rounded-xl px-3.5 py-2 text-xs text-white placeholder-zinc-650 focus:outline-none focus:border-orange-500"
                     required
+                    autoComplete="off"
                   />
                 </div>
               </div>
@@ -74,15 +76,19 @@ export default function AuthModal({ show, onClose, mode, setMode, form, onChange
           )}
  
           <div>
-            <label className="block text-xs text-zinc-300 font-semibold mb-1">Username</label>
-            <input
-              type="text"
-              placeholder="e.g. alex_dev"
-              value={form.username || ''}
-              onChange={(e) => onChange({ ...form, username: e.target.value })}
-              className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-650 focus:outline-none focus:border-orange-500"
-              required
-            />
+            <label className="block text-xs text-zinc-300 font-semibold mb-1">Email</label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+              <input
+                type="email"
+                placeholder="you@example.com"
+                value={form.email || ''}
+                onChange={(e) => onChange({ ...form, email: e.target.value })}
+                className="w-full bg-black border border-zinc-800 rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-zinc-700 focus:outline-none focus:border-orange-500 transition shadow-inner shadow-black/50"
+                required
+                autoComplete="off"
+              />
+            </div>
           </div>
  
           <div>
@@ -95,6 +101,7 @@ export default function AuthModal({ show, onClose, mode, setMode, form, onChange
                 onChange={(e) => onChange({ ...form, password: e.target.value })}
                 className="w-full bg-black border border-zinc-800 rounded-xl pl-3.5 pr-10 py-2.5 text-xs text-white placeholder-zinc-650 focus:outline-none focus:border-orange-500"
                 required
+                autoComplete="new-password"
               />
               <button
                 type="button"
@@ -114,9 +121,17 @@ export default function AuthModal({ show, onClose, mode, setMode, form, onChange
 
           <button
             type="submit"
-            className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs py-3 rounded-xl transition shadow-lg shadow-orange-600/20"
+            disabled={loading}
+            className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs py-3 rounded-xl transition shadow-lg shadow-orange-600/20 disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {mode === 'login' ? 'Login to Dashboard' : 'Register Account'}
+            {loading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                {mode === 'login' ? 'Logging in...' : 'Registering...'}
+              </>
+            ) : (
+              mode === 'login' ? 'Login to Dashboard' : 'Register Account'
+            )}
           </button>
         </form>
 
@@ -127,7 +142,7 @@ export default function AuthModal({ show, onClose, mode, setMode, form, onChange
           <button
             onClick={() => {
               setMode(mode === 'login' ? 'register' : 'login');
-              onChange({ username: '', password: '', name: '', orgName: '' });
+              onChange({ email: '', password: '', name: '', orgName: '' });
             }}
             className="text-orange-400 hover:underline font-semibold"
           >

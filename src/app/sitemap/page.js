@@ -73,7 +73,7 @@ export default function VisualSitemap() {
           <div className="space-y-1.5">
             <div className="text-xs font-bold text-white flex items-center gap-2.5">
               <span className={`w-2.5 h-2.5 rounded-full ${currentUser ? 'bg-emerald-500 shadow-sm shadow-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
-              <span>Authentication Status: {loading ? 'Checking session...' : currentUser ? `Signed in as @${currentUser.username || currentUser.name}` : 'Guest / Anonymous'}</span>
+              <span>Authentication Status: {loading ? 'Checking session...' : currentUser ? `Signed in as @${currentUser.email || currentUser.name}` : 'Guest / Anonymous'}</span>
             </div>
             <p className="text-[11px] text-zinc-400">
               {currentUser

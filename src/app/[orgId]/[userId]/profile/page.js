@@ -45,6 +45,7 @@ export default function ProfilePage() {
   const dispatch = useDispatch();
   const [currentUser, setCurrentUser] = useState(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
+  const [invalidUrl, setInvalidUrl] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -76,11 +77,17 @@ export default function ProfilePage() {
 
   useEffect(() => {
     async function init() {
+      if (userId === 'undefined' || orgId === 'undefined') {
+        setInvalidUrl(true);
+        setLoadingAuth(false);
+        return;
+      }
+
       try {
         const auth = await apiClient.checkAuth();
         if (auth.authenticated && auth.user) {
-          if (auth.user.username !== userId || auth.user.orgId !== orgId) {
-            router.push(`/${auth.user.orgId || 'dialedin'}/${auth.user.username}/profile`);
+          if (auth.user.id !== userId || auth.user.orgId !== orgId) {
+            router.push(`/${auth.user.orgId || 'dialedin'}/${auth.user.id}/profile`);
             return;
           }
           setCurrentUser(auth.user);
@@ -264,9 +271,24 @@ export default function ProfilePage() {
 
   if (loadingAuth) {
     return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center text-zinc-500">
+      <div className="flex flex-col items-center justify-center text-zinc-500 py-12">
         <RefreshCw className="w-8 h-8 animate-spin text-orange-500 mb-3" />
         <p className="text-sm font-semibold">Loading Profile Context...</p>
+      </div>
+    );
+  }
+
+  if (invalidUrl) {
+    return (
+      <div className="flex flex-col items-center justify-center text-zinc-500 py-24 px-4 text-center">
+        <ShieldAlert className="w-12 h-12 text-rose-500 mb-4" />
+        <h2 className="text-xl font-black text-white mb-2">Invalid Profile URL</h2>
+        <p className="text-sm text-zinc-400 max-w-md mb-6">
+          The URL you are trying to access is malformed or missing the correct user identifier.
+        </p>
+        <Link href="/" className="bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs py-2.5 px-6 rounded-xl transition shadow-lg shadow-orange-600/20">
+          Return Home
+        </Link>
       </div>
     );
   }
@@ -274,7 +296,7 @@ export default function ProfilePage() {
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'superAdmin';
 
   return (
-    <div className="min-h-screen bg-black text-slate-100 p-4 sm:p-6 lg:p-8 relative">
+    <div className="relative">
       <div className="max-w-4xl mx-auto space-y-6">
         
         {/* Header Navigation */}
@@ -332,7 +354,7 @@ export default function ProfilePage() {
 
             <div>
               <h2 className="text-lg font-black text-white">{currentUser?.name || form.name}</h2>
-              <p className="text-xs text-orange-400 font-mono mt-0.5">@{currentUser?.username}</p>
+              <p className="text-xs text-orange-400 font-mono mt-0.5">{currentUser?.email}</p>
               <div className="mt-2 flex flex-col gap-1.5 items-center">
                 <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400">
                   Role: {currentUser?.role?.toUpperCase() || 'USER'}
@@ -512,7 +534,7 @@ export default function ProfilePage() {
                 {dynamicFields.map((field) => (
                   <div key={field.name} className="space-y-1.5">
                     <label className="block text-xs font-semibold text-zinc-350">{field.label}</label>
-                    {field.type === 'dropdown' || field.type === 'selector' ? (
+                    {field.type === 'dropdown' ? (
                       <Select
                         value={userPrefs[field.name] ?? ''}
                         onChange={(e) => handlePrefChange(field.name, e.target.value)}
@@ -525,6 +547,34 @@ export default function ProfilePage() {
                           </option>
                         ))}
                       </Select>
+                    ) : field.type === 'pill' ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handlePrefChange(field.name, '')}
+                          className={`px-3 py-1.5 rounded-full text-[10px] font-bold tracking-wider transition border ${
+                            (userPrefs[field.name] ?? '') === '' 
+                              ? 'bg-zinc-800 text-white border-zinc-700' 
+                              : 'bg-black text-zinc-500 border-zinc-800 hover:text-white hover:border-zinc-700'
+                          }`}
+                        >
+                          No Override
+                        </button>
+                        {(field.options || []).map((opt, oIdx) => (
+                          <button
+                            key={`${opt}-${oIdx}`}
+                            type="button"
+                            onClick={() => handlePrefChange(field.name, opt)}
+                            className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition border ${
+                              userPrefs[field.name] === opt 
+                                ? 'bg-orange-600 text-white border-orange-500 shadow-md shadow-orange-600/20' 
+                                : 'bg-black text-zinc-400 border-zinc-800 hover:text-white hover:border-zinc-700'
+                            }`}
+                          >
+                            {opt}
+                          </button>
+                        ))}
+                      </div>
                     ) : field.type === 'text' ? (
                       <input
                         type="text"
@@ -550,6 +600,27 @@ export default function ProfilePage() {
                         ) : (
                           <span className="text-[10px] text-zinc-500 italic">Using Organization Default</span>
                         )}
+                      </div>
+                    ) : field.type === 'checkbox' ? (
+                      <div className="flex items-center gap-4 py-1.5">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={userPrefs[field.name] === true}
+                            onChange={(e) => handlePrefChange(field.name, e.target.checked)}
+                            className="w-4 h-4 rounded border-zinc-700 text-orange-600 focus:ring-orange-500 bg-black accent-orange-600 cursor-pointer"
+                          />
+                          <span className="text-xs text-zinc-400">Enable</span>
+                        </div>
+                        {userPrefs[field.name] !== undefined ? (
+                          <button
+                            type="button"
+                            onClick={() => handlePrefChange(field.name, undefined)}
+                            className="text-[10px] font-bold text-orange-500 hover:text-orange-400 bg-orange-500/10 px-2 py-1 rounded-md transition"
+                          >
+                            Clear Override
+                          </button>
+                        ) : null}
                       </div>
                     ) : null}
                   </div>
@@ -624,7 +695,7 @@ export default function ProfilePage() {
 
             {dynamicFields.length === 0 ? (
               <div className="text-center py-12 text-zinc-500 text-xs border border-dashed border-zinc-800 rounded-xl">
-                No custom fields configured yet. Click "Add New Field" to get started.
+                No custom fields configured yet. Click &quot;Add New Field&quot; to get started.
               </div>
             ) : (
               <div className="space-y-4">
@@ -684,7 +755,7 @@ export default function ProfilePage() {
                               setDynamicFields(prev => {
                                 const updated = [...prev];
                                 updated[idx] = { ...updated[idx], type };
-                                if (type === 'dropdown' || type === 'selector') {
+                                if (type === 'dropdown' || type === 'pill') {
                                   updated[idx].options = updated[idx].options || [];
                                 }
                                 return updated;
@@ -692,10 +763,11 @@ export default function ProfilePage() {
                             }}
                             className="w-full bg-black border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-orange-500 appearance-none cursor-pointer"
                           >
-                            <option value="dropdown">Dropdown Options</option>
-                            <option value="selector">Selector Pill Buttons</option>
-                            <option value="text">Text Input Line</option>
-                            <option value="toggle">Toggle Checkbox</option>
+                            <option value="dropdown">Dropdown</option>
+                            <option value="pill">Pill Selector</option>
+                            <option value="text">Text</option>
+                            <option value="toggle">Toggle</option>
+                            <option value="checkbox">Checkbox</option>
                           </Select>
                         </div>
 
@@ -717,7 +789,7 @@ export default function ProfilePage() {
                       </div>
 
                       {/* Dropdown Options Setup */}
-                      {(field.type === 'dropdown' || field.type === 'selector') && (
+                      {(field.type === 'dropdown' || field.type === 'pill') && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-black/60 rounded-lg border border-zinc-900/60 mt-2">
                           <div>
                             <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">

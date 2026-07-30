@@ -9,7 +9,7 @@ export async function GET() {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const user = await dbService.findUserByUsername(authUser.username);
+    const user = await dbService.findUserByEmail(authUser.email);
     if (!user) {
       return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }
@@ -42,7 +42,7 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'Invalid field defaults' }, { status: 400 });
     }
 
-    const user = await dbService.findUserByUsername(authUser.username);
+    const user = await dbService.findUserByEmail(authUser.email);
     if (!user) {
       return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }

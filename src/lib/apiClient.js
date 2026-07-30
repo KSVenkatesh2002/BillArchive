@@ -10,20 +10,20 @@ export const apiClient = {
     return res.json();
   },
 
-  async login(username, password) {
+  async login(email, password) {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ email, password }),
     });
     return res.json();
   },
 
-  async register(name, username, password, orgName) {
+  async register(name, email, password, orgName) {
     const res = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, username, password, orgName }),
+      body: JSON.stringify({ name, email, password, orgName }),
     });
     return res.json();
   },

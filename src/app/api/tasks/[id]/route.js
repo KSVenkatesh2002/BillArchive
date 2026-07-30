@@ -34,7 +34,7 @@ export async function POST(request, { params }) {
       const result = await taskService.addTimeEntry(
         id,
         user.userId,
-        user.name || user.username,
+        user.name || user.email,
         body.entry
       );
       return NextResponse.json(result);
@@ -66,7 +66,7 @@ export async function PATCH(request, { params }) {
     const result = await taskService.updateTask(
       id,
       user.userId,
-      user.name || user.username,
+      user.name || user.email,
       body
     );
 

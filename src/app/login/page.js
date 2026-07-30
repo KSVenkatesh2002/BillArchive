@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiClient } from '@/lib/apiClient';
 import { CONFIG } from '@/lib/config';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Mail } from 'lucide-react';
 
 export default function LoginPage() {
-  const [form, setForm] = useState({ username: '', password: '' });
+  const [form, setForm] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -20,13 +20,14 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const data = await apiClient.login(form.username, form.password);
+      const data = await apiClient.login(form.email, form.password);
 
       if (data.success) {
-        const userId = data.user?.username; // Use vanity URL
         const orgId = data.user?.orgId || 'dialedin';
-        const role = data.user?.role || 'user';
-        if (role === 'superAdmin' || (data.user?.username || '').toLowerCase() === 'admin') {
+        const userId = data.user?.id; // Use UUID for slug
+        const role = data.user?.role;
+
+        if (role === 'superAdmin' || (data.user?.email || '').toLowerCase() === 'admin@dialed.in') {
           router.push('/superadmin');
         } else {
           router.push(`/${orgId}/${userId}`);
@@ -61,15 +62,19 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs text-zinc-300 font-semibold mb-1">Username</label>
-            <input
-              type="text"
-              placeholder="e.g. alex_dev"
-              value={form.username}
-              onChange={(e) => setForm({ ...form, username: e.target.value })}
-              className="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500"
-              required
-            />
+            <label className="block text-xs text-zinc-300 font-semibold mb-1">Email</label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+              <input
+                type="email"
+                placeholder="you@example.com"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                className="w-full bg-black border border-zinc-800 rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-zinc-700 focus:outline-none focus:border-orange-500 transition shadow-inner shadow-black/50"
+                required
+                autoComplete="off"
+              />
+            </div>
           </div>
 
           <div>
@@ -82,6 +87,7 @@ export default function LoginPage() {
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 className="w-full bg-black border border-zinc-800 rounded-xl pl-3.5 pr-10 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500"
                 required
+                autoComplete="new-password"
               />
               <button
                 type="button"
@@ -108,7 +114,7 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-6 text-center text-xs">
-          <span className="text-zinc-400">Don't have an account?</span>{' '}
+          <span className="text-zinc-400">Don&apos;t have an account?</span>{' '}
           <Link href="/register" className="text-orange-400 hover:underline font-semibold">
             Sign Up
           </Link>

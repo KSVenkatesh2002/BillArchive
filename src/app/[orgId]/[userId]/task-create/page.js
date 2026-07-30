@@ -35,9 +35,9 @@ export default function UserTaskCreatePage() {
           router.push('/login');
           return;
         }
-        const loggedUserId = data.user.userId;
-        const userOrgId = data.user.orgId || 'dialedin';
-        if (loggedUserId !== userId) {
+        const loggedUserId = data.user?.id || data.user?.userId;
+        const userOrgId = data.user?.orgId || 'dialedin';
+        if (loggedUserId && loggedUserId !== userId) {
           router.push(`/${userOrgId}/${loggedUserId}/task-create`);
         } else {
           setAuthChecking(false);
@@ -93,14 +93,14 @@ export default function UserTaskCreatePage() {
 
   if (authChecking) {
     return (
-      <div className="min-h-screen bg-black text-slate-100 flex items-center justify-center">
+      <div className="flex items-center justify-center py-12">
         <div className="animate-spin inline-block w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-slate-100 p-6 flex flex-col items-center justify-center">
+    <div className="p-6 flex flex-col items-center justify-center">
       <div className="w-full max-w-xl space-y-4">
         <div>
           <Link href={`/${orgId || 'dialedin'}/${userId}`} className="text-zinc-400 hover:text-white text-xs font-semibold">

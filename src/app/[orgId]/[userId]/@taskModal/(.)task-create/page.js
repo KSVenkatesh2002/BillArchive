@@ -11,6 +11,7 @@ export const dynamic = 'force-dynamic';
 export default function InterceptedTaskCreateModal() {
   const router = useRouter();
   const dispatch = useDispatch();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [form, setForm] = useState({
     name: '',
@@ -32,6 +33,7 @@ export default function InterceptedTaskCreateModal() {
     }
 
     const projectVal = form.dynamicValues?.project || form.project || 'General';
+    setIsSubmitting(true);
 
     try {
       const payload = {
@@ -62,6 +64,8 @@ export default function InterceptedTaskCreateModal() {
     } catch (err) {
       console.error(err);
       alert(typeof err === 'string' ? err : err?.message || 'An error occurred while creating the task.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -71,6 +75,7 @@ export default function InterceptedTaskCreateModal() {
       isEdit={false}
       form={form}
       onChange={setForm}
+      isSubmitting={isSubmitting}
       onSubmit={handleSubmit}
       onClose={() => router.back()}
     />

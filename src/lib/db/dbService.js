@@ -1,5 +1,4 @@
 import { pgAdapter } from './pgAdapter';
-import { mongoAdapter } from './mongoAdapter';
 
 let connectionAttempted = false;
 
@@ -8,23 +7,16 @@ async function getAdapter() {
     connectionAttempted = true;
     const pgUri = process.env.DATABASE_URL || process.env.POSTGRES_URL;
 
-    if (pgUri) {
-      console.log('[DB Service] Connecting to live PostgreSQL / Supabase database...');
-      await pgAdapter.connect();
-      console.log('[DB Service] Successfully connected to live PostgreSQL / Supabase database!');
-      return pgAdapter;
+    if (!pgUri) {
+      throw new Error('[DB Error] DATABASE_URL is not defined in environment variables. Please check your .env.local configuration.');
     }
 
-    if (process.env.MONGODB_URI) {
-      console.log('[DB Service] Connecting to MongoDB database...');
-      await mongoAdapter.connect();
-      return mongoAdapter;
-    }
-
-    throw new Error('[DB Error] DATABASE_URL is not defined in environment variables. Please check your .env.local configuration.');
+    console.log('[DB Service] Connecting to live PostgreSQL database...');
+    await pgAdapter.connect();
+    console.log('[DB Service] Successfully connected to live PostgreSQL database!');
   }
 
-  return (process.env.DATABASE_URL || process.env.POSTGRES_URL) ? pgAdapter : mongoAdapter;
+  return pgAdapter;
 }
 
 export const dbService = {
@@ -35,9 +27,9 @@ export const dbService = {
     return false;
   },
 
-  async findUserByUsername(username) {
+  async findUserByEmail(email) {
     const adapter = await getAdapter();
-    return adapter.findUserByUsername(username);
+    return adapter.findUserByEmail(email);
   },
 
   async findUsers() {

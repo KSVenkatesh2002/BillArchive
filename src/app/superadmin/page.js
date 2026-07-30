@@ -50,26 +50,6 @@ export default function SuperAdminPage() {
 
   const router = useRouter();
 
-  useEffect(() => {
-    async function init() {
-      try {
-        const auth = await apiClient.checkAuth();
-        const isSuperAdmin = auth.user?.role === 'superAdmin' || auth.user?.username?.toLowerCase() === 'admin';
-        if (auth.authenticated && isSuperAdmin) {
-          setCurrentUser(auth.user);
-          fetchAdminData();
-        } else {
-          setError('Access Denied: You must be logged in as a super administrator.');
-        }
-      } catch (err) {
-        setError('Authentication check failed.');
-      } finally {
-        setLoadingAuth(false);
-      }
-    }
-    init();
-  }, []);
-
   const fetchAdminData = async () => {
     setLoadingData(true);
     try {
@@ -86,6 +66,26 @@ export default function SuperAdminPage() {
       setLoadingData(false);
     }
   };
+
+  useEffect(() => {
+    async function init() {
+      try {
+        const auth = await apiClient.checkAuth();
+        const isSuperAdmin = auth.user?.role === 'superAdmin' || auth.user?.email?.toLowerCase() === 'admin@dialed.in';
+        if (auth.authenticated && isSuperAdmin) {
+          setCurrentUser(auth.user);
+          fetchAdminData();
+        } else {
+          setError('Access Denied: You must be logged in as a super administrator.');
+        }
+      } catch (err) {
+        setError('Authentication check failed.');
+      } finally {
+        setLoadingAuth(false);
+      }
+    }
+    init();
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -449,7 +449,7 @@ export default function SuperAdminPage() {
                       <tr className="bg-zinc-900/60 text-zinc-400 font-bold uppercase border-b border-zinc-800">
                         <th className="py-3 px-4">User ID</th>
                         <th className="py-3 px-4">Full Name</th>
-                        <th className="py-3 px-4">Username</th>
+                        <th className="py-3 px-4">Email</th>
                         <th className="py-3 px-4">System Role</th>
                         <th className="py-3 px-4 text-right">Created Date</th>
                       </tr>
@@ -459,7 +459,7 @@ export default function SuperAdminPage() {
                         <tr key={u._id} className="hover:bg-zinc-900/40 transition-colors">
                           <td className="py-3.5 px-4 font-mono text-zinc-500 text-[10px]">{u._id}</td>
                           <td className="py-3.5 px-4 font-bold text-zinc-100">{u.name}</td>
-                          <td className="py-3.5 px-4 font-mono text-orange-400">@{u.username}</td>
+                          <td className="py-3.5 px-4 font-mono text-orange-400">{u.email}</td>
                           <td className="py-3.5 px-4">
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
                               u.role === 'admin' 
