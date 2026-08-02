@@ -42,6 +42,14 @@ export const BUILTIN_FIELD_LABELS = {
   clickupId: 'ClickUp Link'
 };
 
+export const DISPLAY_LOCATION_OPTIONS = [
+  { value: 'table', label: 'Table View Only' },
+  { value: 'card', label: 'Card View Only' },
+  { value: 'both', label: 'Table & Card Views' },
+  { value: 'filter_only', label: 'Filter Bar Only (Hidden from views)' },
+  { value: 'both_and_filter', label: 'Views and Filter Bar' }
+];
+
 const initialState = {
   organization: null,
   dynamicFields: [],

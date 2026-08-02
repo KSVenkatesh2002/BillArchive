@@ -13,14 +13,18 @@ export async function GET() {
       });
     }
 
-    // Perform a lightweight query to test active Mongo connection
+    // Perform a lightweight query to test active Postgres connection
     await dbService.findTasks({}, { limit: 1 });
+
+    if (!process.env.PG_DATABASE) {
+      throw new Error('PG_DATABASE environment variable is not defined.');
+    }
 
     return NextResponse.json({
       status: 'success',
       connected: true,
-      database: process.env.MONGODB_DB || 'bill',
-      message: 'Successfully connected to MongoDB live instance!',
+      database: process.env.PG_DATABASE,
+      message: 'Successfully connected to PostgreSQL live instance!',
     });
   } catch (error) {
     return NextResponse.json(

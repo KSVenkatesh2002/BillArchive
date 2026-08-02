@@ -16,7 +16,7 @@ export default function Select({ label, value, onChange, options, children, clas
           className={`w-full bg-black border border-zinc-800 rounded-xl px-3 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-orange-500 appearance-none cursor-pointer ${className}`}
         >
           {options && options.map((opt, idx) => (
-            <option key={opt.value ?? idx} value={opt.value}>
+            <option key={opt.id ?? `${opt.value}-${idx}`} value={opt.value}>
               {opt.label}
             </option>
           ))}

@@ -5,12 +5,14 @@ import { useRouter, useParams } from 'next/navigation';
 import { useDispatch } from 'react-redux';
 import Link from 'next/link';
 import { apiClient } from '@/lib/apiClient';
-import { updateOrgConfig, DEFAULT_ENABLED_FIELDS, BUILTIN_FIELD_LABELS } from '@/lib/store/orgSlice';
+import { updateOrgConfig, DEFAULT_ENABLED_FIELDS, BUILTIN_FIELD_LABELS, DISPLAY_LOCATION_OPTIONS } from '@/lib/store/orgSlice';
 import { CONFIG } from '@/lib/config';
 import SectionCard from '@/components/SectionCard';
 import Select from '@/components/Select';
 import Toggle from '@/components/Toggle';
 import TeamManager from './components/TeamManager';
+import ProjectConfig from './components/ProjectConfig';
+import StatusConfig from './components/StatusConfig';
 import { LogOut } from 'lucide-react';
 
 import {
@@ -72,6 +74,7 @@ export default function ProfilePage() {
   const [userPrefs, setUserPrefs] = useState({});
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [savingOrg, setSavingOrg] = useState(false);
+  const [orgStatuses, setOrgStatuses] = useState([]);
 
   const router = useRouter();
 
@@ -87,7 +90,11 @@ export default function ProfilePage() {
         const auth = await apiClient.checkAuth();
         if (auth.authenticated && auth.user) {
           if (auth.user.id !== userId || auth.user.orgId !== orgId) {
-            router.push(`/${auth.user.orgId || 'dialedin'}/${auth.user.id}/profile`);
+          if (auth.user.role !== 'superAdmin' && !auth.user.orgId) {
+            alert('Your account is not linked to any organization.');
+            return;
+          }
+          router.push(`/${auth.user.orgId}/${auth.user.id}/profile`);
             return;
           }
           setCurrentUser(auth.user);
@@ -115,6 +122,15 @@ export default function ProfilePage() {
           const prefRes = await apiClient.getUserPreferences();
           if (prefRes.success) {
             setUserPrefs(prefRes.preferences.fieldDefaults || {});
+          }
+
+          // Fetch organization statuses
+          if (auth.user.role === 'admin' || auth.user.role === 'superAdmin') {
+            const targetOrgId = auth.user.role === 'superAdmin' ? 'system_default' : auth.user.orgId;
+            const statusRes = await apiClient.getStatuses(targetOrgId);
+            if (statusRes.success) {
+              setOrgStatuses(statusRes.statuses || []);
+            }
           }
         } else {
           router.push('/login');
@@ -303,7 +319,13 @@ export default function ProfilePage() {
         <div className="flex items-center justify-between gap-3 pb-6 border-b border-zinc-800/80">
           <div className="flex items-center gap-3">
             <Link
-              href={currentUser ? `/${currentUser.orgId || 'dialedin'}/${currentUser.userId || currentUser.id}` : "/"}
+              href={currentUser ? (currentUser.orgId ? `/${currentUser.orgId}/${currentUser.userId || currentUser.id}` : '#') : "/"}
+              onClick={(e) => {
+                if (currentUser && currentUser.role !== 'superAdmin' && !currentUser.orgId) {
+                  e.preventDefault();
+                  alert('Your account is not assigned to any organization. Please contact an administrator.');
+                }
+              }}
               className="h-10 w-10 bg-zinc-900 hover:bg-zinc-800 rounded-xl border border-zinc-800 flex items-center justify-center transition-colors"
               title="Return to main dashboard"
             >
@@ -675,21 +697,31 @@ export default function ProfilePage() {
                 Check or uncheck options to control which standard fields are visible on team forms, task lists, and metrics:
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-                {Object.entries(BUILTIN_FIELD_LABELS).map(([key, label]) => ({ key, label })).map((item) => (
-                  <label key={item.key} className="flex items-center gap-2.5 cursor-pointer text-xs text-zinc-300 hover:text-white bg-zinc-900/60 p-2.5 rounded-lg border border-zinc-800/80 transition">
-                    <input
-                      type="checkbox"
-                      checked={enabledFields[item.key] !== false}
-                      onChange={(e) => {
-                        const updated = { ...enabledFields, [item.key]: e.target.checked };
-                        setEnabledFields(updated);
-                        handleSaveOrgConfig(updated);
-                      }}
-                      className="w-4 h-4 rounded border-zinc-700 bg-black text-orange-500 focus:ring-orange-500 cursor-pointer"
-                    />
-                    <span className="font-medium">{item.label}</span>
-                  </label>
-                ))}
+                {Object.entries(BUILTIN_FIELD_LABELS).map(([key, label]) => ({ key, label })).map((item) => {
+                  const isChecked = enabledFields[item.key] !== false;
+                  return (
+                    <label 
+                      key={item.key} 
+                      className={`flex items-center justify-center gap-2.5 cursor-pointer text-xs font-bold uppercase tracking-wider p-2.5 rounded-lg border transition ${
+                        isChecked 
+                          ? 'bg-orange-600/10 text-orange-500 border-orange-500/50 shadow-sm shadow-orange-600/10' 
+                          : 'bg-zinc-900/60 text-zinc-400 border-zinc-800/80 hover:bg-zinc-800/60 hover:text-white'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) => {
+                          const updated = { ...enabledFields, [item.key]: e.target.checked };
+                          setEnabledFields(updated);
+                          handleSaveOrgConfig(updated);
+                        }}
+                        className="hidden"
+                      />
+                      <span>{item.label}</span>
+                    </label>
+                  );
+                })}
               </div>
             </div>
 
@@ -780,10 +812,11 @@ export default function ProfilePage() {
                             onChange={(e) => handleUpdateField(idx, 'displayLocation', e.target.value)}
                             className="w-full bg-black border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-orange-500 appearance-none cursor-pointer"
                           >
-                            <option value="table">Table View Only</option>
-                            <option value="card">Card View Only</option>
-                            <option value="both">Table & Card Views</option>
-                            <option value="filter_only">Filter Bar Only (Hidden from views)</option>
+                            {DISPLAY_LOCATION_OPTIONS.map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
                           </Select>
                         </div>
                       </div>
@@ -902,6 +935,16 @@ export default function ProfilePage() {
               </button>
             </div>
           </SectionCard>
+        )}
+
+        {isAdmin && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <ProjectConfig initialDynamicFields={dynamicFields} />
+            <StatusConfig 
+              initialStatuses={orgStatuses} 
+              orgId={currentUser?.role === 'superAdmin' ? 'system_default' : currentUser?.orgId} 
+            />
+          </div>
         )}
 
         <TeamManager isAdmin={isAdmin} />

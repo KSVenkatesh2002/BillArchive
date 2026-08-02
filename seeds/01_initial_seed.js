@@ -36,12 +36,12 @@ exports.seed = async function(knex) {
 
   // 3. Seed Organization Statuses for dialedin
   const dialedinStatuses = [
-    { organization_id: dialedinId, name: 'inprocess', label: 'In Process', color: 'orange', display_order: 1, is_default: true },
-    { organization_id: dialedinId, name: 'dev', label: 'In Development', color: 'blue', display_order: 2, is_default: false },
-    { organization_id: dialedinId, name: 'ready_for_qa', label: 'Ready for QA', color: 'amber', display_order: 3, is_default: false },
-    { organization_id: dialedinId, name: 'qa_complete', label: 'QA Complete', color: 'emerald', display_order: 4, is_default: false },
-    { organization_id: dialedinId, name: 'complete', label: 'Completed', color: 'green', display_order: 5, is_default: false },
-    { organization_id: dialedinId, name: 'need_approval', label: 'Needs Approval', color: 'rose', display_order: 6, is_default: false }
+    { organization_id: dialedinId, name: 'In Process', color: 'orange', display_order: 1, is_default: true },
+    { organization_id: dialedinId, name: 'In Development', color: 'blue', display_order: 2, is_default: false },
+    { organization_id: dialedinId, name: 'Ready for QA', color: 'amber', display_order: 3, is_default: false },
+    { organization_id: dialedinId, name: 'QA Complete', color: 'emerald', display_order: 4, is_default: false },
+    { organization_id: dialedinId, name: 'Completed', color: 'green', display_order: 5, is_default: false },
+    { organization_id: dialedinId, name: 'Needs Approval', color: 'rose', display_order: 6, is_default: false }
   ];
 
   for (const s of dialedinStatuses) {
@@ -50,9 +50,9 @@ exports.seed = async function(knex) {
 
   // 4. Seed Organization Statuses for acme
   const acmeStatuses = [
-    { organization_id: acmeId, name: 'backlog', label: 'Backlog', color: 'zinc', display_order: 1, is_default: true },
-    { organization_id: acmeId, name: 'in_progress', label: 'In Progress', color: 'orange', display_order: 2, is_default: false },
-    { organization_id: acmeId, name: 'done', label: 'Done', color: 'green', display_order: 3, is_default: false }
+    { organization_id: acmeId, name: 'Backlog', color: 'zinc', display_order: 1, is_default: true },
+    { organization_id: acmeId, name: 'In Progress', color: 'orange', display_order: 2, is_default: false },
+    { organization_id: acmeId, name: 'Done', color: 'green', display_order: 3, is_default: false }
   ];
 
   for (const s of acmeStatuses) {

@@ -129,8 +129,9 @@ export const apiClient = {
     return res.json();
   },
 
-  async getStatuses() {
-    const res = await fetch('/api/admin/statuses');
+  async getStatuses(orgId) {
+    const url = orgId ? `/api/admin/statuses?orgId=${orgId}` : '/api/admin/statuses';
+    const res = await fetch(url);
     return res.json();
   },
 
@@ -148,11 +149,11 @@ export const apiClient = {
     return res.json();
   },
 
-  async updateStatuses(statuses) {
+  async updateStatuses(statuses, orgId) {
     const res = await fetch('/api/admin/statuses', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ statuses }),
+      body: JSON.stringify({ statuses, orgId }),
     });
     return res.json();
   },

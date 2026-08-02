@@ -24,7 +24,10 @@ export const taskService = {
     // Apply custom dynamic fields filters
     Object.entries(customFilters).forEach(([key, val]) => {
       if (val && val !== 'all') {
-        query[`dynamicValues.${key}`] = val;
+        let parsedVal = val;
+        if (val === 'true') parsedVal = true;
+        if (val === 'false') parsedVal = false;
+        query[`dynamicValues.${key}`] = parsedVal;
       }
     });
 

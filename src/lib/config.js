@@ -8,17 +8,7 @@ export const CONFIG = {
   SITE_INITIAL: 'B',
   SUBTITLE: 'Pro Desktop Edition',
   DESCRIPTION: 'Multi-User Task Management • Status Change Audit Logging • Timeframe & Project Text Exports',
-  
-  VALID_STATUSES: [
-    'inprocess',
-    'dev',
-    'ready for qa',
-    'qa complete',
-    'ready for code review',
-    'code review complete',
-    'complete',
-    'need approval'
-  ],
+
 
   DEFAULT_DB_NAME: 'bill',
   JWT_COOKIE_NAME: 'auth_token',

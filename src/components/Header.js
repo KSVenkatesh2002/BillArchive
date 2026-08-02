@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import { useSelector } from 'react-redux';
 import { CONFIG } from '@/lib/config';
@@ -11,7 +12,7 @@ export default function Header(props) {
   const storeCurrentUser = useSelector((state) => state.auth.currentUser);
   const currentUser = props.currentUser !== undefined ? props.currentUser : storeCurrentUser;
 
-  const activeOrgId = params?.orgId || currentUser?.orgId || 'dialedin';
+  const activeOrgId = params?.orgId || currentUser?.orgId;
   const activeUserId = params?.userId || currentUser?.userId || currentUser?.id;
 
   const newTaskUrl = activeUserId ? `/${activeOrgId}/${activeUserId}/task-create` : '/login';
@@ -19,11 +20,11 @@ export default function Header(props) {
   const homeUrl = activeUserId ? `/${activeOrgId}/${activeUserId}` : '/';
 
   return (
-    <header className="flex flex-col lg:flex-row lg:items-center lg:justify-between pb-6 mb-6 border-b border-zinc-800/80 gap-4">
+    <header className="flex flex-col lg:flex-row lg:items-center lg:justify-between pb-3 mb-4 border-b border-zinc-800/80 gap-3">
       <div>
         <div className="flex items-center gap-3">
-          <Link href={homeUrl} className="h-10 w-10 rounded-xl bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-500 flex items-center justify-center font-balmain font-bold text-white text-lg shadow-lg shadow-orange-500/20">
-            {CONFIG.SITE_INITIAL}
+          <Link href={homeUrl} className="h-10 w-10 flex items-center justify-center transition-transform hover:scale-105 active:scale-95">
+            <Image src="/logo.png" alt="Logo" width={40} height={40} className="object-contain" />
           </Link>
           <div>
             <h1 className="text-lg font-balmain font-medium text-white flex items-center gap-3">

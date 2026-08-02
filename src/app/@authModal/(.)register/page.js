@@ -24,8 +24,14 @@ export default function RegisterModal() {
 
       if (data.success) {
         const userId = data.user?.id || data.user?.userId;
-        const orgId = data.user?.orgId || 'dialedin';
+        const orgId = data.user?.orgId;
         const role = data.user?.role || 'user';
+        
+        if (role !== 'superAdmin' && !orgId) {
+          setError('Registration failed: no organization assigned. Please contact support.');
+          setLoading(false);
+          return;
+        }
         router.back();
         setTimeout(() => {
           if (role === 'superAdmin' || (data.user?.email || '').toLowerCase() === 'admin@dialed.in') {

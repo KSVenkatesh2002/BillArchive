@@ -73,7 +73,11 @@ export default function UserProjectPage() {
       const user = await dispatch(checkAuth()).unwrap();
       if (user) {
         if (user.id !== userId) {
-          router.push(`/${user.orgId || 'dialedin'}/${user.id}/project/${name}`);
+          if (user.role !== 'superAdmin' && !user.orgId) {
+            alert('Your account is not linked to any organization.');
+            return;
+          }
+          router.push(`/${user.orgId}/${user.id}/project/${name}`);
         }
       } else {
         router.push('/login');
@@ -250,7 +254,16 @@ export default function UserProjectPage() {
         {/* Back navigation & Project Title */}
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-zinc-800 pb-4 gap-3">
           <div className="flex items-center gap-3">
-            <Link href={`/${orgId || 'dialedin'}/${userId}`} className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:text-white text-zinc-300 px-3 py-1.5 rounded-lg text-xs font-semibold transition">
+            <Link 
+              href={orgId ? `/${orgId}/${userId}` : '#'}
+              onClick={(e) => {
+                if (!orgId) {
+                  e.preventDefault();
+                  alert('No organization associated with this link.');
+                }
+              }}
+              className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:text-white text-zinc-300 px-3 py-1.5 rounded-lg text-xs font-semibold transition"
+            >
               ← Dashboard
             </Link>
             <h2 className="text-xl font-black text-white">

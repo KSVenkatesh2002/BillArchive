@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  if (!process.env.NEXT_PUBLIC_SITE_URL) {
+    console.warn('WARNING: NEXT_PUBLIC_SITE_URL is not set for sitemap generation.');
+  }
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL;
 
   // Static Public Routes
   const staticRoutes = [

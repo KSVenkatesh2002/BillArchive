@@ -18,7 +18,7 @@ exports.up = async function(knex) {
   // 2. Organizations Table (UUID PK + unique slug for vanity URLs)
   await knex.schema.createTable('organizations', (table) => {
     table.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
-    table.string('slug', 255).notNullable().unique(); // 'dialedin', 'acme'
+    table.string('slug', 255).notNullable().unique(); // 'acme'
     table.string('name', 255).notNullable();
     table.timestamps(true, true);
   });

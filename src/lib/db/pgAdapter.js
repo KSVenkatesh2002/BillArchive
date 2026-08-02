@@ -44,7 +44,7 @@ export const pgAdapter = {
       password: user.password_hash,
       role: user.role_code || 'user',
       organization: org,
-      orgId: user.org_slug || 'dialedin',
+      orgId: user.org_slug || null,
       preferences: {
         ...(userPref?.preferences || {}),
         project: userPref?.default_project || 'General'
@@ -70,6 +70,104 @@ export const pgAdapter = {
     }));
   },
 
+  async findOrganizationById(id) {
+    const db = getKnex();
+    const org = await db('organizations').where({ id }).first();
+    if (!org) return null;
+
+    const fields = await db('organization_fields').where({ organization_id: id }).orderBy('created_at', 'asc');
+    
+    const fieldIds = fields.map(f => f.id);
+    let options = [];
+    if (fieldIds.length > 0) {
+      options = await db('organization_field_options').whereIn('field_id', fieldIds).orderBy('display_order', 'asc');
+    }
+
+    const dynamicFields = fields.map(f => {
+      const fieldOpts = options.filter(o => o.field_id === f.id);
+      return {
+        name: f.name,
+        label: f.label,
+        type: f.type,
+        defaultValue: f.default_value,
+        isRequired: f.is_required,
+        displayLocation: f.display_location,
+        options: fieldOpts.map(o => o.option_value)
+      };
+    });
+
+    return {
+      id: org.id,
+      name: org.name,
+      slug: org.slug,
+      enabledFields: typeof org.enabled_fields === 'string' ? JSON.parse(org.enabled_fields) : (org.enabled_fields || {}),
+      dynamicFields
+    };
+  },
+
+  async findOrganizationBySlug(slug) {
+    const db = getKnex();
+    const org = await db('organizations').where({ slug }).first();
+    if (!org) return null;
+    return this.findOrganizationById(org.id);
+  },
+
+  async createOrganization(orgDoc) {
+    const db = getKnex();
+    const [org] = await db('organizations').insert({
+      slug: orgDoc.slug,
+      name: orgDoc.name,
+      enabled_fields: JSON.stringify(orgDoc.enabledFields || {})
+    }).returning('*');
+    return this.findOrganizationById(org.id);
+  },
+
+  async updateOrganizationConfig(id, dynamicFields, enabledFields) {
+    const db = getKnex();
+    
+    if (enabledFields) {
+      await db('organizations').where({ id }).update({
+        enabled_fields: JSON.stringify(enabledFields)
+      });
+    }
+
+    if (dynamicFields && Array.isArray(dynamicFields)) {
+      await db('organization_fields').where({ organization_id: id }).del();
+      
+      for (const field of dynamicFields) {
+        const [insertedField] = await db('organization_fields').insert({
+          organization_id: id,
+          name: field.name,
+          label: field.label,
+          type: field.type,
+          default_value: field.defaultValue || '',
+          is_required: field.isRequired || false,
+          display_location: field.displayLocation || 'all'
+        }).returning('id');
+
+        if (field.options && Array.isArray(field.options)) {
+          for (let i = 0; i < field.options.length; i++) {
+            const opt = field.options[i];
+            const optVal = typeof opt === 'string' ? opt : (opt.value || opt.label);
+            await db('organization_field_options').insert({
+              field_id: insertedField.id,
+              option_label: optVal,
+              option_value: optVal,
+              display_order: i
+            });
+          }
+        }
+      }
+    }
+
+    return this.findOrganizationById(id);
+  },
+
+  async getOrganizations() {
+    const db = getKnex();
+    return db('organizations').select('*');
+  },
+
   async createUser(userDoc) {
     const db = getKnex();
 
@@ -82,7 +180,10 @@ export const pgAdapter = {
 
     // Resolve Org ID
     let orgId = null;
-    const targetOrgSlug = typeof userDoc.organization === 'object' ? userDoc.organization?.slug || userDoc.organization?.id : (userDoc.organization || 'dialedin');
+    const targetOrgSlug = typeof userDoc.organization === 'object' ? userDoc.organization?.slug || userDoc.organization?.id : userDoc.organization;
+    if (!targetOrgSlug) {
+      throw new Error('Organization must be provided when creating a user.');
+    }
     const org = await db('organizations').where(isUUID(targetOrgSlug) ? { id: targetOrgSlug } : { slug: targetOrgSlug }).first();
     orgId = org?.id;
 
@@ -107,12 +208,13 @@ export const pgAdapter = {
 
   async updateUser(id, updateDoc) {
     const db = getKnex();
+    const data = updateDoc.$set || updateDoc;
     const updateData = {};
-    if (updateDoc.name) updateData.name = updateDoc.name;
-    if (updateDoc.email) updateData.email = updateDoc.email;
-    if (updateDoc.password) updateData.password_hash = updateDoc.password;
-    if (updateDoc.role) {
-      const r = await db('roles').where({ code: updateDoc.role }).first();
+    if (data.name) updateData.name = data.name;
+    if (data.email) updateData.email = data.email;
+    if (data.password) updateData.password_hash = data.password;
+    if (data.role) {
+      const r = await db('roles').where({ code: data.role }).first();
       if (r) updateData.role_id = r.id;
     }
 
@@ -120,17 +222,17 @@ export const pgAdapter = {
       await db('users').where({ id }).update(updateData);
     }
 
-    if (updateDoc.preferences) {
+    if (data.preferences) {
       await db('user_preferences')
         .insert({
           user_id: id,
-          default_project: updateDoc.preferences.project || 'General',
-          preferences: JSON.stringify(updateDoc.preferences)
+          default_project: data.preferences.project || 'General',
+          preferences: JSON.stringify(data.preferences)
         })
         .onConflict('user_id')
         .merge({
-          default_project: updateDoc.preferences.project || 'General',
-          preferences: JSON.stringify(updateDoc.preferences)
+          default_project: data.preferences.project || 'General',
+          preferences: JSON.stringify(data.preferences)
         });
     }
 
@@ -177,13 +279,27 @@ export const pgAdapter = {
     for (const key of dynamicKeys) {
       const fieldName = key.split('.')[1];
       const val = query[key];
-      q = q.whereExists(function() {
-        this.select('id')
-          .from('task_custom_values as cv')
-          .whereRaw('cv.task_id = t.id')
-          .where('cv.field_name', fieldName)
-          .where('cv.field_value', 'ilike', `%${val}%`);
-      });
+      
+      if (val === false || val === 'false') {
+        // If we want to find tasks where a boolean field is FALSE, it could either be 
+        // explicitly set to 'false'/'', OR the row could simply not exist (implicit false).
+        // It's easier to say: exclude tasks where the field is explicitly 'true'.
+        q = q.whereNotExists(function() {
+          this.select('id')
+            .from('task_custom_values as cv')
+            .whereRaw('cv.task_id = t.id')
+            .where('cv.field_name', fieldName)
+            .where('cv.field_value', 'ilike', '%true%');
+        });
+      } else {
+        q = q.whereExists(function() {
+          this.select('id')
+            .from('task_custom_values as cv')
+            .whereRaw('cv.task_id = t.id')
+            .where('cv.field_name', fieldName)
+            .where('cv.field_value', 'ilike', `%${val}%`);
+        });
+      }
     }
 
     q = q.orderBy('t.work_date', 'desc');
@@ -281,7 +397,10 @@ export const pgAdapter = {
     const db = getKnex();
 
     // Resolve Org ID
-    const targetOrgSlug = taskDoc.organization || 'dialedin';
+    const targetOrgSlug = taskDoc.organization;
+    if (!targetOrgSlug) {
+      throw new Error('Task must be associated with an organization.');
+    }
     const org = await db('organizations').where(isUUID(targetOrgSlug) ? { id: targetOrgSlug } : { slug: targetOrgSlug }).first();
     const orgId = org?.id;
 
@@ -311,8 +430,8 @@ export const pgAdapter = {
     if (taskDoc.docLinks && taskDoc.docLinks.length > 0) {
       const dlInserts = taskDoc.docLinks.map(dl => ({
         task_id: newTask.id,
-        label: dl.label,
-        url: dl.url
+        label: dl.label || 'Link',
+        url: dl.url || '#'
       }));
       await db('task_doc_links').insert(dlInserts);
     }
@@ -374,7 +493,7 @@ export const pgAdapter = {
       if (s.docLinks) {
         await db('task_doc_links').where({ task_id: id }).del();
         if (s.docLinks.length > 0) {
-          await db('task_doc_links').insert(s.docLinks.map(dl => ({ task_id: id, label: dl.label, url: dl.url })));
+          await db('task_doc_links').insert(s.docLinks.map(dl => ({ task_id: id, label: dl.label || 'Link', url: dl.url || '#' })));
         }
       }
 
@@ -413,28 +532,39 @@ export const pgAdapter = {
     return true;
   },
 
-  async getStatuses(orgSlug = 'dialedin') {
+  async getStatuses(orgSlug = 'system_default') {
     const db = getKnex();
     const org = await db('organizations').where(isUUID(orgSlug) ? { id: orgSlug } : { slug: orgSlug }).first();
     const orgId = org?.id;
 
-    if (!orgId) return ['inprocess', 'dev', 'ready_for_qa', 'qa_complete', 'complete', 'need_approval'];
+    if (!orgId) {
+      throw new Error(`Organization '${orgSlug}' not found.`);
+    }
 
     const rows = await db('organization_statuses')
       .where({ organization_id: orgId })
       .orderBy('display_order', 'asc');
     
+    // If the org has no custom statuses, maybe it's not system_default. Let's return system_default's if it exists.
     if (rows.length === 0) {
-      return ['inprocess', 'dev', 'ready_for_qa', 'qa_complete', 'complete', 'need_approval'];
+      if (orgSlug !== 'system_default') {
+         return this.getStatuses('system_default');
+      }
+      throw new Error(`No statuses configured for '${orgSlug}'. Please seed the database or configure statuses.`);
     }
     return rows.map(r => r.name);
   },
 
-  async saveStatuses(list, orgSlug = 'dialedin') {
+  async saveStatuses(list, orgSlug = 'system_default') {
     const db = getKnex();
-    const org = await db('organizations').where(isUUID(orgSlug) ? { id: orgSlug } : { slug: orgSlug }).first();
+    let org = await db('organizations').where(isUUID(orgSlug) ? { id: orgSlug } : { slug: orgSlug }).first();
+    
+    // If saving to system_default and it doesn't exist, create it
+    if (!org && orgSlug === 'system_default') {
+      [org] = await db('organizations').insert({ slug: 'system_default', name: 'System Default' }).returning('*');
+    }
+    
     const orgId = org?.id;
-
     if (!orgId) return list;
 
     await db('organization_statuses').where({ organization_id: orgId }).del();
@@ -443,7 +573,6 @@ export const pgAdapter = {
       await db('organization_statuses').insert({
         organization_id: orgId,
         name: name,
-        label: name.replace(/_/g, ' ').toUpperCase(),
         display_order: i + 1
       });
     }
@@ -512,7 +641,15 @@ export const pgAdapter = {
       name: orgDoc.name
     }).onConflict('slug').ignore().returning('*');
 
-    return this.findOrganizationById(org?.id || orgDoc.slug);
+    const createdOrgId = org?.id || orgDoc.slug;
+
+    // Snapshot inherit statuses from system_default
+    if (createdOrgId && createdOrgId !== 'system_default') {
+      const defaultStatuses = await this.getStatuses('system_default');
+      await this.saveStatuses(defaultStatuses, createdOrgId);
+    }
+
+    return this.findOrganizationById(createdOrgId);
   },
 
   async updateOrganizationConfig(idOrSlug, dynamicFields, enabledFields) {

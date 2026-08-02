@@ -100,7 +100,10 @@ export default function FilterControls(props) {
       <div className="flex flex-wrap items-center gap-3">
         {/* Dynamic Custom Filters */}
         {dynamicFields
-          .filter((f) => f.name !== 'project')
+          .filter((f) => {
+            if (f.name === 'project') return false;
+            return !f.displayLocation || f.displayLocation === 'filter_only' || f.displayLocation === 'both_and_filter';
+          })
           .map((field) => {
             const value = customFilters[field.name] || 'all';
             const onChange = (val) => handleCustomFilterChange(field.name, val);
@@ -125,7 +128,7 @@ export default function FilterControls(props) {
             if (field.type === 'dropdown') {
               const options = [
                 { value: 'all', label: 'All' },
-                ...(field.options || []).map(opt => ({
+                ...Array.from(new Set(field.options || [])).map(opt => ({
                   value: opt,
                   label: opt.charAt(0).toUpperCase() + opt.slice(1)
                 }))
@@ -142,15 +145,21 @@ export default function FilterControls(props) {
               );
             }
 
-            if (field.type === 'toggle') {
+            if (field.type === 'toggle' || field.type === 'checkbox') {
+              const options = [
+                { value: 'all', label: 'Any' },
+                { value: 'true', label: 'Yes / Checked' },
+                { value: 'false', label: 'No / Unchecked' }
+              ];
+
               return (
-                <div key={field.name} className="flex flex-col gap-1.5 h-full justify-center mt-2">
-                  <Toggle
-                    label={field.label}
-                    checked={value === 'true'}
-                    onChange={(checked) => onChange(checked ? 'true' : 'all')}
-                  />
-                </div>
+                <Select
+                  key={field.name}
+                  label={field.label}
+                  value={value}
+                  options={options}
+                  onChange={(e) => onChange(e.target.value)}
+                />
               );
             }
 

@@ -3,8 +3,12 @@ import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import { CONFIG } from './config';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-jwt-key-change-in-production-12345';
-const secretKey = new TextEncoder().encode(JWT_SECRET);
+function getSecretKey() {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('CRITICAL WARNING: JWT_SECRET is not set in the environment variables!');
+  }
+  return new TextEncoder().encode(process.env.JWT_SECRET);
+}
 
 export async function hashPassword(password) {
   const salt = await bcrypt.genSalt(10);
@@ -20,12 +24,12 @@ export async function signToken(payload) {
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(`${CONFIG.JWT_EXPIRY_DAYS}d`)
-    .sign(secretKey);
+    .sign(getSecretKey());
 }
 
 export async function verifyToken(token) {
   try {
-    const { payload } = await jwtVerify(token, secretKey);
+    const { payload } = await jwtVerify(token, getSecretKey());
     return payload;
   } catch (err) {
     return null;

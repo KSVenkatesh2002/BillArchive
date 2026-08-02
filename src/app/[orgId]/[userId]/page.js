@@ -85,7 +85,11 @@ export default function UserDashboard() {
       const user = await dispatch(checkAuth()).unwrap();
       if (user) {
         if (user.id !== userId || user.orgId !== orgId) {
-          router.push(`/${user.orgId || 'dialedin'}/${user.id}`);
+          if (user.role !== 'superAdmin' && !user.orgId) {
+            alert('Your account is not linked to any organization. Please contact an administrator.');
+            return;
+          }
+          router.push(`/${user.orgId}/${user.id}`);
         }
       } else {
         router.push('/login');

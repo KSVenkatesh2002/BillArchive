@@ -7,8 +7,8 @@ export async function GET() {
   try {
     const user = await getAuthUser();
     
-    // Auth security: Must be logged in AND have 'admin' role
-    if (!user || user.role !== 'admin') {
+    // Auth security: Must be logged in AND have 'superAdmin' role
+    if (!user || user.role !== 'superAdmin') {
       return NextResponse.json(
         { success: false, error: 'Forbidden: Super Admin access only.' },
         { status: 403 }
@@ -36,7 +36,7 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      database: isDemo ? 'in-memory-fallback' : 'mongodb-atlas',
+      database: isDemo ? 'in-memory-fallback' : 'postgresql',
       stats: {
         usersCount: users.length,
         tasksCount: tasks.length,

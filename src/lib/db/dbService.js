@@ -82,14 +82,14 @@ export const dbService = {
     return adapter.updateUser(id, updateDoc);
   },
 
-  async getStatuses() {
+  async getStatuses(orgSlug) {
     const adapter = await getAdapter();
-    return adapter.getStatuses();
+    return adapter.getStatuses(orgSlug);
   },
 
-  async saveStatuses(list) {
+  async saveStatuses(list, orgSlug) {
     const adapter = await getAdapter();
-    return adapter.saveStatuses(list);
+    return adapter.saveStatuses(list, orgSlug);
   },
 
   async getUserProjects(userId) {
@@ -100,16 +100,6 @@ export const dbService = {
   async addUserProject(userId, projectName) {
     const adapter = await getAdapter();
     return adapter.addUserProject(userId, projectName);
-  },
-
-  async getSources() {
-    const adapter = await getAdapter();
-    return adapter.getSources();
-  },
-
-  async getTypesOfWork() {
-    const adapter = await getAdapter();
-    return adapter.getTypesOfWork();
   },
 
   async findOrganizationById(id) {

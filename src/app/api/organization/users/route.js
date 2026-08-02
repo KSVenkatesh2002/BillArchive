@@ -20,14 +20,16 @@ export async function GET() {
     }
 
     const authOrgId = (dbUser.organization?._id || dbUser.organization)?.toString();
-    if (!authOrgId) {
+    const authOrgSlug = dbUser.orgId || dbUser.organization?.slug?.toString();
+    
+    if (!authOrgId && !authOrgSlug) {
       return NextResponse.json({ success: false, error: 'No organization scope found' }, { status: 400 });
     }
 
     const allUsers = await dbService.findUsers();
     const orgUsers = allUsers.filter(u => {
-      const uOrgId = (u.organization?._id || u.organization)?.toString();
-      return uOrgId === authOrgId && !u.isDeleted;
+      const uOrg = (u.organization?._id || u.organization)?.toString();
+      return (uOrg === authOrgId || uOrg === authOrgSlug) && !u.isDeleted;
     });
 
     return NextResponse.json({

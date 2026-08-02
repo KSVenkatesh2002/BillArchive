@@ -36,7 +36,7 @@ export default function UserTaskCreatePage() {
           return;
         }
         const loggedUserId = data.user?.id || data.user?.userId;
-        const userOrgId = data.user?.orgId || 'dialedin';
+        const userOrgId = data.user?.orgId;
         if (loggedUserId && loggedUserId !== userId) {
           router.push(`/${userOrgId}/${loggedUserId}/task-create`);
         } else {
@@ -81,7 +81,7 @@ export default function UserTaskCreatePage() {
 
       const result = await dispatch(createTask(payload)).unwrap();
       if (result && result.success) {
-        router.push(`/${orgId || 'dialedin'}/${userId}`);
+        router.push(`/${orgId}/${userId}`);
       } else {
         alert(result?.error || 'Failed to save task.');
       }
@@ -101,9 +101,9 @@ export default function UserTaskCreatePage() {
 
   return (
     <div className="p-6 flex flex-col items-center justify-center">
-      <div className="w-full max-w-xl space-y-4">
+      <div className="w-full md:max-w-3xl lg:max-w-4xl space-y-4">
         <div>
-          <Link href={`/${orgId || 'dialedin'}/${userId}`} className="text-zinc-400 hover:text-white text-xs font-semibold">
+          <Link href={`/${orgId}/${userId}`} className="text-zinc-400 hover:text-white text-xs font-semibold">
             ← Back to Dashboard
           </Link>
         </div>

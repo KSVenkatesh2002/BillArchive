@@ -22,9 +22,30 @@ import { CONFIG } from "@/lib/config";
 export const metadata = {
   title: CONFIG.SITE_NAME,
   description: CONFIG.DESCRIPTION,
+  icons: {
+    icon: '/logo.png',
+    shortcut: '/logo.png',
+    apple: '/logo.png',
+  },
+  openGraph: {
+    title: CONFIG.SITE_NAME,
+    description: CONFIG.DESCRIPTION,
+    url: 'https://billarchive.vercel.app',
+    siteName: CONFIG.SITE_NAME,
+    images: [
+      {
+        url: '/logo.png',
+        width: 800,
+        height: 600,
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
 };
 
 import { ReduxProvider } from "@/lib/store/ReduxProvider";
+import Footer from "@/components/Footer";
 
 export default function RootLayout({ children, authModal }) {
   return (
@@ -37,6 +58,7 @@ export default function RootLayout({ children, authModal }) {
         <ReduxProvider>
           {children}
           {authModal}
+          <Footer />
         </ReduxProvider>
       </body>
     </html>

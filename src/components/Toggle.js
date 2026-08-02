@@ -3,8 +3,8 @@ import React from 'react';
 export default function Toggle({ label, checked, onChange, disabled, containerClassName = '' }) {
   return (
     <label className={containerClassName}>
-      {label && <span className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">{label}</span>}
-      <div className="relative">
+      {label && <span className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider ml-1 mb-1.5">{label}</span>}
+      <div className="relative inline-block w-10 h-6 shrink-0 cursor-pointer">
         <input
           type="checkbox"
           className="sr-only"
@@ -13,7 +13,7 @@ export default function Toggle({ label, checked, onChange, disabled, containerCl
           disabled={disabled}
         />
         <div
-          className={`block w-10 h-6 rounded-full transition-colors ${
+          className={`absolute inset-0 rounded-full transition-colors ${
             checked ? 'bg-orange-500' : 'bg-zinc-700'
           }`}
         />
