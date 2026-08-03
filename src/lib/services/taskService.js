@@ -167,6 +167,26 @@ export const taskService = {
       };
     }
 
+    // Sync time entry if there is exactly 1 (to fix UI date sorting and hours when editing a basic task)
+    if (existingTask.timeEntries && existingTask.timeEntries.length === 1) {
+      const te = existingTask.timeEntries[0];
+      let teUpdated = false;
+      
+      if (workDate && new Date(workDate).getTime() !== new Date(te.date).getTime()) {
+        te.date = new Date(workDate);
+        teUpdated = true;
+      }
+      if (bill) {
+        if (bill.allocatedHours !== undefined && parseFloat(bill.allocatedHours) !== te.allocatedHours) { te.allocatedHours = parseFloat(bill.allocatedHours); teUpdated = true; }
+        if (bill.billedHours !== undefined && parseFloat(bill.billedHours) !== te.billedHours) { te.billedHours = parseFloat(bill.billedHours); teUpdated = true; }
+        if (bill.actualHours !== undefined && parseFloat(bill.actualHours) !== te.actualHours) { te.actualHours = parseFloat(bill.actualHours); teUpdated = true; }
+      }
+      
+      if (teUpdated) {
+        updateDoc.$set.timeEntries = [te];
+      }
+    }
+
     // Status Audit History tracking
     if (status && status !== existingTask.status) {
       const validStatuses = await dbService.getStatuses();

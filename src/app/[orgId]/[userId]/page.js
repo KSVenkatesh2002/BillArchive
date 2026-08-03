@@ -70,6 +70,8 @@ export default function UserDashboard() {
     clickupId: '',
     dynamicValues: {}
   });
+  const [initialTaskForm, setInitialTaskForm] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [toastMessage, setToastMessage] = useState('');
 
@@ -192,6 +194,7 @@ export default function UserDashboard() {
     const projectVal = taskForm.dynamicValues?.project || taskForm.project;
     if (!taskForm.name || !projectVal) return;
 
+    setIsSubmitting(true);
     try {
       const payload = {
         name: taskForm.name,
@@ -202,6 +205,7 @@ export default function UserDashboard() {
         typeOfWork: taskForm.dynamicValues?.typeOfWork || taskForm.typeOfWork || undefined,
         clickupId: taskForm.clickupId,
         dynamicValues: taskForm.dynamicValues || {},
+        workDate: taskForm.workDate,
         bill: {
           allocatedHours: parseFloat(taskForm.allocatedHours || 0),
           billedHours: parseFloat(taskForm.billedHours || 0),
@@ -220,6 +224,8 @@ export default function UserDashboard() {
     } catch (err) {
       console.error(err);
       alert('An error occurred.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -243,7 +249,7 @@ export default function UserDashboard() {
     const originalTask = tasks.find(t => t._id === (task._originalId || task._id)) || task;
 
     setEditingTask(originalTask);
-    setTaskForm({
+    const newForm = {
       name: originalTask.name,
       nickName: originalTask.nickName || '',
       status: originalTask.status,
@@ -254,8 +260,11 @@ export default function UserDashboard() {
       billedHours: originalTask.bill?.billedHours || '',
       actualHours: originalTask.bill?.actualHours || '',
       clickupId: originalTask.clickupId || '',
-      dynamicValues: originalTask.dynamicValues || {}
-    });
+      dynamicValues: originalTask.dynamicValues || {},
+      workDate: originalTask.workDate || new Date().toISOString()
+    };
+    setTaskForm(newForm);
+    setInitialTaskForm(JSON.stringify(newForm));
     setShowTaskModal(true);
   };
 
@@ -454,6 +463,8 @@ export default function UserDashboard() {
         onChange={setTaskForm}
         onSubmit={handleSaveTask}
         onClose={() => setShowTaskModal(false)}
+        isSubmitting={isSubmitting}
+        disableSubmit={JSON.stringify(taskForm) === initialTaskForm}
       />
 
       {/* Log Time Modal */}

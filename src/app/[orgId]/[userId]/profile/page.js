@@ -70,6 +70,8 @@ export default function ProfilePage() {
   const [orgName, setOrgName] = useState('');
   const [orgDbId, setOrgDbId] = useState('');
   const [dynamicFields, setDynamicFields] = useState([]);
+  const [initialDynamicFieldsStr, setInitialDynamicFieldsStr] = useState('[]');
+  const [openFields, setOpenFields] = useState({});
   const [enabledFields, setEnabledFields] = useState({ ...DEFAULT_ENABLED_FIELDS });
   const [userPrefs, setUserPrefs] = useState({});
   const [savingPrefs, setSavingPrefs] = useState(false);
@@ -113,6 +115,7 @@ export default function ProfilePage() {
             setOrgName(orgRes.organization.name);
             setOrgDbId(orgRes.organization._id || orgRes.organization.id);
             setDynamicFields(orgRes.organization.dynamicFields || []);
+            setInitialDynamicFieldsStr(JSON.stringify(orgRes.organization.dynamicFields || []));
             if (orgRes.organization.enabledFields) {
               setEnabledFields({ ...DEFAULT_ENABLED_FIELDS, ...orgRes.organization.enabledFields });
             }
@@ -230,7 +233,9 @@ export default function ProfilePage() {
       defaultValue: '',
       displayLocation: 'table'
     };
-    setDynamicFields([...dynamicFields, newField]);
+    setDynamicFields([newField, ...dynamicFields]);
+    // Open the newly added field by default
+    setOpenFields(prev => ({ ...prev, [newField.name]: true }));
   };
 
   const handleUpdateField = (index, key, value) => {
@@ -272,6 +277,7 @@ export default function ProfilePage() {
       if (data.success) {
         setSuccess('Organization configurations saved successfully!');
         setDynamicFields(data.dynamicFields || []);
+        setInitialDynamicFieldsStr(JSON.stringify(data.dynamicFields || []));
         if (data.enabledFields) {
           setEnabledFields({ ...DEFAULT_ENABLED_FIELDS, ...data.enabledFields });
         }
@@ -739,7 +745,7 @@ export default function ProfilePage() {
                       key={field.name || idx}
                       className="p-5 bg-zinc-950/80 border border-zinc-800 rounded-xl space-y-4 relative transition duration-200 group"
                     >
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between cursor-pointer" onClick={() => setOpenFields(prev => ({ ...prev, [field.name || idx]: !prev[field.name || idx] }))}>
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 bg-orange-500/15 text-orange-400 rounded-md border border-orange-500/10">
                             Field #{idx + 1}
@@ -747,10 +753,15 @@ export default function ProfilePage() {
                           <span className="text-xs font-semibold text-zinc-350">
                             {field.label || 'Unnamed Field'}
                           </span>
+                          {!openFields[field.name || idx] && (
+                            <span className="ml-2 text-[10px] text-zinc-500 bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">
+                              Type: {field.type}
+                            </span>
+                          )}
                         </div>
                         <button
                           type="button"
-                          onClick={() => handleRemoveField(idx)}
+                          onClick={(e) => { e.stopPropagation(); handleRemoveField(idx); }}
                           className="text-zinc-500 hover:text-rose-400 transition p-1.5 hover:bg-zinc-900 rounded-lg"
                           title="Delete Field"
                         >
@@ -758,7 +769,9 @@ export default function ProfilePage() {
                         </button>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">                        {/* Field Display Label */}
+                      {openFields[field.name || idx] && (
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">                        {/* Field Display Label */}
                         <div>
                           <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
                             Display Label
@@ -918,6 +931,8 @@ export default function ProfilePage() {
                           </div>
                         </div>
                       )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -928,7 +943,7 @@ export default function ProfilePage() {
               <button
                 type="button"
                 onClick={() => handleSaveOrgConfig()}
-                disabled={savingOrg}
+                disabled={savingOrg || JSON.stringify(dynamicFields) === initialDynamicFieldsStr}
                 className="bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs px-6 py-3 rounded-xl transition shadow-lg shadow-orange-600/15 disabled:opacity-50"
               >
                 {savingOrg ? 'Saving Configuration...' : 'Save Organization Schema'}

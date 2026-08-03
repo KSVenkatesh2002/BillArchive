@@ -8,7 +8,7 @@ import Toggle from './Toggle';
 import { DEFAULT_ENABLED_FIELDS, fetchOrgConfig } from '@/lib/store/orgSlice';
 import { apiClient } from '@/lib/apiClient';
 
-export default function TaskFormModal({ show, onClose, onSubmit, form, onChange, isEdit, inline = false, isSubmitting = false }) {
+export default function TaskFormModal({ show, onClose, onSubmit, form, onChange, isEdit, inline = false, isSubmitting = false, disableSubmit = false }) {
   const dispatch = useDispatch();
   const orgLoading = useSelector((state) => state.org?.loading);
   const orgError = useSelector((state) => state.org?.error);
@@ -473,9 +473,9 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
         <div className="lg:col-span-2 pt-4 mt-2 border-t border-zinc-800/50">
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || disableSubmit}
             className={`w-full font-bold text-sm py-3.5 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 ${
-              isSubmitting 
+              (isSubmitting || disableSubmit)
                 ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed shadow-none' 
                 : 'bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white shadow-orange-600/25 hover:shadow-orange-500/40'
             }`}

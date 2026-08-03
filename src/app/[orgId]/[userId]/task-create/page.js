@@ -24,6 +24,7 @@ export default function UserTaskCreatePage() {
     dynamicValues: {}
   });
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [authChecking, setAuthChecking] = useState(true);
 
   useEffect(() => {
@@ -59,6 +60,7 @@ export default function UserTaskCreatePage() {
 
     const projectVal = form.dynamicValues?.project || form.project || 'General';
 
+    setIsSubmitting(true);
     try {
       const payload = {
         name: form.name.trim(),
@@ -72,6 +74,7 @@ export default function UserTaskCreatePage() {
           ...(form.dynamicValues || {}),
           project: projectVal
         },
+        workDate: form.workDate || new Date().toISOString(),
         bill: {
           allocatedHours: parseFloat(form.allocatedHours || 0),
           billedHours: parseFloat(form.billedHours || 0),
@@ -88,6 +91,8 @@ export default function UserTaskCreatePage() {
     } catch (err) {
       console.error(err);
       alert(typeof err === 'string' ? err : err?.message || 'An error occurred while creating the task.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -114,6 +119,7 @@ export default function UserTaskCreatePage() {
           form={form}
           onChange={setForm}
           onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
         />
       </div>
     </div>
