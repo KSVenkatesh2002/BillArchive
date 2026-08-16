@@ -77,18 +77,17 @@ export const taskService = {
     const initialAlloc = parseFloat(bill?.allocatedHours || 0);
     const initialBilled = parseFloat(bill?.billedHours || 0);
     const initialActual = parseFloat(bill?.actualHours || 0);
-    const initialEntries = [];
 
-    if (initialAlloc > 0 || initialBilled > 0 || initialActual > 0) {
-      initialEntries.push({
-        date: taskWorkDate,
-        allocatedHours: initialAlloc,
-        billedHours: initialBilled,
-        actualHours: initialActual,
-        note: 'Initial hours logged',
-        loggedBy: name || email
-      });
-    }
+    // Always create an initial time entry for the task creation date,
+    // even if hours are zero. This ensures the task shows up correctly for this date in the UI.
+    const initialEntries = [{
+      date: taskWorkDate,
+      allocatedHours: initialAlloc,
+      billedHours: initialBilled,
+      actualHours: initialActual,
+      note: 'Task Created',
+      loggedBy: name || email
+    }];
 
     const newTask = {
       name: taskName,

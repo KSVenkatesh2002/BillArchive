@@ -424,7 +424,7 @@ export default function UserDashboard() {
             openEditModal={openEditModal}
             deleteTask={(id) => {
               const task = flattenedTasks.find(t => t._id === id);
-              handleDeleteTask(task ? task._originalId : id);
+              return handleDeleteTask(task ? task._originalId : id);
             }}
             dynamicFields={dynamicFields}
           />
@@ -441,7 +441,7 @@ export default function UserDashboard() {
             openEditModal={openEditModal}
             deleteTask={(id) => {
               const task = flattenedTasks.find(t => t._id === id);
-              handleDeleteTask(task ? task._originalId : id);
+              return handleDeleteTask(task ? task._originalId : id);
             }}
             dynamicFields={dynamicFields}
           />

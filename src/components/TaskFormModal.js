@@ -5,6 +5,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { Edit3, PlusCircle, Lightbulb, ChevronDown } from 'lucide-react';
 import Select from './Select';
 import Toggle from './Toggle';
+import Loader from './Loader';
 import { DEFAULT_ENABLED_FIELDS, fetchOrgConfig } from '@/lib/store/orgSlice';
 import { apiClient } from '@/lib/apiClient';
 
@@ -482,7 +483,7 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
           >
             {isSubmitting ? (
               <>
-                <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                <Loader className="w-4 h-4 text-white" />
                 <span>Processing...</span>
               </>
             ) : (
@@ -499,7 +500,7 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
   }
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
       onClick={onClose}
     >

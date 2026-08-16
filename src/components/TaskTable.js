@@ -13,6 +13,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { apiClient } from "@/lib/apiClient";
+import Loader from "./Loader";
 
 const getRelativeTimeGroup = (dateString) => {
   if (!dateString) return "Older";
@@ -90,6 +91,16 @@ export default function TaskTable({
   const userId = params?.userId || "admin";
   const orgId = params?.orgId;
   const [statuses, setStatuses] = useState([]);
+  const [deletingId, setDeletingId] = useState(null);
+
+  const handleDelete = async (id) => {
+    setDeletingId(id);
+    try {
+      await deleteTask(id);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   useEffect(() => {
     apiClient
@@ -429,11 +440,12 @@ export default function TaskTable({
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
                           <button
-                            onClick={() => deleteTask(task._id)}
-                            className="bg-zinc-900 hover:bg-rose-955/40 text-zinc-400 hover:text-rose-350 p-1.5 rounded-lg border border-zinc-800 transition flex items-center justify-center"
+                            onClick={() => handleDelete(task._id)}
+                            disabled={deletingId === task._id}
+                            className={`bg-zinc-900 p-1.5 rounded-lg border border-zinc-800 transition flex items-center justify-center ${deletingId === task._id ? 'opacity-50 cursor-not-allowed text-zinc-500' : 'hover:bg-rose-955/40 text-zinc-400 hover:text-rose-350'}`}
                             title="Delete task"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            {deletingId === task._id ? <Loader className="w-3.5 h-3.5" /> : <Trash2 className="w-3.5 h-3.5" />}
                           </button>
                         </div>
                       </td>

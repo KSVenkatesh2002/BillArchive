@@ -544,7 +544,7 @@ export const pgAdapter = {
     const rows = await db('organization_statuses')
       .where({ organization_id: orgId })
       .orderBy('display_order', 'asc');
-    
+
     // If the org has no custom statuses, maybe it's not system_default. Let's return system_default's if it exists.
     if (rows.length === 0) {
       if (orgSlug !== 'system_default') {
@@ -558,12 +558,12 @@ export const pgAdapter = {
   async saveStatuses(list, orgSlug = 'system_default') {
     const db = getKnex();
     let org = await db('organizations').where(isUUID(orgSlug) ? { id: orgSlug } : { slug: orgSlug }).first();
-    
+
     // If saving to system_default and it doesn't exist, create it
     if (!org && orgSlug === 'system_default') {
       [org] = await db('organizations').insert({ slug: 'system_default', name: 'System Default' }).returning('*');
     }
-    
+
     const orgId = org?.id;
     if (!orgId) return list;
 
