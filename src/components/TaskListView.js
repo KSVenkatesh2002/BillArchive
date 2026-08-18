@@ -56,6 +56,21 @@ export default function TaskListView({
   const toggleDateCollapse = (dateStr) => {
     setOpenDate(prev => prev === dateStr ? null : dateStr);
   };
+  const dateRangeText = useMemo(() => {
+    if (sortedDates.length === 0) return 'No tasks found';
+    const validDates = sortedDates.filter(d => d !== 'No Date').map(d => new Date(d));
+    if (validDates.length === 0) return 'Unscheduled Tasks';
+    
+    const maxDate = new Date(Math.max(...validDates));
+    const minDate = new Date(Math.min(...validDates));
+    
+    const formatStr = (d) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    
+    if (minDate.getTime() === maxDate.getTime()) {
+      return formatStr(minDate);
+    }
+    return `${formatStr(minDate)} - ${formatStr(maxDate)}`;
+  }, [sortedDates]);
 
 
 
@@ -70,7 +85,8 @@ export default function TaskListView({
           </div>
           <div className="flex items-center gap-2 text-zinc-200 font-bold text-sm tracking-wide">
             <CalendarIcon className="w-4 h-4 text-zinc-400" />
-            <span>Task Directory</span>
+            <span className="hidden sm:inline">Task Directory:</span>
+            <span className="text-orange-400">{dateRangeText}</span>
           </div>
         </div>
         
