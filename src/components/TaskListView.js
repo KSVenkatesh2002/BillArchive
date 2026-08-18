@@ -29,7 +29,7 @@ export default function TaskListView({
       }
       acc[key].tasks.push(task);
       acc[key].allocated += task.allocatedHours || 0;
-      acc[key].billable += task.bill?.billHours || 0;
+      acc[key].billable += task.bill?.billedHours || 0;
       acc[key].actual += task.bill?.actualHours || 0;
       return acc;
     }, {});
@@ -179,7 +179,7 @@ export default function TaskListView({
                         {/* Hours */}
                         <div className="flex flex-col items-start md:items-center w-full md:w-1/6">
                           <div className="text-xs font-mono font-bold text-zinc-300">
-                            {task.allocatedHours || 0}h / <span className="text-amber-500">{task.bill?.billHours || 0}h</span> / {task.bill?.actualHours || 0}h
+                            {task.allocatedHours || 0}h / <span className="text-amber-500">{task.bill?.billedHours || 0}h</span> / {task.bill?.actualHours || 0}h
                           </div>
                           <div className="text-[9px] text-zinc-500 flex gap-2 uppercase tracking-widest mt-0.5">
                             <span>Alloc</span><span>Bill</span><span>Act</span>
