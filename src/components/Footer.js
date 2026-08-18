@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { CONFIG } from '@/lib/config';
 
 export default function Footer() {
@@ -9,8 +10,13 @@ export default function Footer() {
       <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="md:col-span-2">
-            <Link href="/" className="text-lg font-balmain font-semibold tracking-wider text-white hover:text-orange-400 transition inline-block mb-4">
-              {CONFIG.SITE_NAME}
+            <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition mb-4 w-max">
+              <div className="h-8 w-8 flex items-center justify-center">
+                <Image src="/logo.png" alt="Logo" width={32} height={32} className="object-contain" />
+              </div>
+              <span className="text-lg font-balmain font-semibold tracking-wider text-white">
+                {CONFIG.SITE_NAME}
+              </span>
             </Link>
             <p className="text-sm text-zinc-500 max-w-sm">
               {CONFIG.DESCRIPTION}
