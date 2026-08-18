@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { apiClient } from '../apiClient';
+import { CONFIG } from '../config';
 
 export const fetchOrgConfig = createAsyncThunk('org/fetchOrgConfig', async (_, { rejectWithValue }) => {
   try {
@@ -31,7 +32,8 @@ export const DEFAULT_ENABLED_FIELDS = {
   billedHours: true,
   actualHours: true,
   project: true,
-  clickupId: true
+  clickupId: true,
+  statusColors: CONFIG.DEFAULT_STATUS_COLORS
 };
 
 export const BUILTIN_FIELD_LABELS = {
