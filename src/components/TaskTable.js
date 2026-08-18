@@ -73,13 +73,12 @@ export default function TaskTable({
   loading,
   tasks,
   handleQuickStatusChange,
-  setActiveHistoryTask,
-  handleCopyProjectDetails,
   openEditModal,
   deleteTask,
   dynamicFields = [],
 }) {
   const customCols = dynamicFields.filter(
+
     (f) =>
       f.name !== "project" &&
       (f.displayLocation === "table" ||
@@ -101,6 +100,12 @@ export default function TaskTable({
       setDeletingId(null);
     }
   };
+
+  const handleCopyTaskDetails = (task) => {
+    const text = `id: ${task._originalId || task._id}\nname: ${task.name}\nproject: ${task.project}\ndate: ${new Date(task.workDate || task.createdAt).toLocaleDateString()}\nbill hours: ${task.bill?.billedHours || 0}`;
+    navigator.clipboard.writeText(text);
+  };
+
 
   useEffect(() => {
     apiClient
@@ -191,7 +196,6 @@ export default function TaskTable({
                 <th className="py-3.5 px-4">Task / Nickname</th>
                 <th className="py-3.5 px-3">Project</th>
                 <th className="py-3.5 px-3">Status</th>
-                <th className="py-3.5 px-3 text-center">Status History</th>
                 <th className="py-3.5 px-3 text-center">
                   Hours (Alloc / Bill / Act)
                 </th>
@@ -317,22 +321,17 @@ export default function TaskTable({
                             <Folder className="w-3.5 h-3.5 text-zinc-400" />
                             <span>{task.project}</span>
                           </Link>
-                          {handleCopyProjectDetails && (
-                            <button
-                              onClick={() =>
-                                handleCopyProjectDetails(task.project)
-                              }
-                              title={`Copy all details for project "${task.project}" as text`}
-                              className="opacity-0 group-hover:opacity-100 text-[10px] bg-zinc-900 hover:bg-orange-600 text-zinc-300 hover:text-white p-1 px-1.5 rounded transition inline-flex items-center gap-1"
-                            >
-                              <Copy className="w-3 h-3" />
-                              <span>Copy</span>
-                            </button>
-                          )}
+                          <button
+                            onClick={() => handleCopyTaskDetails(task)}
+                            title={`Copy details for task "${task.name}" as text`}
+                            className="opacity-0 group-hover:opacity-100 text-[10px] bg-zinc-900 hover:bg-orange-600 text-zinc-300 hover:text-white p-1 px-1.5 rounded transition inline-flex items-center gap-1"
+                          >
+                            <Copy className="w-3 h-3" />
+                            <span>Copy</span>
+                          </button>
                         </div>
                       </td>
 
-                      {/* Interactive Status Selector */}
                       <td className="py-3.5 px-3">
                         <select
                           value={task.status}
@@ -351,21 +350,6 @@ export default function TaskTable({
                             </option>
                           ))}
                         </select>
-                      </td>
-
-                      {/* Audit History Timeline Button */}
-                      <td className="py-3.5 px-3 text-center">
-                        <button
-                          onClick={() => setActiveHistoryTask(task)}
-                          className="bg-black hover:bg-zinc-900 text-zinc-300 border border-zinc-800 px-2.5 py-1 rounded-lg text-[11px] font-mono transition flex items-center gap-1.5 mx-auto"
-                          title="Click to view full status progression audit log"
-                        >
-                          <Clock className="w-3.5 h-3.5 text-zinc-400" />
-                          <span>
-                            {task.statusHistory?.length || 1} change
-                            {(task.statusHistory?.length || 1) > 1 ? "s" : ""}
-                          </span>
-                        </button>
                       </td>
 
                       {/* Hours breakdown */}

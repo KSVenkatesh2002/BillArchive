@@ -956,8 +956,10 @@ export default function ProfilePage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             <ProjectConfig initialDynamicFields={dynamicFields} />
             <StatusConfig 
-              initialStatuses={orgStatuses} 
-              orgId={currentUser?.role === 'superAdmin' ? 'system_default' : currentUser?.orgId} 
+              statuses={orgStatuses} 
+              statusColors={enabledFields.statusColors || {}}
+              onSave={(newColors) => handleSaveOrgConfig({ ...enabledFields, statusColors: newColors })}
+              saving={savingOrg}
             />
           </div>
         )}

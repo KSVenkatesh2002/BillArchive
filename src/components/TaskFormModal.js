@@ -78,11 +78,11 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
         fields.forEach((f) => {
           initialVals[f.name] = prefs[f.name] ?? f.defaultValue ?? '';
         });
-        onChange({
-          ...form,
+        onChange(prev => ({
+          ...prev,
           dynamicValues: initialVals,
-          project: initialVals.project || form.project || ''
-        });
+          project: initialVals.project || prev.project || ''
+        }));
       }
     }).catch((err) => console.error('Failed to load dynamic fields / preferences:', err));
 
@@ -178,27 +178,31 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
         )}
       </div>
 
-      <form onSubmit={handleWrapperSubmit} className="flex flex-col lg:grid lg:grid-cols-2 gap-6 lg:gap-8">
+      <form onSubmit={handleWrapperSubmit} className={`flex flex-col ${!isEdit ? 'lg:grid lg:grid-cols-2' : ''} gap-6 lg:gap-8`}>
         {/* LEFT COLUMN - Core Details */}
         <div className="space-y-5">
-          <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-zinc-700"></span> Core Details
-          </div>
+          {!isEdit && (
+            <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-zinc-700"></span> Core Details
+            </div>
+          )}
           
-          <div>
-            <label className="block text-xs font-semibold text-zinc-300 mb-1.5">Task Name <span className="text-orange-500">*</span></label>
-            <input
-              type="text"
-              placeholder="e.g. Build Payment Gateway"
-              value={form.name || ''}
-              onChange={(e) => onChange({ ...form, name: e.target.value })}
-              className="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-700 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 transition-all shadow-inner"
-              required
-            />
-          </div>
+          {!isEdit && (
+            <div>
+              <label className="block text-xs font-semibold text-zinc-300 mb-1.5">Task Name <span className="text-orange-500">*</span></label>
+              <input
+                type="text"
+                placeholder="e.g. Build Payment Gateway"
+                value={form.name || ''}
+                onChange={(e) => onChange({ ...form, name: e.target.value })}
+                className="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-700 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 transition-all shadow-inner"
+                required
+              />
+            </div>
+          )}
 
           {/* ClickUp Link Input */}
-          {enabledFields.clickupId !== false && (
+          {!isEdit && enabledFields.clickupId !== false && (
             <div className="p-4 bg-zinc-900/30 rounded-xl border border-zinc-800/80">
               <label className="block text-xs font-semibold text-zinc-300 mb-1.5">ClickUp Link / Task ID</label>
               <input
@@ -238,12 +242,14 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
 
         {/* RIGHT COLUMN - Additional Properties */}
         <div className="space-y-5">
-          <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-zinc-700"></span> Properties & Metrics
-          </div>
-          
-          {/* Dynamic Fields Section */}
-          {dynamicFields.length > 0 && (
+          {!isEdit && (
+            <>
+              <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-zinc-700"></span> Properties & Metrics
+              </div>
+              
+              {/* Dynamic Fields Section */}
+              {dynamicFields.length > 0 && (
             <div className="bg-zinc-900/20 p-4 rounded-xl border border-zinc-800/60">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5">
                 {dynamicFields.filter(f => f.name !== 'project' || enabledFields.project !== false).map((field) => {
@@ -393,6 +399,8 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
               </div>
             </div>
           )}
+          </>
+          )}
 
           {/* Billing Hours Breakdown */}
           {(enabledFields.allocatedHours !== false || enabledFields.billedHours !== false || enabledFields.actualHours !== false) && (
@@ -445,29 +453,31 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
           )}
 
           {/* Advanced Collapsible Section */}
-          <div>
-            <button
-              type="button"
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              className="text-[11px] font-bold text-zinc-400 hover:text-orange-400 transition-colors flex items-center gap-1.5 focus:outline-none"
-            >
-              <ChevronDown className={`w-3 h-3 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
-              <span>{showAdvanced ? 'Hide Optional Fields' : 'Show Optional Fields (Nickname)'}</span>
-            </button>
+          {!isEdit && (
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="text-[11px] font-bold text-zinc-400 hover:text-orange-400 transition-colors flex items-center gap-1.5 focus:outline-none"
+              >
+                <ChevronDown className={`w-3 h-3 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+                <span>{showAdvanced ? 'Hide Optional Fields' : 'Show Optional Fields (Nickname)'}</span>
+              </button>
 
-            {showAdvanced && (
-              <div className="mt-3 p-4 bg-zinc-900/30 border border-zinc-800/80 rounded-xl animate-fadeIn">
-                <label className="block text-xs font-semibold text-zinc-350 mb-1.5">Nick Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Pay-GW"
-                  value={form.nickName || ''}
-                  onChange={(e) => onChange({ ...form, nickName: e.target.value })}
-                  className="w-full bg-black border border-zinc-800 rounded-lg px-3.5 py-2.5 text-xs text-white placeholder-zinc-700 focus:outline-none focus:border-orange-500 transition-colors"
-                />
-              </div>
-            )}
-          </div>
+              {showAdvanced && (
+                <div className="mt-3 p-4 bg-zinc-900/30 border border-zinc-800/80 rounded-xl animate-fadeIn">
+                  <label className="block text-xs font-semibold text-zinc-350 mb-1.5">Nick Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Pay-GW"
+                    value={form.nickName || ''}
+                    onChange={(e) => onChange({ ...form, nickName: e.target.value })}
+                    className="w-full bg-black border border-zinc-800 rounded-lg px-3.5 py-2.5 text-xs text-white placeholder-zinc-700 focus:outline-none focus:border-orange-500 transition-colors"
+                  />
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* SUBMIT BUTTON - Spans full width */}

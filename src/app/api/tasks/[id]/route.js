@@ -44,6 +44,14 @@ export async function POST(request, { params }) {
         body.entryId,
         user.userId
       );
+    } else if (body.action === 'updateTimeEntry') {
+      const result = await taskService.updateTimeEntry(
+        id,
+        body.entryId,
+        user.userId,
+        user.name || user.email,
+        body.entry
+      );
       return NextResponse.json(result);
     }
 

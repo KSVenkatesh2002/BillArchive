@@ -275,13 +275,18 @@ export const pgAdapter = {
       if (query.createdAt.$lte) q = q.where('t.created_at', '<=', query.createdAt.$lte);
     }
 
+    if (query.workDate) {
+      if (query.workDate.$gte) q = q.where('t.work_date', '>=', query.workDate.$gte);
+      if (query.workDate.$lte) q = q.where('t.work_date', '<=', query.workDate.$lte);
+    }
+
     const dynamicKeys = Object.keys(query).filter(k => k.startsWith('dynamicValues.'));
     for (const key of dynamicKeys) {
       const fieldName = key.split('.')[1];
       const val = query[key];
-      
+
       if (val === false || val === 'false') {
-        // If we want to find tasks where a boolean field is FALSE, it could either be 
+        // If we want to find tasks where a boolean field is FALSE, it could either be
         // explicitly set to 'false'/'', OR the row could simply not exist (implicit false).
         // It's easier to say: exclude tasks where the field is explicitly 'true'.
         q = q.whereNotExists(function() {

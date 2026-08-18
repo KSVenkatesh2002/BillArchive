@@ -3,40 +3,51 @@
  * Encapsulates all backend endpoint calls for cleaner UI components.
  */
 
+const BASE_API_URL = '/api';
+
+async function fetchJSON(endpoint, options = {}) {
+  const url = endpoint.startsWith('http') ? endpoint : `${BASE_API_URL}${endpoint}`;
+
+  const config = {
+    ...options,
+    headers: {
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      ...options.headers,
+    },
+  };
+
+  const response = await fetch(url, config);
+  return response.json();
+}
+
 export const apiClient = {
   // Authentication
-  async checkAuth() {
-    const res = await fetch('/api/auth/me');
-    return res.json();
+  checkAuth() {
+    return fetchJSON('/auth/me');
   },
 
-  async login(email, password) {
-    const res = await fetch('/api/auth/login', {
+  login(email, password) {
+    return fetchJSON('/auth/login', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
-    return res.json();
   },
 
-  async register(name, email, password, orgName) {
-    const res = await fetch('/api/auth/register', {
+  register(name, email, password, orgName) {
+    return fetchJSON('/auth/register', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, email, password, orgName }),
     });
-    return res.json();
   },
 
-  async logout() {
-    const res = await fetch('/api/auth/logout', { method: 'POST' });
-    return res.json();
+  logout() {
+    return fetchJSON('/auth/logout', { method: 'POST' });
   },
 
   // Tasks
-  async getTasks(params = {}) {
+  getTasks(params = {}) {
     const { page = 1, limit = 15, timeframe = 'all', ...filters } = params;
-    let url = `/api/tasks?page=${page}&limit=${limit}&timeframe=${timeframe}`;
+    let url = `/tasks?page=${page}&limit=${limit}&timeframe=${timeframe}`;
 
     Object.entries(filters).forEach(([key, val]) => {
       if (val !== undefined && val !== null && val !== 'all' && val !== '') {
@@ -44,58 +55,54 @@ export const apiClient = {
       }
     });
 
-    const res = await fetch(url);
-    return res.json();
+    return fetchJSON(url);
   },
 
-  async createTask(taskData) {
-    const res = await fetch('/api/tasks', {
+  createTask(taskData) {
+    return fetchJSON('/tasks', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(taskData),
     });
-    return res.json();
   },
 
-  async getTask(taskId) {
-    const res = await fetch(`/api/tasks/${taskId}`);
-    return res.json();
+  getTask(taskId) {
+    return fetchJSON(`/tasks/${taskId}`);
   },
 
-  async updateTask(taskId, updateData) {
-    const res = await fetch(`/api/tasks/${taskId}`, {
+  updateTask(taskId, updateData) {
+    return fetchJSON(`/tasks/${taskId}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updateData),
     });
-    return res.json();
   },
 
-  async addTimeEntry(taskId, entry) {
-    const res = await fetch(`/api/tasks/${taskId}`, {
+  addTimeEntry(taskId, entry) {
+    return fetchJSON(`/tasks/${taskId}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'addTimeEntry', entry }),
     });
-    return res.json();
   },
 
-  async deleteTimeEntry(taskId, entryId) {
-    const res = await fetch(`/api/tasks/${taskId}`, {
+  updateTimeEntry(taskId, entryId, entry) {
+    return fetchJSON(`/tasks/${taskId}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'updateTimeEntry', entryId, entry }),
+    });
+  },
+
+  deleteTimeEntry(taskId, entryId) {
+    return fetchJSON(`/tasks/${taskId}`, {
+      method: 'POST',
       body: JSON.stringify({ action: 'deleteTimeEntry', entryId }),
     });
-    return res.json();
   },
 
-  async deleteTask(taskId) {
-    const res = await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
-    return res.json();
+  deleteTask(taskId) {
+    return fetchJSON(`/tasks/${taskId}`, { method: 'DELETE' });
   },
 
   // Reports
-  async getReport(optionsOrTimeframe, projectStr = null) {
+  getReport(optionsOrTimeframe, projectStr = null) {
     const params = new URLSearchParams();
     if (typeof optionsOrTimeframe === 'string') {
       params.set('timeframe', optionsOrTimeframe);
@@ -105,114 +112,89 @@ export const apiClient = {
         if (v !== undefined && v !== null) params.set(k, v);
       });
     }
-    const res = await fetch(`/api/reports?${params.toString()}`);
-    return res.json();
+    return fetchJSON(`/reports?${params.toString()}`);
   },
 
   // Bills
-  async getBills() {
-    const res = await fetch('/api/bills');
-    return res.json();
+  getBills() {
+    return fetchJSON('/bills');
   },
 
-  async createBill(billData) {
-    const res = await fetch('/api/bills', {
+  createBill(billData) {
+    return fetchJSON('/bills', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(billData),
     });
-    return res.json();
   },
 
-  async getAdminData() {
-    const res = await fetch('/api/admin');
-    return res.json();
+  getAdminData() {
+    return fetchJSON('/admin');
   },
 
-  async getStatuses(orgId) {
-    const url = orgId ? `/api/admin/statuses?orgId=${orgId}` : '/api/admin/statuses';
-    const res = await fetch(url);
-    return res.json();
+  getStatuses(orgId) {
+    const url = orgId ? `/admin/statuses?orgId=${orgId}` : '/admin/statuses';
+    return fetchJSON(url);
   },
 
-  async getProjects() {
-    const res = await fetch('/api/projects');
-    return res.json();
+  getProjects() {
+    return fetchJSON('/projects');
   },
 
-  async createProject(projectName) {
-    const res = await fetch('/api/projects', {
+  createProject(projectName) {
+    return fetchJSON('/projects', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ project: projectName }),
     });
-    return res.json();
   },
 
-  async updateStatuses(statuses, orgId) {
-    const res = await fetch('/api/admin/statuses', {
+  updateStatuses(statuses, orgId) {
+    return fetchJSON('/admin/statuses', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ statuses, orgId }),
     });
-    return res.json();
   },
 
-  async updateProfile(profileData) {
-    const res = await fetch('/api/auth/profile', {
+  updateProfile(profileData) {
+    return fetchJSON('/auth/profile', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(profileData)
     });
-    return res.json();
   },
 
-  async deleteAccount() {
-    const res = await fetch('/api/auth/profile', {
-      method: 'DELETE'
-    });
-    return res.json();
+  deleteAccount() {
+    return fetchJSON('/auth/profile', { method: 'DELETE' });
   },
 
-  async getOrganizationUsers() {
-    const res = await fetch('/api/organization/users');
-    return res.json();
+  getOrganizationUsers() {
+    return fetchJSON('/organization/users');
   },
 
-  async createOrganizationUser(userData) {
-    const res = await fetch('/api/organization/users', {
+  createOrganizationUser(userData) {
+    return fetchJSON('/organization/users', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(userData)
     });
-    return res.json();
   },
 
-  async getOrganizationConfig() {
-    const res = await fetch('/api/organization/config');
-    return res.json();
+  getOrganizationConfig() {
+    return fetchJSON('/organization/config');
   },
 
-  async updateOrganizationConfig(data) {
-    const res = await fetch('/api/organization/config', {
+  updateOrganizationConfig(data) {
+    return fetchJSON('/organization/config', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
-    return res.json();
   },
 
-  async getUserPreferences() {
-    const res = await fetch('/api/user/preferences');
-    return res.json();
+  getUserPreferences() {
+    return fetchJSON('/user/preferences');
   },
 
-  async saveUserPreferences(prefs) {
-    const res = await fetch('/api/user/preferences', {
+  saveUserPreferences(prefs) {
+    return fetchJSON('/user/preferences', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ fieldDefaults: prefs })
     });
-    return res.json();
   }
 };

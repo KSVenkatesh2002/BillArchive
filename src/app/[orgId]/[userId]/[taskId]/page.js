@@ -40,6 +40,12 @@ export default function TaskDetailPage() {
   });
   const [submittingEntry, setSubmittingEntry] = useState(false);
 
+  // Edit Time Entry State
+  const [editingEntryId, setEditingEntryId] = useState(null);
+  const [editingEntryForm, setEditingEntryForm] = useState({
+    date: '', allocatedHours: '', billedHours: '', actualHours: '', note: ''
+  });
+
   // Status Change State
   const [statuses, setStatuses] = useState([]);
   const [statusLoading, setStatusLoading] = useState(false);
@@ -139,6 +145,32 @@ export default function TaskDetailPage() {
       }
     } catch (err) {
       alert('Error deleting time entry');
+    }
+  };
+
+  const startEditEntry = (entry) => {
+    setEditingEntryId(entry._id);
+    setEditingEntryForm({
+      date: entry.date ? new Date(entry.date).toISOString().split('T')[0] : '',
+      allocatedHours: entry.allocatedHours || '',
+      billedHours: entry.billedHours || '',
+      actualHours: entry.actualHours || '',
+      note: entry.note || ''
+    });
+  };
+
+  const handleUpdateEntry = async (entryId) => {
+    try {
+      const data = await apiClient.updateTimeEntry(taskId, entryId, editingEntryForm);
+      if (data.success) {
+        setTask(data.task);
+        setEditingEntryId(null);
+        triggerToast('Time entry updated.');
+      } else {
+        alert(data.error || 'Failed to update time entry');
+      }
+    } catch (err) {
+      alert('Error updating time entry');
     }
   };
 
@@ -325,28 +357,104 @@ export default function TaskDetailPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-800/50">
-                    {task.timeEntries.map((entry, idx) => (
-                      <tr key={entry._id || idx} className="hover:bg-zinc-900/40 transition">
-                        <td className="py-3 px-3 font-mono font-semibold text-orange-400">
-                          {new Date(entry.date).toLocaleDateString()}
-                        </td>
-                        <td className="py-3 px-3 text-center font-mono text-zinc-300">{entry.allocatedHours || 0} hrs</td>
-                        <td className="py-3 px-3 text-center font-mono text-amber-400 font-bold">{entry.billedHours || 0} hrs</td>
-                        <td className="py-3 px-3 text-center font-mono text-orange-400 font-bold">{entry.actualHours || 0} hrs</td>
-                        <td className="py-3 px-3 text-zinc-300 max-w-xs truncate" title={entry.note}>
-                          {entry.note || <span className="text-zinc-600 font-italic">No note</span>}
-                        </td>
-                        <td className="py-3 px-3 text-right">
-                          <button
-                            onClick={() => handleDeleteTimeEntry(entry._id)}
-                            className="p-1.5 rounded-lg bg-zinc-900 hover:bg-rose-955/40 text-zinc-400 hover:text-rose-400 transition"
-                            title="Delete Entry"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {task.timeEntries.map((entry, idx) => {
+                      if (editingEntryId === entry._id) {
+                        return (
+                          <tr key={entry._id || idx} className="bg-zinc-900/60 transition">
+                            <td className="py-3 px-3">
+                              <input
+                                type="date"
+                                value={editingEntryForm.date}
+                                onChange={(e) => setEditingEntryForm({ ...editingEntryForm, date: e.target.value })}
+                                className="w-full bg-black border border-zinc-800 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-orange-500"
+                              />
+                            </td>
+                            <td className="py-3 px-3">
+                              <input
+                                type="number" step="0.5"
+                                value={editingEntryForm.allocatedHours}
+                                onChange={(e) => setEditingEntryForm({ ...editingEntryForm, allocatedHours: e.target.value })}
+                                className="w-full bg-black border border-zinc-800 rounded px-2 py-1 text-xs text-white focus:outline-none text-center font-mono"
+                              />
+                            </td>
+                            <td className="py-3 px-3">
+                              <input
+                                type="number" step="0.5"
+                                value={editingEntryForm.billedHours}
+                                onChange={(e) => setEditingEntryForm({ ...editingEntryForm, billedHours: e.target.value })}
+                                className="w-full bg-black border border-zinc-800 rounded px-2 py-1 text-xs text-white focus:outline-none text-center font-mono"
+                              />
+                            </td>
+                            <td className="py-3 px-3">
+                              <input
+                                type="number" step="0.5"
+                                value={editingEntryForm.actualHours}
+                                onChange={(e) => setEditingEntryForm({ ...editingEntryForm, actualHours: e.target.value })}
+                                className="w-full bg-black border border-zinc-800 rounded px-2 py-1 text-xs text-white focus:outline-none text-center font-mono"
+                              />
+                            </td>
+                            <td className="py-3 px-3">
+                              <input
+                                type="text"
+                                value={editingEntryForm.note}
+                                onChange={(e) => setEditingEntryForm({ ...editingEntryForm, note: e.target.value })}
+                                className="w-full bg-black border border-zinc-800 rounded px-2 py-1 text-xs text-white focus:outline-none"
+                              />
+                            </td>
+                            <td className="py-3 px-3 text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <button
+                                  onClick={() => handleUpdateEntry(entry._id)}
+                                  className="p-1.5 rounded bg-emerald-950 hover:bg-emerald-900 text-emerald-400 transition"
+                                  title="Save"
+                                >
+                                  <CheckCircle className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => setEditingEntryId(null)}
+                                  className="p-1.5 rounded bg-zinc-900 hover:bg-zinc-800 text-zinc-400 transition"
+                                  title="Cancel"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      }
+                      
+                      return (
+                        <tr key={entry._id || idx} className="hover:bg-zinc-900/40 transition">
+                          <td className="py-3 px-3 font-mono font-semibold text-orange-400">
+                            {new Date(entry.date).toLocaleDateString()}
+                          </td>
+                          <td className="py-3 px-3 text-center font-mono text-zinc-300">{entry.allocatedHours || 0} hrs</td>
+                          <td className="py-3 px-3 text-center font-mono text-amber-400 font-bold">{entry.billedHours || 0} hrs</td>
+                          <td className="py-3 px-3 text-center font-mono text-orange-400 font-bold">{entry.actualHours || 0} hrs</td>
+                          <td className="py-3 px-3 text-zinc-300 max-w-xs truncate" title={entry.note}>
+                            {entry.note || <span className="text-zinc-600 italic">No note</span>}
+                          </td>
+                          <td className="py-3 px-3 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                onClick={() => startEditEntry(entry)}
+                                className="p-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white transition"
+                                title="Edit Entry"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteTimeEntry(entry._id)}
+                                className="p-1.5 rounded-lg bg-zinc-900 hover:bg-rose-955/40 text-zinc-400 hover:text-rose-400 transition"
+                                title="Delete Entry"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

@@ -19,6 +19,15 @@ export const taskService = {
       const oneMonthAgo = new Date();
       oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
       query.createdAt = { $gte: oneMonthAgo };
+    } else if (filters.startDate && filters.endDate) {
+      // Explicit date range for backend pagination
+      query.workDate = { 
+        $gte: new Date(filters.startDate),
+        $lte: new Date(filters.endDate)
+      };
+      // Remove them from customFilters so they aren't parsed as dynamic values
+      delete customFilters.startDate;
+      delete customFilters.endDate;
     }
 
     // Apply custom dynamic fields filters
@@ -262,6 +271,48 @@ export const taskService = {
         };
       }
     }
+
+    const updatedTask = await dbService.updateTask(taskId, updateDoc);
+    return { success: true, task: updatedTask };
+  },
+
+  /**
+   * Update a Time Entry in a task
+   */
+  async updateTimeEntry(taskId, entryId, userId, userNameOrEmail, entryData) {
+    const existingTask = await dbService.findTaskById(taskId);
+    if (!existingTask) throw new Error('Task not found');
+
+    const updatedEntries = (existingTask.timeEntries || []).map(e => {
+      if (e._id.toString() === entryId) {
+        return {
+          ...e,
+          date: entryData.date ? new Date(entryData.date) : e.date,
+          allocatedHours: entryData.allocatedHours !== undefined ? parseFloat(entryData.allocatedHours) : e.allocatedHours,
+          billedHours: entryData.billedHours !== undefined ? parseFloat(entryData.billedHours) : e.billedHours,
+          actualHours: entryData.actualHours !== undefined ? parseFloat(entryData.actualHours) : e.actualHours,
+          note: entryData.note !== undefined ? entryData.note : e.note,
+          loggedBy: userNameOrEmail
+        };
+      }
+      return e;
+    });
+
+    const totalAllocated = updatedEntries.reduce((sum, e) => sum + (e.allocatedHours || 0), 0);
+    const totalBilled = updatedEntries.reduce((sum, e) => sum + (e.billedHours || 0), 0);
+    const totalActual = updatedEntries.reduce((sum, e) => sum + (e.actualHours || 0), 0);
+
+    const updateDoc = {
+      $set: {
+        timeEntries: updatedEntries,
+        bill: {
+          allocatedHours: totalAllocated,
+          billedHours: totalBilled,
+          actualHours: totalActual
+        },
+        updatedAt: new Date()
+      }
+    };
 
     const updatedTask = await dbService.updateTask(taskId, updateDoc);
     return { success: true, task: updatedTask };

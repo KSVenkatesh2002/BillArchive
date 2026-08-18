@@ -19,6 +19,13 @@ async function getAdapter() {
   return pgAdapter;
 }
 
+export const HARDCODED_STATUSES = [
+  'inprocess',
+  'ready for qa',
+  'ready for code review',
+  'completed'
+];
+
 export const dbService = {
   /**
    * Check if running in demo mode (Always false now as memory adapter is removed)
@@ -83,13 +90,12 @@ export const dbService = {
   },
 
   async getStatuses(orgSlug) {
-    const adapter = await getAdapter();
-    return adapter.getStatuses(orgSlug);
+    return HARDCODED_STATUSES;
   },
 
   async saveStatuses(list, orgSlug) {
-    const adapter = await getAdapter();
-    return adapter.saveStatuses(list, orgSlug);
+    // Disabled as per user request to make statuses hardcoded
+    throw new Error('Statuses are now hardcoded and cannot be modified via this API.');
   },
 
   async getUserProjects(userId) {
