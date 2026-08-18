@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useSelector, useDispatch } from 'react-redux';
-import { Zap, LayoutGrid, List } from 'lucide-react';
+import { Zap, LayoutGrid, List, FileText, Plus } from 'lucide-react';
 
 // Import Redux Actions & Thunks
 import { checkAuth, logout } from '@/lib/store/authSlice';
@@ -31,6 +31,8 @@ import Toast from '@/components/Toast';
 import AuditLogModal from '@/components/AuditLogModal';
 import TaskFormModal from '@/components/TaskFormModal';
 import LogTimeModal from '@/components/LogTimeModal';
+import TaskListView from '@/components/TaskListView';
+import { CONFIG } from '@/lib/config';
 
 export default function UserDashboard() {
   const { userId, orgId } = useParams();
@@ -39,7 +41,7 @@ export default function UserDashboard() {
 
   // Select states from Redux store
   const { currentUser } = useSelector((state) => state.auth);
-  const { dynamicFields } = useSelector((state) => state.org);
+  const { dynamicFields, enabledFields } = useSelector((state) => state.org);
   const {
     tasks,
     loading,
@@ -115,17 +117,17 @@ export default function UserDashboard() {
 
         // Seed default filter values from organization config
         const sourceField = fields.find(f => f.name === 'source');
-        if (sourceField?.defaultValue) {
+        if (sourceField?.defaultValue && dynamicFields.length === 0) {
           dispatch(setFilterSource(sourceField.defaultValue));
         }
 
         const typeField = fields.find(f => f.name === 'typeOfWork');
-        if (typeField?.defaultValue) {
+        if (typeField?.defaultValue && dynamicFields.length === 0) {
           dispatch(setFilterType(typeField.defaultValue));
         }
 
         const projectField = fields.find(f => f.name === 'project');
-        if (projectField?.defaultValue) {
+        if (projectField?.defaultValue && dynamicFields.length === 0) {
           dispatch(setFilterProject(projectField.defaultValue));
         }
 
@@ -142,6 +144,7 @@ export default function UserDashboard() {
   useEffect(() => {
     handleCheckAuth();
     handleFetchOrgConfig();
+    dispatch(setFilterProject('all')); // Reset project filter when entering dashboard
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
       setTimeout(() => setViewMode('cards'), 0);
     }
@@ -342,86 +345,80 @@ export default function UserDashboard() {
           </div>
         )}
 
-        {/* Dashboard Metrics Bar */}
-        <MetricsBar
-          tasksLength={flattenedTasks.length}
-          metrics={metrics}
-        />
-
-        {/* Filter Controls Bar */}
-        <FilterControls
-          filterSource={filterSource}
-          setFilterSource={(val) => dispatch(setFilterSource(val))}
-          filterType={filterType}
-          setFilterType={(val) => dispatch(setFilterType(val))}
-          filterProject={filterProject}
-          setFilterProject={(val) => dispatch(setFilterProject(val))}
-          filterTimeframe={filterTimeframe}
-          setFilterTimeframe={(val) => dispatch(setFilterTimeframe(val))}
-          uniqueProjects={uniqueProjects}
-          tasksLength={flattenedTasks.length}
-          dynamicFields={dynamicFields}
-          customFilters={customFilters}
-          setCustomFilters={(val) => {
-            const resolved = typeof val === 'function' ? val(customFilters) : val;
-            dispatch(setCustomFilters(resolved));
-          }}
-        />
-
-        {/* View Mode Toggle Header */}
-        <div className="flex items-center justify-between mb-4 mt-2">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-2">
-            <span>Task Directory</span>
-            <span className="text-[10px] lowercase font-normal px-2 py-0.5 rounded-full bg-zinc-900 text-zinc-500 border border-zinc-800">
-              {viewMode === 'table' ? 'table view' : 'card view'}
-            </span>
-            <button
-              onClick={() => setShowLogTimeModal(true)}
-              className="ml-2 text-[10px] uppercase font-bold px-3 py-1 rounded-md bg-orange-500/10 text-orange-400 hover:bg-orange-500 hover:text-black border border-orange-500/20 transition-all flex items-center gap-1"
-            >
-              + Add Task
-            </button>
-          </h2>
-          <div className="flex items-center bg-zinc-950 border border-zinc-800 rounded-xl p-1 shadow-inner">
-            <button
-              onClick={() => setViewMode('table')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 ${
-                viewMode === 'table'
-                  ? 'bg-zinc-900 text-white border border-zinc-800 shadow'
-                  : 'text-zinc-500 hover:text-zinc-300'
-              }`}
-              title="Table View (Desktop Preferred)"
-            >
-              <List className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Table</span>
-            </button>
-            <button
-              onClick={() => setViewMode('cards')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 ${
-                viewMode === 'cards'
-                  ? 'bg-zinc-900 text-white border border-zinc-800 shadow'
-                  : 'text-zinc-500 hover:text-zinc-350'
-              }`}
-              title="Card View (Mobile Preferred)"
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Cards</span>
-            </button>
+        {CONFIG.USE_NEW_UI && (
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-2">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
+                Welcome back, {currentUser?.name?.split(' ')[0] || 'User'}
+              </h1>
+              <p className="text-sm text-zinc-400 mt-1">
+                Here's what's happening with your projects today.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => router.push(`/${orgId}/${userId}/reports`)}
+                className="bg-zinc-900 hover:bg-zinc-800 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition flex items-center gap-2 border border-zinc-800/80"
+              >
+                <FileText className="w-4 h-4" /> View Reports
+              </button>
+              <button
+                onClick={() => setShowTaskModal(true)}
+                className="bg-orange-600 hover:bg-orange-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition shadow-lg shadow-orange-600/20 flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" /> New Task
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Task Data Display */}
-        {viewMode === 'table' ? (
-          <TaskTable
+        {/* Dashboard Metrics Bar (Legacy) */}
+        {!CONFIG.USE_NEW_UI && (
+          <MetricsBar
+            tasksLength={flattenedTasks.length}
+            metrics={metrics}
             loading={loading && flattenedTasks.length === 0}
+          />
+        )}
+
+        {/* Filter Controls Bar (Legacy) */}
+        {!CONFIG.USE_NEW_UI && (
+          <FilterControls
+            loading={loading && flattenedTasks.length === 0}
+            filterSource={filterSource}
+            setFilterSource={(val) => dispatch(setFilterSource(val))}
+            filterType={filterType}
+            setFilterType={(val) => dispatch(setFilterType(val))}
+            filterProject={filterProject}
+            setFilterProject={(val) => dispatch(setFilterProject(val))}
+            filterTimeframe={filterTimeframe}
+            setFilterTimeframe={(val) => dispatch(setFilterTimeframe(val))}
+            uniqueProjects={uniqueProjects}
+            tasksLength={flattenedTasks.length}
+            dynamicFields={dynamicFields}
+            customFilters={customFilters}
+            setCustomFilters={(val) => {
+              const resolved = typeof val === 'function' ? val(customFilters) : val;
+              dispatch(setCustomFilters(resolved));
+            }}
+          />
+        )}
+
+        {CONFIG.USE_NEW_UI ? (
+          <TaskListView
             tasks={flattenedTasks}
+            openEditModal={openEditModal}
+            openTimeModal={() => setShowLogTimeModal(true)}
+            statusColors={enabledFields?.statusColors || {}}
+            viewMode={viewMode === 'table' ? 'list' : viewMode}
+            setViewMode={(val) => setViewMode(val === 'list' ? 'table' : val)}
+            // Props for TaskCards rendering inside TaskListView
+            loading={loading && flattenedTasks.length === 0}
             handleQuickStatusChange={(id, status) => {
               const task = flattenedTasks.find(t => t._id === id);
               handleQuickStatusChange(task ? task._originalId : id, status);
             }}
             setActiveHistoryTask={(val) => dispatch(setActiveHistoryTask(val))}
-            handleCopyProjectDetails={handleCopyProjectDetails}
-            openEditModal={openEditModal}
             deleteTask={(id) => {
               const task = flattenedTasks.find(t => t._id === id);
               return handleDeleteTask(task ? task._originalId : id);
@@ -429,22 +426,84 @@ export default function UserDashboard() {
             dynamicFields={dynamicFields}
           />
         ) : (
-          <TaskCards
-            loading={loading && flattenedTasks.length === 0}
-            tasks={flattenedTasks}
-            handleQuickStatusChange={(id, status) => {
-              const task = flattenedTasks.find(t => t._id === id);
-              handleQuickStatusChange(task ? task._originalId : id, status);
-            }}
-            setActiveHistoryTask={(val) => dispatch(setActiveHistoryTask(val))}
-            handleCopyProjectDetails={handleCopyProjectDetails}
-            openEditModal={openEditModal}
-            deleteTask={(id) => {
-              const task = flattenedTasks.find(t => t._id === id);
-              return handleDeleteTask(task ? task._originalId : id);
-            }}
-            dynamicFields={dynamicFields}
-          />
+          <>
+            {/* View Mode Toggle Header */}
+            <div className="flex items-center justify-between mb-4 mt-2">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-2">
+                <span>Task Directory</span>
+                <span className="text-[10px] lowercase font-normal px-2 py-0.5 rounded-full bg-zinc-900 text-zinc-500 border border-zinc-800">
+                  {viewMode === 'table' ? 'table view' : 'card view'}
+                </span>
+                <button
+                  onClick={() => setShowLogTimeModal(true)}
+                  className="ml-2 text-[10px] uppercase font-bold px-3 py-1 rounded-md bg-orange-500/10 text-orange-400 hover:bg-orange-500 hover:text-black border border-orange-500/20 transition-all flex items-center gap-1"
+                >
+                  + Add Task
+                </button>
+              </h2>
+              <div className="flex items-center bg-zinc-950 border border-zinc-800 rounded-xl p-1 shadow-inner">
+                <button
+                  onClick={() => setViewMode('table')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 ${
+                    viewMode === 'table'
+                      ? 'bg-zinc-900 text-white border border-zinc-800 shadow'
+                      : 'text-zinc-500 hover:text-zinc-300'
+                  }`}
+                  title="Table View (Desktop Preferred)"
+                >
+                  <List className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Table</span>
+                </button>
+                <button
+                  onClick={() => setViewMode('cards')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 ${
+                    viewMode === 'cards'
+                      ? 'bg-zinc-900 text-white border border-zinc-800 shadow'
+                      : 'text-zinc-500 hover:text-zinc-350'
+                  }`}
+                  title="Card View (Mobile Preferred)"
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Cards</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Task Data Display */}
+            {viewMode === 'table' ? (
+              <TaskTable
+                loading={loading && flattenedTasks.length === 0}
+                tasks={flattenedTasks}
+                handleQuickStatusChange={(id, status) => {
+                  const task = flattenedTasks.find(t => t._id === id);
+                  handleQuickStatusChange(task ? task._originalId : id, status);
+                }}
+                setActiveHistoryTask={(val) => dispatch(setActiveHistoryTask(val))}
+                openEditModal={openEditModal}
+                deleteTask={(id) => {
+                  const task = flattenedTasks.find(t => t._id === id);
+                  return handleDeleteTask(task ? task._originalId : id);
+                }}
+                dynamicFields={dynamicFields}
+              />
+            ) : (
+              <TaskCards
+                loading={loading && flattenedTasks.length === 0}
+                tasks={flattenedTasks}
+                handleQuickStatusChange={(id, status) => {
+                  const task = flattenedTasks.find(t => t._id === id);
+                  handleQuickStatusChange(task ? task._originalId : id, status);
+                }}
+                setActiveHistoryTask={(val) => dispatch(setActiveHistoryTask(val))}
+                openEditModal={openEditModal}
+                deleteTask={(id) => {
+                  const task = flattenedTasks.find(t => t._id === id);
+                  return handleDeleteTask(task ? task._originalId : id);
+                }}
+                dynamicFields={dynamicFields}
+              />
+            )}
+          </>
         )}
 
         {/* Infinite Scroll loading indicator */}

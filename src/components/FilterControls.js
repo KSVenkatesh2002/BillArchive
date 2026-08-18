@@ -96,8 +96,8 @@ export default function FilterControls(props) {
   }, [props.uniqueProjects, storeTasks, projectField]);
 
   return (
-    <div className="bg-[#0b0b0b] p-4 rounded-2xl border border-zinc-800/80 mb-6 flex flex-wrap items-center justify-between gap-4">
-      <div className="flex flex-wrap items-center gap-3">
+    <div className={`${props.isSidebar ? 'flex flex-col gap-4' : 'bg-[#0b0b0b] p-4 rounded-2xl border border-zinc-800/80 mb-6 flex flex-wrap items-center justify-between gap-4'} transition-opacity ${props.loading ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+      <div className={`flex gap-3 ${props.isSidebar ? 'flex-col items-stretch w-full' : 'flex-wrap items-center'}`}>
         {/* Dynamic Custom Filters */}
         {dynamicFields
           .filter((f) => {
@@ -119,7 +119,7 @@ export default function FilterControls(props) {
                     placeholder={`Search ${field.label}...`}
                     value={value === 'all' ? '' : value}
                     onChange={(e) => onChange(e.target.value)}
-                    className="bg-black border border-zinc-800 text-xs text-white px-3 py-1.5 rounded-lg focus:outline-none focus:border-orange-500 w-48 placeholder-zinc-700"
+                    className={`bg-black border border-zinc-800 text-xs text-white px-3 py-1.5 rounded-lg focus:outline-none focus:border-orange-500 placeholder-zinc-700 ${props.isSidebar ? 'w-full' : 'w-48'}`}
                   />
                 </div>
               );
@@ -206,9 +206,17 @@ export default function FilterControls(props) {
         />
       </div>
 
-      <div className="text-xs text-zinc-400 font-medium">
-        Showing <span className="text-white font-bold">{tasksLength}</span> tasks
-      </div>
+      {!props.isSidebar && (
+        <div className="text-xs text-zinc-400 font-medium">
+          Showing <span className="text-white font-bold">{tasksLength}</span> tasks
+        </div>
+      )}
+
+      {props.isSidebar && (
+        <button className="mt-2 w-full flex items-center justify-center gap-2 text-[11px] font-bold text-zinc-400 bg-zinc-900/50 border border-zinc-800/80 hover:bg-zinc-800 hover:text-white px-3 py-2 rounded-xl transition">
+          + Create Filter
+        </button>
+      )}
     </div>
   );
 }
