@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { Play, Check, ChevronDown, ChevronRight, Plus, MoreHorizontal, LayoutGrid, List as ListIcon, Filter, Calendar as CalendarIcon, CheckCircle, Clock, Folder, Edit2, Trash2, ChevronLeft } from 'lucide-react';
 import TaskCards from './TaskCards';
 
@@ -7,6 +9,10 @@ export default function TaskListView({
   viewMode, setViewMode, loading, handleQuickStatusChange, 
   setActiveHistoryTask, deleteTask, dynamicFields 
 }) {
+  const params = useParams();
+  const userId = params?.userId || "admin";
+  const orgId = params?.orgId;
+
   // Group tasks by date
   const groupedTasks = useMemo(() => {
     return tasks.reduce((acc, task) => {
@@ -147,7 +153,9 @@ export default function TaskListView({
                             <Clock className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                           )}
                           <div className="flex flex-col min-w-0">
-                            <p className="text-white text-sm font-bold truncate leading-tight cursor-pointer hover:text-orange-400 transition" onClick={() => openEditModal(task)}>{task.name}</p>
+                            <Link href={`/${orgId}/${userId}/${task._originalId || task._id}`} className="text-white text-sm font-bold truncate leading-tight cursor-pointer hover:text-orange-400 hover:underline transition">
+                              {task.name}
+                            </Link>
                             <div className="flex items-center gap-2 mt-1 flex-wrap">
                               <span className="text-zinc-500 text-[10px]">Nick: <span className="text-white font-bold">N/A</span></span>
                               <span className="text-zinc-500 text-[10px] bg-zinc-900 px-2 py-0.5 rounded-full border border-zinc-800">by {task.user || 'Unknown'}</span>
