@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Play, Check, ChevronDown, ChevronRight, Plus, MoreHorizontal, LayoutGrid, List as ListIcon, Filter, Calendar as CalendarIcon, CheckCircle, Clock, Folder, Edit2, Trash2, ChevronLeft } from 'lucide-react';
@@ -44,12 +44,14 @@ export default function TaskListView({
   }, [groupedTasks]);
 
   const [openDate, setOpenDate] = useState(null);
+  const hasAutoOpened = useRef(false);
 
   useEffect(() => {
-    if (!openDate && sortedDates.length > 0) {
+    if (!hasAutoOpened.current && sortedDates.length > 0) {
       setOpenDate(sortedDates[0]);
+      hasAutoOpened.current = true;
     }
-  }, [sortedDates, openDate]);
+  }, [sortedDates]);
 
   const toggleDateCollapse = (dateStr) => {
     setOpenDate(prev => prev === dateStr ? null : dateStr);
