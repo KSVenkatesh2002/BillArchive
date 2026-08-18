@@ -7,7 +7,8 @@ import TaskCards from './TaskCards';
 export default function TaskListView({ 
   tasks, openEditModal, openTimeModal, statusColors, 
   viewMode, setViewMode, loading, handleQuickStatusChange, 
-  setActiveHistoryTask, deleteTask, dynamicFields 
+  setActiveHistoryTask, deleteTask, dynamicFields,
+  currentWeekStart, onPrevWeek, onNextWeek
 }) {
   const params = useParams();
   const userId = params?.userId || "admin";
@@ -46,6 +47,11 @@ export default function TaskListView({
   const [openDate, setOpenDate] = useState(null);
   const hasAutoOpened = useRef(false);
 
+  // Reset auto-open flag when navigating between weeks
+  useEffect(() => {
+    hasAutoOpened.current = false;
+  }, [currentWeekStart]);
+
   useEffect(() => {
     if (!hasAutoOpened.current && sortedDates.length > 0) {
       setOpenDate(sortedDates[0]);
@@ -57,22 +63,21 @@ export default function TaskListView({
     setOpenDate(prev => prev === dateStr ? null : dateStr);
   };
   const dateRangeText = useMemo(() => {
-    if (sortedDates.length === 0) return 'No tasks found';
-    const validDates = sortedDates.filter(d => d !== 'No Date').map(d => new Date(d));
-    if (validDates.length === 0) return 'Unscheduled Tasks';
-    
-    const maxDate = new Date(Math.max(...validDates));
-    const minDate = new Date(Math.min(...validDates));
-    
+    if (!currentWeekStart) return 'Task Directory';
+    const start = new Date(currentWeekStart);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
     const formatStr = (d) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-    
-    if (minDate.getTime() === maxDate.getTime()) {
-      return formatStr(minDate);
-    }
-    return `${formatStr(minDate)} - ${formatStr(maxDate)}`;
-  }, [sortedDates]);
+    return `Week of ${formatStr(start)} - ${formatStr(end)}`;
+  }, [currentWeekStart]);
 
-
+  const isCurrentWeek = useMemo(() => {
+    if (!currentWeekStart) return false;
+    const now = new Date();
+    now.setDate(now.getDate() - now.getDay());
+    now.setHours(0, 0, 0, 0);
+    return new Date(currentWeekStart).getTime() === now.getTime();
+  }, [currentWeekStart]);
 
   return (
     <div className="bg-[#0a0a0a] rounded-2xl border border-zinc-800/80 overflow-hidden shadow-2xl">
@@ -80,13 +85,31 @@ export default function TaskListView({
       <div className="flex items-center justify-between p-4 bg-[#111115] border-b border-zinc-800">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <button className="p-1.5 border border-zinc-700 rounded-md hover:bg-zinc-800 transition"><ChevronLeft className="w-4 h-4 text-zinc-400" /></button>
-            <button className="p-1.5 border border-zinc-700 rounded-md hover:bg-zinc-800 transition"><ChevronRight className="w-4 h-4 text-zinc-400" /></button>
+            <button 
+              onClick={onPrevWeek}
+              title="Previous Week"
+              aria-label="Previous Week"
+              className="p-1.5 border border-zinc-700 rounded-md hover:bg-zinc-800 transition"
+            >
+              <ChevronLeft className="w-4 h-4 text-zinc-400" />
+            </button>
+            <button 
+              onClick={onNextWeek}
+              title="Next Week"
+              aria-label="Next Week"
+              className="p-1.5 border border-zinc-700 rounded-md hover:bg-zinc-800 transition"
+            >
+              <ChevronRight className="w-4 h-4 text-zinc-400" />
+            </button>
           </div>
           <div className="flex items-center gap-2 text-zinc-200 font-bold text-sm tracking-wide">
             <CalendarIcon className="w-4 h-4 text-zinc-400" />
-            <span className="hidden sm:inline">Task Directory:</span>
-            <span className="text-orange-400">{dateRangeText}</span>
+            <span className="hidden sm:inline">{dateRangeText}</span>
+            {isCurrentWeek && (
+              <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 ml-2">
+                Current Week
+              </span>
+            )}
           </div>
         </div>
         

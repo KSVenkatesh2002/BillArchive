@@ -18,6 +18,7 @@ import {
   setCustomFilters,
   setActiveHistoryTask,
   deleteTask,
+  createTask,
   updateTask,
   addTimeEntry
 } from '@/lib/store/taskSlice';
@@ -58,6 +59,12 @@ export default function UserDashboard() {
   } = useSelector((state) => state.tasks);
 
   // Local UI states (viewMode, modals, toast)
+  const [currentWeekStart, setCurrentWeekStart] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - d.getDay()); // Sunday
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
   const [viewMode, setViewMode] = useState('table');
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showLogTimeModal, setShowLogTimeModal] = useState(false);
@@ -152,8 +159,40 @@ export default function UserDashboard() {
 
   // Reload tasks when filters change
   useEffect(() => {
-    handleFetchTasks(1, true);
-  }, [filterSource, filterType, filterProject, filterTimeframe, customFilters]);
+    const startIso = new Date(currentWeekStart).toISOString();
+    const end = new Date(currentWeekStart);
+    end.setDate(end.getDate() + 6);
+    end.setHours(23, 59, 59, 999);
+    const endIso = end.toISOString();
+
+    if (customFilters.startDate !== startIso || customFilters.endDate !== endIso) {
+      dispatch(setCustomFilters({
+        ...customFilters,
+        startDate: startIso,
+        endDate: endIso
+      }));
+    } else {
+      handleFetchTasks(1, true);
+    }
+  }, [filterSource, filterType, filterProject, filterTimeframe, customFilters, currentWeekStart]);
+
+  const handlePrevWeek = () => {
+    dispatch(setFilterTimeframe('all'));
+    setCurrentWeekStart(prev => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() - 7);
+      return d;
+    });
+  };
+
+  const handleNextWeek = () => {
+    dispatch(setFilterTimeframe('all'));
+    setCurrentWeekStart(prev => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() + 7);
+      return d;
+    });
+  };
 
   // Load next page on scroll reach end
   const handleScroll = () => {
@@ -191,7 +230,7 @@ export default function UserDashboard() {
     }
   };
 
-  // Handle Save (Edit Mode)
+  // Handle Save (Create or Edit Mode)
   const handleSaveTask = async (e) => {
     e.preventDefault();
     const projectVal = taskForm.dynamicValues?.project || taskForm.project;
@@ -216,11 +255,17 @@ export default function UserDashboard() {
         }
       };
 
-      const data = await dispatch(updateTask({ taskId: editingTask._originalId || editingTask._id, updateData: payload })).unwrap();
+      let data;
+      if (editingTask) {
+        data = await dispatch(updateTask({ taskId: editingTask._originalId || editingTask._id, updateData: payload })).unwrap();
+      } else {
+        data = await dispatch(createTask(payload)).unwrap();
+      }
+
       if (data.success) {
         setShowTaskModal(false);
         setEditingTask(null);
-        triggerToast('Task updated successfully!');
+        triggerToast(editingTask ? 'Task updated successfully!' : 'Task created successfully!');
       } else {
         alert(data.error || 'Failed to save task.');
       }
@@ -324,10 +369,38 @@ export default function UserDashboard() {
         list.push({ ...task, _originalId: task._id });
       }
     });
+    // Filter strictly by the current week bounds
+    const weekStart = new Date(currentWeekStart);
+    weekStart.setHours(0, 0, 0, 0);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+
+    const filteredList = list.filter(t => {
+      const d = new Date(t.workDate || t.createdAt);
+      return d >= weekStart && d <= weekEnd;
+    });
+
     // Sort chronologically by date
-    list.sort((a, b) => new Date(b.workDate || b.createdAt) - new Date(a.workDate || a.createdAt));
-    return list;
-  }, [tasks]);
+    filteredList.sort((a, b) => new Date(b.workDate || b.createdAt) - new Date(a.workDate || a.createdAt));
+    return filteredList;
+  }, [tasks, currentWeekStart]);
+
+  const handleAddNewTask = () => {
+    setEditingTask(null);
+    setTaskForm({
+      name: '',
+      nickName: '',
+      status: 'inprocess',
+      allocatedHours: '',
+      billedHours: '',
+      actualHours: '',
+      clickupId: '',
+      dynamicValues: {}
+    });
+    setInitialTaskForm(null);
+    setShowTaskModal(true);
+  };
 
   return (
     <>
@@ -363,7 +436,13 @@ export default function UserDashboard() {
                 <FileText className="w-4 h-4" /> View Reports
               </button>
               <button
-                onClick={() => setShowTaskModal(true)}
+                onClick={() => setShowLogTimeModal(true)}
+                className="bg-zinc-900 hover:bg-zinc-800 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition shadow-lg shadow-black/20 flex items-center gap-2 border border-zinc-800"
+              >
+                <Plus className="w-4 h-4" /> Log Time
+              </button>
+              <button
+                onClick={handleAddNewTask}
                 className="bg-orange-600 hover:bg-orange-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition shadow-lg shadow-orange-600/20 flex items-center gap-2"
               >
                 <Plus className="w-4 h-4" /> New Task
@@ -424,6 +503,9 @@ export default function UserDashboard() {
               return handleDeleteTask(task ? task._originalId : id);
             }}
             dynamicFields={dynamicFields}
+            currentWeekStart={currentWeekStart}
+            onPrevWeek={handlePrevWeek}
+            onNextWeek={handleNextWeek}
           />
         ) : (
           <>
@@ -517,7 +599,7 @@ export default function UserDashboard() {
       {/* Task Edit Modal */}
       <TaskFormModal
         show={showTaskModal}
-        isEdit={true}
+        isEdit={!!editingTask}
         form={taskForm}
         onChange={setTaskForm}
         onSubmit={handleSaveTask}
