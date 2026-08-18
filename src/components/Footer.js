@@ -5,8 +5,8 @@ import { CONFIG } from '@/lib/config';
 
 export default function Footer() {
   return (
-    <footer className="border-t border-zinc-900 bg-black mt-20 py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <footer className="border-t border-zinc-900 bg-[#0a0a0a] mt-20 py-12">
+      <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="md:col-span-2">
             <Link href="/" className="text-lg font-balmain font-semibold tracking-wider text-white hover:text-orange-400 transition inline-block mb-4">

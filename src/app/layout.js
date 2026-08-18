@@ -45,7 +45,6 @@ export const metadata = {
 };
 
 import { ReduxProvider } from "@/lib/store/ReduxProvider";
-import Footer from "@/components/Footer";
 
 export default function RootLayout({ children, authModal }) {
   return (
@@ -58,7 +57,6 @@ export default function RootLayout({ children, authModal }) {
         <ReduxProvider>
           {children}
           {authModal}
-          <Footer />
         </ReduxProvider>
       </body>
     </html>
