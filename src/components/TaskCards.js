@@ -73,11 +73,10 @@ export default function TaskCards({
   loading,
   tasks,
   handleQuickStatusChange,
-  setActiveHistoryTask,
-  handleCopyProjectDetails,
   openEditModal,
   deleteTask,
   dynamicFields = [],
+  disableGrouping = false,
 }) {
   const params = useParams();
   const userId = params?.userId || "admin";
@@ -92,6 +91,11 @@ export default function TaskCards({
     } finally {
       setDeletingId(null);
     }
+  };
+
+  const handleCopyTaskDetails = (task) => {
+    const text = `id: ${task._originalId || task._id}\nname: ${task.name}\nproject: ${task.project}\ndate: ${new Date(task.workDate || task.createdAt).toLocaleDateString()}\nbill hours: ${task.bill?.billedHours || 0}`;
+    navigator.clipboard.writeText(text);
   };
 
   useEffect(() => {
@@ -207,7 +211,7 @@ export default function TaskCards({
 
             return (
               <React.Fragment key={task._id}>
-                {showWeek && (
+                {!disableGrouping && showWeek && (
                   <div className="col-span-full mt-4 mb-2">
                     <h3 className="text-sm font-bold uppercase text-zinc-300 bg-zinc-900/80 p-2 rounded-lg border border-zinc-800 flex items-center gap-4">
                       <span>Week of {currentWeek}</span>
@@ -219,7 +223,7 @@ export default function TaskCards({
                     </h3>
                   </div>
                 )}
-                {showSeparator && (
+                {!disableGrouping && showSeparator && (
                   <div className="col-span-full mt-4 mb-2">
                     <h3 className="text-sm font-black tracking-widest uppercase text-orange-500 border-b border-orange-500/20 pb-2 flex items-center gap-4">
                       <span>{currentGroup}</span>
@@ -289,15 +293,13 @@ export default function TaskCards({
                         <span className="truncate">{task.project}</span>
                       </Link>
 
-                      {handleCopyProjectDetails && (
-                        <button
-                          onClick={() => handleCopyProjectDetails(task.project)}
-                          title={`Copy all details for project "${task.project}" as text`}
-                          className="opacity-0 group-hover:opacity-100 text-[10px] bg-zinc-950 hover:bg-orange-655 text-zinc-400 hover:text-white p-1.5 rounded-lg border border-zinc-800/80 transition"
-                        >
-                          <Copy className="w-3 h-3" />
-                        </button>
-                      )}
+                      <button
+                        onClick={() => handleCopyTaskDetails(task)}
+                        title={`Copy details for task "${task.name}" as text`}
+                        className="opacity-0 group-hover:opacity-100 text-[10px] bg-zinc-950 hover:bg-orange-655 text-zinc-400 hover:text-white p-1.5 rounded-lg border border-zinc-800/80 transition"
+                      >
+                        <Copy className="w-3 h-3" />
+                      </button>
                     </div>
 
                     {/* Metadata and Hours breakdown */}
@@ -369,18 +371,6 @@ export default function TaskCards({
                             );
                           })}
                       </div>
-
-                      <button
-                        onClick={() => setActiveHistoryTask(task)}
-                        className="bg-zinc-950 hover:bg-zinc-900 text-zinc-350 border border-zinc-800 px-2.5 py-1 rounded-lg text-[10px] font-mono transition flex items-center gap-1.5"
-                        title="Click to view full status progression audit log"
-                      >
-                        <Clock className="w-3 h-3 text-zinc-400" />
-                        <span>
-                          {task.statusHistory?.length || 1} change
-                          {(task.statusHistory?.length || 1) > 1 ? "s" : ""}
-                        </span>
-                      </button>
                     </div>
                   </div>
 
