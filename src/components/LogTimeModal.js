@@ -13,6 +13,8 @@ export default function LogTimeModal({ isOpen, onClose, tasks, onSubmit }) {
   const [actualHours, setActualHours] = useState('');
   const [status, setStatus] = useState('');
   const [statuses, setStatuses] = useState([]);
+  const [modalTasks, setModalTasks] = useState([]);
+  const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -36,6 +38,16 @@ export default function LogTimeModal({ isOpen, onClose, tasks, onSubmit }) {
           }
         })
         .catch(err => console.error(err));
+
+      setIsLoadingTasks(true);
+      apiClient.getTasks({ limit: 100, timeframe: 'all' })
+        .then(data => {
+          if (data.success && data.tasks) {
+            setModalTasks(data.tasks);
+          }
+        })
+        .catch(err => console.error(err))
+        .finally(() => setIsLoadingTasks(false));
     }
   }, [isOpen]);
 
@@ -67,8 +79,13 @@ export default function LogTimeModal({ isOpen, onClose, tasks, onSubmit }) {
     }
   };
 
+  // Combine tasks from props and tasks fetched specifically for the modal
+  const combinedTasks = useMemo(() => {
+    return [...tasks, ...modalTasks];
+  }, [tasks, modalTasks]);
+
   // Get unique parent tasks
-  const uniqueTasks = Array.from(new Map(tasks.map(t => [t._originalId || t._id, t])).values());
+  const uniqueTasks = Array.from(new Map(combinedTasks.map(t => [t._originalId || t._id, t])).values());
 
   // Filter tasks that already have a time entry for the currently selected date
   const availableTasks = useMemo(() => {
@@ -175,7 +192,12 @@ export default function LogTimeModal({ isOpen, onClose, tasks, onSubmit }) {
 
                 {dropdownOpen && (
                   <div className="absolute z-[60] mt-2 w-full bg-[#0d0d0d] border border-zinc-800 rounded-xl shadow-2xl max-h-64 overflow-y-auto custom-scrollbar">
-                    {availableTasks.length === 0 ? (
+                    {isLoadingTasks && availableTasks.length === 0 ? (
+                      <div className="px-4 py-4 text-sm text-zinc-500 text-center flex items-center justify-center gap-2">
+                        <div className="w-3 h-3 border border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                        Loading tasks...
+                      </div>
+                    ) : availableTasks.length === 0 ? (
                       <div className="px-4 py-4 text-sm text-zinc-500 text-center">No tasks available for this date</div>
                     ) : (
                       availableTasks.map(t => (
@@ -290,29 +312,26 @@ export default function LogTimeModal({ isOpen, onClose, tasks, onSubmit }) {
               </div>
             </div>
             
+            {/* Footer */}
+            <div className="pt-5 mt-2 border-t border-zinc-800/80 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 rounded-xl text-sm font-semibold text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className={`px-5 py-2 rounded-xl text-sm font-bold bg-orange-500 hover:bg-orange-400 text-black transition-colors flex items-center gap-2 shadow-lg shadow-orange-500/20 ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
+              >
+                {isSubmitting ? <Loader className="w-4 h-4 text-black" /> : <Save className="w-4 h-4" />}
+                {isSubmitting ? 'Saving...' : 'Log Time'}
+              </button>
+            </div>
           </form>
         </div>
-
-        {/* Footer */}
-        <div className="p-5 border-t border-zinc-800/80 bg-black/50 rounded-b-2xl flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 rounded-xl text-sm font-semibold text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            form="logTimeForm"
-            disabled={isSubmitting}
-            className={`px-5 py-2 rounded-xl text-sm font-bold bg-orange-500 hover:bg-orange-400 text-black transition-colors flex items-center gap-2 shadow-lg shadow-orange-500/20 ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
-          >
-            {isSubmitting ? <Loader className="w-4 h-4 text-black" /> : <Save className="w-4 h-4" />}
-            {isSubmitting ? 'Saving...' : 'Log Time'}
-          </button>
-        </div>
-
       </div>
     </div>
   );

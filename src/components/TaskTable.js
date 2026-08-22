@@ -193,18 +193,18 @@ export default function TaskTable({
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-zinc-950 text-zinc-400 font-bold uppercase tracking-wider border-b border-zinc-800">
-                <th className="py-3.5 px-4">Task / Nickname</th>
-                <th className="py-3.5 px-3">Project</th>
-                <th className="py-3.5 px-3">Status</th>
-                <th className="py-3.5 px-3 text-center">
+                <th className="py-2.5 px-3">Task / Nickname</th>
+                <th className="py-2.5 px-3">Project</th>
+                <th className="py-2.5 px-3">Status</th>
+                <th className="py-2.5 px-3 text-center">
                   Hours (Alloc / Bill / Act)
                 </th>
                 {customCols.map((col) => (
-                  <th key={col.name} className="py-3.5 px-3 text-center">
+                  <th key={col.name} className="py-2.5 px-3 text-center">
                     {col.label}
                   </th>
                 ))}
-                <th className="py-3.5 px-4 text-right">Actions</th>
+                <th className="py-2.5 px-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800/60 bg-[#070707]">
@@ -246,10 +246,10 @@ export default function TaskTable({
                       <tr className="bg-zinc-900/80">
                         <td
                           colSpan={6 + customCols.length}
-                          className="py-2.5 px-4 text-xs font-bold uppercase text-zinc-300 border-y border-zinc-800"
+                          className="py-2.5 px-3 border-b border-zinc-800 font-bold uppercase text-[10px] tracking-wider text-zinc-500"
                         >
                           Week of {currentWeek}{" "}
-                          <span className="ml-4 font-normal text-[10px] text-zinc-400">
+                          <span className="ml-4 font-normal text-[10px] text-zinc-400" title="Allocated / Billed / Actual">
                             Alloc: {weekTotals[currentWeek].alloc.toFixed(2)}h |
                             Bill: {weekTotals[currentWeek].bill.toFixed(2)}h |
                             Act: {weekTotals[currentWeek].act.toFixed(2)}h

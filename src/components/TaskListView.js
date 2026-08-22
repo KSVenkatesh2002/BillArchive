@@ -36,6 +36,10 @@ export default function TaskListView({
     }, {});
   }, [tasks]);
 
+  const weekTotals = useMemo(() => {
+    return tasks.reduce((sum, task) => sum + (task.bill?.billedHours || 0), 0);
+  }, [tasks]);
+
   const sortedDates = useMemo(() => {
     return Object.keys(groupedTasks).sort((a, b) => {
       if (a === 'No Date') return 1;
@@ -102,14 +106,17 @@ export default function TaskListView({
               <ChevronRight className="w-4 h-4 text-zinc-400" />
             </button>
           </div>
-          <div className="flex items-center gap-2 text-zinc-200 font-bold text-sm tracking-wide">
-            <CalendarIcon className="w-4 h-4 text-zinc-400" />
-            <span className="hidden sm:inline">{dateRangeText}</span>
-            {isCurrentWeek && (
-              <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 ml-2">
-                Current Week
-              </span>
-            )}
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2 text-zinc-200 font-bold text-sm tracking-wide">
+              <CalendarIcon className="w-4 h-4 text-zinc-400" />
+              <span className="hidden sm:inline">{dateRangeText}</span>
+              {isCurrentWeek && (
+                <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 ml-2">
+                  Current Week
+                </span>
+              )}
+            </div>
+            <span className="text-[10px] text-zinc-400 font-medium ml-6">Total Billed: {weekTotals.toFixed(2)}h</span>
           </div>
         </div>
         
@@ -171,7 +178,7 @@ export default function TaskListView({
                     <span>Billable: {group.billable.toFixed(2)}h</span>
                     <span>Actual: {group.actual.toFixed(2)}h</span>
                   </div>
-                  <div className={`text-[11px] font-bold ${variance < 0 ? 'text-red-500' : 'text-zinc-500'}`}>
+                  <div className={`text-[11px] font-bold ${variance < 0 ? 'text-red-500' : 'text-zinc-500'}`} title={variance < 0 ? "Actual hours spent exceeds the allocated hours" : "Actual hours are within the allocated budget"}>
                     {variance < 0 ? `Over by ${Math.abs(variance).toFixed(2)}h` : 'On track'}
                   </div>
                 </div>
@@ -250,8 +257,13 @@ export default function TaskListView({
               </div>
             );
           })}
-          
-          {tasks.length === 0 && (
+
+          {loading && tasks.length === 0 ? (
+            <div className="text-center py-24 flex flex-col items-center">
+              <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+              <p className="text-zinc-500 text-sm font-medium">Loading tasks...</p>
+            </div>
+          ) : tasks.length === 0 ? (
             <div className="text-center py-24 flex flex-col items-center">
               <div className="w-16 h-16 bg-zinc-900 rounded-full flex items-center justify-center mb-4">
                 <Check className="w-8 h-8 text-zinc-700" />
@@ -259,7 +271,7 @@ export default function TaskListView({
               <h3 className="text-white font-bold text-lg mb-1">You're all caught up!</h3>
               <p className="text-zinc-500 text-sm">No tasks found for this period.</p>
             </div>
-          )}
+          ) : null}
         </div>
       )}
     </div>

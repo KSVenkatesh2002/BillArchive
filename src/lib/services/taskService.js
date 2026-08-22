@@ -21,10 +21,20 @@ export const taskService = {
       query.createdAt = { $gte: oneMonthAgo };
     } else if (filters.startDate && filters.endDate) {
       // Explicit date range for backend pagination
-      query.workDate = { 
-        $gte: new Date(filters.startDate),
-        $lte: new Date(filters.endDate)
-      };
+      query.$or = [
+        {
+          workDate: { 
+            $gte: new Date(filters.startDate),
+            $lte: new Date(filters.endDate)
+          }
+        },
+        {
+          'timeEntries.date': {
+            $gte: new Date(filters.startDate),
+            $lte: new Date(filters.endDate)
+          }
+        }
+      ];
       // Remove them from customFilters so they aren't parsed as dynamic values
       delete customFilters.startDate;
       delete customFilters.endDate;
@@ -87,16 +97,19 @@ export const taskService = {
     const initialBilled = parseFloat(bill?.billedHours || 0);
     const initialActual = parseFloat(bill?.actualHours || 0);
 
-    // Always create an initial time entry for the task creation date,
-    // even if hours are zero. This ensures the task shows up correctly for this date in the UI.
-    const initialEntries = [{
-      date: taskWorkDate,
-      allocatedHours: initialAlloc,
-      billedHours: initialBilled,
-      actualHours: initialActual,
-      note: 'Task Created',
-      loggedBy: name || email
-    }];
+    // Only create an initial time entry if hours are actually provided during creation.
+    // The UI handles tasks without time entries by falling back to their workDate.
+    const initialEntries = [];
+    if (initialAlloc > 0 || initialBilled > 0 || initialActual > 0) {
+      initialEntries.push({
+        date: taskWorkDate,
+        allocatedHours: initialAlloc,
+        billedHours: initialBilled,
+        actualHours: initialActual,
+        note: 'Initial Allocation',
+        loggedBy: name || email
+      });
+    }
 
     const newTask = {
       name: taskName,

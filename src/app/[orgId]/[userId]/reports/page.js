@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { RefreshCw, Download, Filter, Settings, Link as LinkIcon, CheckCircle, Search, LayoutDashboard, Copy, Check, FileText, Calendar, Eye, Settings2, CheckSquare, Square, ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
 import { apiClient } from '@/lib/apiClient';
+import { generateReportText } from '@/lib/utils/reportGenerator';
 import Link from 'next/link';
 
 export default function ReportsPage() {
@@ -32,9 +33,7 @@ export default function ReportsPage() {
   const [copied, setCopied] = useState(false);
 
   // Accordion states
-  const [isFilterOpen, setIsFilterOpen] = useState(true);
-  const [isTogglesOpen, setIsTogglesOpen] = useState(true);
-  const [isTasksOpen, setIsTasksOpen] = useState(true);
+  const [activeAccordion, setActiveAccordion] = useState('filter'); // 'filter', 'toggles', 'tasks', or null
 
   // Fetch projects on mount
   useEffect(() => {
@@ -59,31 +58,34 @@ export default function ReportsPage() {
       if (startDate) params.set('startDate', startDate);
       if (endDate) params.set('endDate', endDate);
 
-      if (excludedTaskIds.size > 0) {
-        params.set('excludedIds', Array.from(excludedTaskIds).join(','));
-      }
-
-      params.set('includeHours', includeHours ? 'true' : 'false');
-      params.set('includeHistory', includeHistory ? 'true' : 'false');
-      params.set('includeClickUp', includeClickUp ? 'true' : 'false');
-      params.set('includeMeta', includeMeta ? 'true' : 'false');
-      params.set('includeTotals', includeTotals ? 'true' : 'false');
-
       const data = await apiClient.getReport(Object.fromEntries(params));
-      if (data.success) {
-        setReportText(data.reportText || '');
-        setTasksCount(data.tasksCount || 0);
-
-        if (data.tasks) {
-          setTaskList(data.tasks);
-        }
+      if (data.success && data.tasks) {
+        setTaskList(data.tasks);
       }
     } catch (err) {
-      console.error('Failed to generate report preview:', err);
+      console.error('Failed to fetch report tasks:', err);
     } finally {
       setLoading(false);
     }
-  }, [selectedProject, startDate, endDate, excludedTaskIds, includeHours, includeHistory, includeClickUp, includeMeta, includeTotals]);
+  }, [selectedProject, startDate, endDate]);
+
+  // Generate report text locally
+  useEffect(() => {
+    const { textBuffer, count } = generateReportText({
+      taskList,
+      excludedTaskIds,
+      includeHours,
+      includeHistory,
+      includeClickUp,
+      includeTotals,
+      selectedProject,
+      startDate,
+      endDate
+    });
+
+    setReportText(textBuffer);
+    setTasksCount(count);
+  }, [taskList, excludedTaskIds, includeHours, includeHistory, includeClickUp, includeTotals, selectedProject, startDate, endDate]);
 
   useEffect(() => {
     setTimeout(() => fetchReport(), 0);
@@ -164,16 +166,16 @@ export default function ReportsPage() {
           {/* Timeline Range Controls */}
           <section className="bg-zinc-950 border border-zinc-800 rounded-2xl shadow-sm overflow-hidden">
             <button
-              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              onClick={() => setActiveAccordion(activeAccordion === 'filter' ? null : 'filter')}
               className="w-full flex items-center justify-between p-5 bg-zinc-900/40 hover:bg-zinc-900/80 transition text-xs font-bold text-zinc-400 uppercase tracking-wider"
             >
               <div className="flex items-center gap-1.5">
                 <Calendar className="w-4 h-4 text-orange-400" /> Date & Project Filter
               </div>
-              {isFilterOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              {activeAccordion === 'filter' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
 
-            {isFilterOpen && (
+            {activeAccordion === 'filter' && (
               <div className="p-5 border-t border-zinc-800/50 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -221,16 +223,16 @@ export default function ReportsPage() {
           {/* Report Content Options */}
           <section className="bg-zinc-950 border border-zinc-800 rounded-2xl shadow-sm overflow-hidden">
             <button 
-              onClick={() => setIsTogglesOpen(!isTogglesOpen)}
+              onClick={() => setActiveAccordion(activeAccordion === 'toggles' ? null : 'toggles')}
               className="w-full flex items-center justify-between p-5 bg-zinc-900/40 hover:bg-zinc-900/80 transition text-xs font-bold text-zinc-400 uppercase tracking-wider"
             >
               <div className="flex items-center gap-1.5">
                 <Settings2 className="w-4 h-4 text-orange-400" /> Output Toggles
               </div>
-              {isTogglesOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              {activeAccordion === 'toggles' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
 
-            {isTogglesOpen && (
+            {activeAccordion === 'toggles' && (
               <div className="p-5 border-t border-zinc-800/50 grid grid-cols-2 gap-4 text-sm">
                 <label className="flex items-center gap-2.5 text-zinc-300 cursor-pointer select-none bg-[#0d0d0d] p-3 rounded-xl border border-zinc-800">
                   <input
@@ -276,9 +278,9 @@ export default function ReportsPage() {
           </section>
 
           {/* Task Inclusion Checklist */}
-          <section className={`bg-zinc-950 border border-zinc-800 rounded-2xl shadow-sm flex flex-col overflow-hidden ${isTasksOpen ? 'flex-1 min-h-[300px]' : ''}`}>
+          <section className={`bg-zinc-950 border border-zinc-800 rounded-2xl shadow-sm flex flex-col overflow-hidden ${activeAccordion === 'tasks' ? 'flex-1 min-h-[300px]' : ''}`}>
             <button 
-              onClick={() => setIsTasksOpen(!isTasksOpen)}
+              onClick={() => setActiveAccordion(activeAccordion === 'tasks' ? null : 'tasks')}
               className="w-full flex items-center justify-between p-5 bg-zinc-900/40 hover:bg-zinc-900/80 transition text-xs font-bold text-zinc-400 uppercase tracking-wider"
             >
               <div className="flex items-center gap-1.5">
@@ -288,11 +290,11 @@ export default function ReportsPage() {
                 <span className="text-xs font-semibold px-2 py-1 bg-[#0d0d0d] rounded-lg text-zinc-300 border border-zinc-800">
                   {taskList.length - excludedTaskIds.size} / {taskList.length} Included
                 </span>
-                {isTasksOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                {activeAccordion === 'tasks' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </div>
             </button>
 
-            {isTasksOpen && (
+            {activeAccordion === 'tasks' && (
               <div className="flex-1 flex flex-col p-5 border-t border-zinc-800/50 overflow-hidden">
                 {taskList.length === 0 ? (
               <div className="flex-1 flex items-center justify-center text-sm text-zinc-500 border border-dashed border-zinc-800 rounded-xl bg-black/50">

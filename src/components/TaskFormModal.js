@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Edit3, PlusCircle, Lightbulb, ChevronDown } from 'lucide-react';
 import Select from './Select';
@@ -8,6 +8,7 @@ import Toggle from './Toggle';
 import Loader from './Loader';
 import { DEFAULT_ENABLED_FIELDS, fetchOrgConfig } from '@/lib/store/orgSlice';
 import { apiClient } from '@/lib/apiClient';
+import { useQuery } from '@tanstack/react-query';
 
 export default function TaskFormModal({ show, onClose, onSubmit, form, onChange, isEdit, inline = false, isSubmitting = false, disableSubmit = false }) {
   const dispatch = useDispatch();
@@ -17,76 +18,61 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
   const storeEnabledFields = useSelector((state) => state.org?.enabledFields);
   const enabledFields = { ...DEFAULT_ENABLED_FIELDS, ...(storeEnabledFields || {}) };
 
-  const [projects, setProjects] = useState([]);
-  const [statuses, setStatuses] = useState([]);
   const [isAddingNewProject, setIsAddingNewProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [dynamicFields, setDynamicFields] = useState([]);
-  const [userPrefs, setUserPrefs] = useState({});
 
+  const { data: projectsData } = useQuery({
+    queryKey: ['projects'],
+    queryFn: () => apiClient.getProjects(),
+    enabled: show,
+    staleTime: 5 * 60 * 1000 // Cache for 5 minutes
+  });
+  const projects = projectsData?.projects || [];
+
+  const { data: statusesData } = useQuery({
+    queryKey: ['statuses'],
+    queryFn: () => apiClient.getStatuses(),
+    enabled: show,
+    staleTime: 5 * 60 * 1000
+  });
+  const statuses = statusesData?.statuses || [];
+
+  const { data: prefsData, isPending: prefsPending } = useQuery({
+    queryKey: ['userPreferences'],
+    queryFn: () => apiClient.getUserPreferences(),
+    enabled: show,
+    staleTime: 5 * 60 * 1000
+  });
+  const userPrefs = prefsData?.preferences?.fieldDefaults || {};
+
+  // Resolve dynamic fields from organization config
+  const dynamicFields = useMemo(() => {
+    if (!organization) return [];
+    let fields = organization.dynamicFields || [];
+    if (!fields.some(f => f.name === 'project')) {
+      fields = [
+        { name: 'project', label: 'Project', type: 'dropdown', options: [] },
+        ...fields
+      ];
+    }
+    return fields;
+  }, [organization]);
+
+  // Seed default dynamic values on creation if not set yet
   useEffect(() => {
-    if (!show) return;
-
-    // Fetch projects (for fallback or general use)
-    apiClient.getProjects()
-      .then((data) => {
-        if (data.success) {
-          setProjects(data.projects || []);
-        }
-      })
-      .catch((err) => console.error(err));
-
-    // Fetch statuses
-    apiClient.getStatuses()
-      .then((data) => {
-        if (data.success) {
-          setStatuses(data.statuses || []);
-        } else {
-          console.error('Failed to load statuses:', data.error);
-          setStatuses([]);
-        }
-      })
-      .catch((err) => {
-        console.error('Network error loading statuses:', err);
-        setStatuses([]);
+    if (show && !isEdit && !prefsPending && (!form.dynamicValues || Object.keys(form.dynamicValues).length === 0) && dynamicFields.length > 0) {
+      const initialVals = {};
+      dynamicFields.forEach((f) => {
+        initialVals[f.name] = userPrefs[f.name] ?? f.defaultValue ?? '';
       });
-
-    // Fetch organization dynamic fields and user preferences via Redux dispatch
-    Promise.all([
-      dispatch(fetchOrgConfig()).unwrap(),
-      apiClient.getUserPreferences()
-    ]).then(([orgData, prefData]) => {
-      let fields = orgData?.dynamicFields ? orgData.dynamicFields : [];
-
-      // Ensure Project field is always present, since it is a core property
-      if (!fields.some(f => f.name === 'project')) {
-        fields = [
-          { name: 'project', label: 'Project', type: 'dropdown', options: [] },
-          ...fields
-        ];
-      }
-
-      const prefs = prefData.success && prefData.preferences?.fieldDefaults ? prefData.preferences.fieldDefaults : {};
-
-      setDynamicFields(fields);
-      setUserPrefs(prefs);
-
-      // Seed default dynamic values on creation if not set yet
-      if (!isEdit && (!form.dynamicValues || Object.keys(form.dynamicValues).length === 0)) {
-        const initialVals = {};
-        fields.forEach((f) => {
-          initialVals[f.name] = prefs[f.name] ?? f.defaultValue ?? '';
-        });
-        onChange(prev => ({
-          ...prev,
-          dynamicValues: initialVals,
-          project: initialVals.project || prev.project || ''
-        }));
-      }
-    }).catch((err) => console.error('Failed to load dynamic fields / preferences:', err));
-
-  }, [show, isEdit]);
+      onChange(prev => ({
+        ...prev,
+        dynamicValues: initialVals,
+        project: initialVals.project || prev.project || ''
+      }));
+    }
+  }, [show, isEdit, dynamicFields, userPrefs]);
 
   if (!show) return null;
 
@@ -126,14 +112,20 @@ export default function TaskFormModal({ show, onClose, onSubmit, form, onChange,
 
   if (isLoading) {
     const loadingContent = (
-      <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full md:max-w-3xl lg:max-w-4xl p-8 shadow-2xl flex flex-col items-center justify-center min-h-[300px]">
+      <div 
+        onClick={(e) => e.stopPropagation()} 
+        className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full md:max-w-3xl lg:max-w-4xl p-8 shadow-2xl flex flex-col items-center justify-center min-h-[300px]"
+      >
         <div className="animate-spin inline-block w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full mb-4"></div>
         <p className="text-sm font-semibold text-zinc-400">Loading Task Configuration...</p>
       </div>
     );
     if (inline) return loadingContent;
     return (
-      <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+      <div 
+        className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+        onClick={onClose}
+      >
         {loadingContent}
       </div>
     );

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useSelector, useDispatch } from 'react-redux';
 import { Zap, LayoutGrid, List, FileText, Plus } from 'lucide-react';
 
@@ -34,10 +34,12 @@ import TaskFormModal from '@/components/TaskFormModal';
 import LogTimeModal from '@/components/LogTimeModal';
 import TaskListView from '@/components/TaskListView';
 import { CONFIG } from '@/lib/config';
+import { apiClient } from '@/lib/apiClient';
 
 export default function UserDashboard() {
   const { userId, orgId } = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const dispatch = useDispatch();
 
   // Select states from Redux store
@@ -60,11 +62,26 @@ export default function UserDashboard() {
 
   // Local UI states (viewMode, modals, toast)
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
+    const weekStartParam = searchParams.get('weekStart');
+    if (weekStartParam) {
+      const d = new Date(weekStartParam);
+      if (!isNaN(d.getTime())) return d;
+    }
     const d = new Date();
     d.setDate(d.getDate() - d.getDay()); // Sunday
     d.setHours(0, 0, 0, 0);
     return d;
   });
+
+  useEffect(() => {
+    const dStr = currentWeekStart.toISOString().split('T')[0];
+    const newParams = new URLSearchParams(searchParams);
+    if (newParams.get('weekStart') !== dStr) {
+      newParams.set('weekStart', dStr);
+      router.replace(`/${orgId}/${userId}?${newParams.toString()}`, { scroll: false });
+    }
+  }, [currentWeekStart, searchParams, orgId, userId, router]);
+
   const [viewMode, setViewMode] = useState('table');
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showLogTimeModal, setShowLogTimeModal] = useState(false);
@@ -234,7 +251,14 @@ export default function UserDashboard() {
   const handleSaveTask = async (e) => {
     e.preventDefault();
     const projectVal = taskForm.dynamicValues?.project || taskForm.project;
-    if (!taskForm.name || !projectVal) return;
+    if (!taskForm.name) {
+      alert("Please enter a task name.");
+      return;
+    }
+    if (!projectVal) {
+      alert("Please select a project.");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -257,7 +281,21 @@ export default function UserDashboard() {
 
       let data;
       if (editingTask) {
-        data = await dispatch(updateTask({ taskId: editingTask._originalId || editingTask._id, updateData: payload })).unwrap();
+        const targetTaskId = editingTask._originalId || editingTask._id;
+        
+        if (editingTask._entryId) {
+          // If editing a specific time entry log, update the log hours first!
+          await apiClient.updateTimeEntry(targetTaskId, editingTask._entryId, {
+            date: taskForm.workDate,
+            allocatedHours: parseFloat(taskForm.allocatedHours || 0),
+            billedHours: parseFloat(taskForm.billedHours || 0),
+            actualHours: parseFloat(taskForm.actualHours || 0)
+          });
+          // Remove 'bill' from payload so we don't overwrite the task summary
+          delete payload.bill;
+        }
+        
+        data = await dispatch(updateTask({ taskId: targetTaskId, updateData: payload })).unwrap();
       } else {
         data = await dispatch(createTask(payload)).unwrap();
       }
@@ -296,7 +334,24 @@ export default function UserDashboard() {
     // Find the original unflattened task to populate the edit form accurately
     const originalTask = tasks.find(t => t._id === (task._originalId || task._id)) || task;
 
-    setEditingTask(originalTask);
+    let entryId = null;
+    let entryDate = originalTask.workDate || new Date().toISOString();
+    let entryAlloc = originalTask.bill?.allocatedHours || '';
+    let entryBilled = originalTask.bill?.billedHours || '';
+    let entryActual = originalTask.bill?.actualHours || '';
+
+    if (task._id && task._id.includes('-')) {
+      entryId = task._id.split('-')[1];
+      const entry = originalTask.timeEntries?.find(e => e._id === entryId);
+      if (entry) {
+        entryDate = entry.date;
+        entryAlloc = entry.allocatedHours;
+        entryBilled = entry.billedHours;
+        entryActual = entry.actualHours;
+      }
+    }
+
+    setEditingTask({ ...originalTask, _entryId: entryId });
     const newForm = {
       name: originalTask.name,
       nickName: originalTask.nickName || '',
@@ -304,12 +359,12 @@ export default function UserDashboard() {
       project: originalTask.project,
       source: originalTask.source,
       typeOfWork: originalTask.typeOfWork,
-      allocatedHours: originalTask.bill?.allocatedHours || '',
-      billedHours: originalTask.bill?.billedHours || '',
-      actualHours: originalTask.bill?.actualHours || '',
+      allocatedHours: entryAlloc,
+      billedHours: entryBilled,
+      actualHours: entryActual,
       clickupId: originalTask.clickupId || '',
       dynamicValues: originalTask.dynamicValues || {},
-      workDate: originalTask.workDate || new Date().toISOString()
+      workDate: entryDate
     };
     setTaskForm(newForm);
     setInitialTaskForm(JSON.stringify(newForm));
@@ -321,6 +376,21 @@ export default function UserDashboard() {
     try {
       await dispatch(deleteTask(id)).unwrap();
       triggerToast('Task deleted');
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteTimeEntry = async (taskId, entryId) => {
+    if (!confirm('Are you sure you want to delete this time entry log?')) return;
+    try {
+      const res = await apiClient.deleteTimeEntry(taskId, entryId);
+      if (res.success) {
+        triggerToast('Log entry deleted');
+        handleFetchTasks(page, true);
+      } else {
+        alert(res.error || 'Failed to delete log entry');
+      }
     } catch (err) {
       console.error(err);
     }
@@ -429,23 +499,17 @@ export default function UserDashboard() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <button 
-                onClick={() => router.push(`/${orgId}/${userId}/reports`)}
-                className="bg-zinc-900 hover:bg-zinc-800 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition flex items-center gap-2 border border-zinc-800/80"
-              >
-                <FileText className="w-4 h-4" /> View Reports
-              </button>
               <button
                 onClick={() => setShowLogTimeModal(true)}
-                className="bg-zinc-900 hover:bg-zinc-800 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition shadow-lg shadow-black/20 flex items-center gap-2 border border-zinc-800"
+                className="bg-zinc-900 hover:bg-zinc-800 text-white px-3 py-1.5 rounded-lg text-[11px] font-bold transition shadow shadow-black/20 flex items-center gap-1.5 border border-zinc-800"
               >
-                <Plus className="w-4 h-4" /> Log Time
+                <Plus className="w-3.5 h-3.5" /> Log Time
               </button>
               <button
                 onClick={handleAddNewTask}
-                className="bg-orange-600 hover:bg-orange-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition shadow-lg shadow-orange-600/20 flex items-center gap-2"
+                className="bg-orange-600 hover:bg-orange-500 text-white px-3 py-1.5 rounded-lg text-[11px] font-bold transition shadow shadow-orange-600/20 flex items-center gap-1.5"
               >
-                <Plus className="w-4 h-4" /> New Task
+                <Plus className="w-3.5 h-3.5" /> New Task
               </button>
             </div>
           </div>
@@ -500,6 +564,12 @@ export default function UserDashboard() {
             setActiveHistoryTask={(val) => dispatch(setActiveHistoryTask(val))}
             deleteTask={(id) => {
               const task = flattenedTasks.find(t => t._id === id);
+              if (task && id.includes('-')) {
+                const [taskId, entryId] = id.split('-');
+                if (entryId !== 'undefined') {
+                  return handleDeleteTimeEntry(taskId, entryId);
+                }
+              }
               return handleDeleteTask(task ? task._originalId : id);
             }}
             dynamicFields={dynamicFields}
@@ -564,6 +634,12 @@ export default function UserDashboard() {
                 openEditModal={openEditModal}
                 deleteTask={(id) => {
                   const task = flattenedTasks.find(t => t._id === id);
+                  if (task && id.includes('-')) {
+                    const [taskId, entryId] = id.split('-');
+                    if (entryId !== 'undefined') {
+                      return handleDeleteTimeEntry(taskId, entryId);
+                    }
+                  }
                   return handleDeleteTask(task ? task._originalId : id);
                 }}
                 dynamicFields={dynamicFields}
@@ -580,6 +656,12 @@ export default function UserDashboard() {
                 openEditModal={openEditModal}
                 deleteTask={(id) => {
                   const task = flattenedTasks.find(t => t._id === id);
+                  if (task && id.includes('-')) {
+                    const [taskId, entryId] = id.split('-');
+                    if (entryId !== 'undefined') {
+                      return handleDeleteTimeEntry(taskId, entryId);
+                    }
+                  }
                   return handleDeleteTask(task ? task._originalId : id);
                 }}
                 dynamicFields={dynamicFields}
