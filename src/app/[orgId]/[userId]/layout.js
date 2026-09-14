@@ -1,6 +1,5 @@
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
-import Footer from '@/components/Footer';
 import { CONFIG } from '@/lib/config';
 
 export const dynamic = 'force-dynamic';
@@ -15,7 +14,6 @@ export default function UserLayout({ children, taskModal }) {
           <div className="flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {children}
           </div>
-          <Footer />
           {taskModal}
         </div>
       </div>
@@ -31,7 +29,6 @@ export default function UserLayout({ children, taskModal }) {
       <div className="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 pb-8">
         {children}
       </div>
-      <Footer />
       {taskModal}
     </div>
   );

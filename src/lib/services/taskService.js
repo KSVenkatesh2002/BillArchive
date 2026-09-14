@@ -5,9 +5,18 @@ export const taskService = {
   /**
    * Find tasks with pagination, filters, and metrics
    */
-  async getTasks(userId, filters = {}, pagination = {}) {
-    const query = { userId };
-    const { project, timeframe, ...customFilters } = filters;
+  async getTasks(userOrId, filters = {}, pagination = {}) {
+    const userId = typeof userOrId === 'object' ? (userOrId.userId || userOrId.id) : userOrId;
+    const orgId = typeof userOrId === 'object' ? userOrId.orgId : null;
+
+    const query = {};
+    const { scope, project, timeframe, ...customFilters } = filters;
+
+    if (scope === 'org') {
+      if (orgId) query.orgId = orgId;
+    } else {
+      if (userId) query.userId = userId;
+    }
 
     if (project && project !== 'all') query.project = project;
 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { taskService } from '@/lib/services/taskService';
 import { getAuthUser } from '@/lib/auth';
+import { dbService } from '@/lib/db/dbService';
 
 export async function GET(request) {
   try {
@@ -20,8 +21,16 @@ export async function GET(request) {
     const page = searchParams.get('page') || '1';
     const limit = searchParams.get('limit') || '15';
 
+    const dbUser = await dbService.findUserByEmail(user.email);
+    const userCtx = {
+      userId: user.userId || user.id,
+      orgId: dbUser?.organization?._id || dbUser?.organization?.id || user.orgId,
+      email: user.email,
+      role: user.role
+    };
+
     const result = await taskService.getTasks(
-      user.userId,
+      userCtx,
       filters,
       { page, limit }
     );
