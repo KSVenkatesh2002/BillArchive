@@ -166,6 +166,7 @@ export default function TaskListView({
             openEditModal={openEditModal}
             deleteTask={deleteTask}
             dynamicFields={dynamicFields}
+            statusColors={statusColors}
           />
         </div>
       ) : (

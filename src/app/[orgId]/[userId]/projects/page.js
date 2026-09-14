@@ -8,6 +8,26 @@ import { Folder, Clock, CheckCircle, ArrowLeft, User } from 'lucide-react';
 import Link from 'next/link';
 
 function ProjectTaskList({ projectName }) {
+  const { data: orgConfigData } = useQuery({
+    queryKey: ['orgConfig'],
+    queryFn: async () => {
+      const res = await apiClient.getOrganizationConfig();
+      return res?.organization?.enabledFields?.statusColors || {};
+    }
+  });
+  const statusColors = orgConfigData || {};
+
+  const getStatusColor = (st) => {
+    if (statusColors && statusColors[st]) return `${statusColors[st]} text-white border-transparent`;
+    const s = (st || "").toLowerCase();
+    if (statusColors && statusColors[s]) return `${statusColors[s]} text-white border-transparent`;
+    if (s === "complete" || s === "completed" || s === "qa complete")
+      return "bg-emerald-500/10 text-emerald-400 border-emerald-500/30";
+    if (s === "inprocess" || s === "dev")
+      return "bg-orange-500/10 text-orange-400 border-orange-500/30";
+    return "bg-zinc-900 text-zinc-400 border-zinc-800";
+  };
+
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } = useInfiniteQuery({
     queryKey: ['tasks', projectName],
     queryFn: async ({ pageParam = 1 }) => {
@@ -46,7 +66,7 @@ function ProjectTaskList({ projectName }) {
             <div className="min-w-0">
               <p className="text-sm font-bold text-zinc-150 truncate">{task.name}</p>
               <div className="flex items-center gap-3 mt-1 text-[11px]">
-                <span className="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 font-semibold uppercase text-[9px]">
+                <span className={`px-2 py-0.5 rounded border text-[9px] font-semibold uppercase ${getStatusColor(task.status)}`}>
                   {task.status}
                 </span>
                 <span className="text-zinc-400 flex items-center gap-1 font-medium">
