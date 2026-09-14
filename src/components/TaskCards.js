@@ -77,6 +77,7 @@ export default function TaskCards({
   deleteTask,
   dynamicFields = [],
   disableGrouping = false,
+  statusColors = {},
 }) {
   const params = useParams();
   const userId = params?.userId || "admin";
@@ -124,8 +125,10 @@ export default function TaskCards({
         ];
 
   const getStatusColor = (status) => {
+    if (statusColors && statusColors[status]) return `${statusColors[status]} text-white border-transparent`;
     const s = (status || "").toLowerCase();
-    if (s === "complete" || s === "qa complete")
+    if (statusColors && statusColors[s]) return `${statusColors[s]} text-white border-transparent`;
+    if (s === "complete" || s === "completed" || s === "qa complete")
       return "bg-emerald-500/10 text-emerald-450 border-emerald-500/30";
     if (s === "inprocess" || s === "dev")
       return "bg-orange-500/10 text-orange-400 border-orange-500/30";
@@ -306,9 +309,6 @@ export default function TaskCards({
                     <div className="bg-zinc-950/60 rounded-xl p-3 border border-zinc-900 mb-4 space-y-3">
                       <div className="flex justify-between items-center text-[10px] text-zinc-500 uppercase tracking-wider font-bold">
                         <span>Hours Metrics</span>
-                        <span className="text-zinc-650">
-                          (Alloc / Bill / Act)
-                        </span>
                       </div>
                       <div className="grid grid-cols-3 gap-2 text-center font-mono">
                         <div className="bg-zinc-900/60 p-2 rounded-lg border border-zinc-800">

@@ -75,12 +75,29 @@ export default function TaskListView({
     return `Week of ${formatStr(start)} - ${formatStr(end)}`;
   }, [currentWeekStart]);
 
-  const isCurrentWeek = useMemo(() => {
-    if (!currentWeekStart) return false;
+  const weekBadge = useMemo(() => {
+    if (!currentWeekStart) return 'Current Week';
+    let cwsYear, cwsMonth, cwsDate;
+    if (typeof currentWeekStart === 'string' && currentWeekStart.includes('-')) {
+      const parts = currentWeekStart.split('T')[0].split('-').map(Number);
+      cwsYear = parts[0];
+      cwsMonth = parts[1] - 1;
+      cwsDate = parts[2];
+    } else {
+      const d = new Date(currentWeekStart);
+      cwsYear = d.getFullYear();
+      cwsMonth = d.getMonth();
+      cwsDate = d.getDate();
+    }
+    const cwsTime = new Date(cwsYear, cwsMonth, cwsDate, 0, 0, 0).getTime();
+
     const now = new Date();
-    now.setDate(now.getDate() - now.getDay());
-    now.setHours(0, 0, 0, 0);
-    return new Date(currentWeekStart).getTime() === now.getTime();
+    const todaySun = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay(), 0, 0, 0).getTime();
+    const diffDays = Math.round((cwsTime - todaySun) / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return 'Current Week';
+    if (diffDays < 0) return 'Previous Week';
+    return 'Next Week';
   }, [currentWeekStart]);
 
   return (
@@ -110,11 +127,13 @@ export default function TaskListView({
             <div className="flex items-center gap-2 text-zinc-200 font-bold text-sm tracking-wide">
               <CalendarIcon className="w-4 h-4 text-zinc-400" />
               <span className="hidden sm:inline">{dateRangeText}</span>
-              {isCurrentWeek && (
-                <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 ml-2">
-                  Current Week
-                </span>
-              )}
+              <span className={`text-[10px] uppercase font-extrabold px-2 py-0.5 rounded border ml-2 ${
+                weekBadge === 'Current Week' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
+                weekBadge === 'Previous Week' ? 'bg-zinc-800/80 text-zinc-300 border-zinc-700' :
+                'bg-blue-500/10 text-blue-400 border-blue-500/20'
+              }`}>
+                {weekBadge}
+              </span>
             </div>
             <span className="text-[10px] text-zinc-400 font-medium ml-6">Total Billed: {weekTotals.toFixed(2)}h</span>
           </div>
@@ -228,9 +247,6 @@ export default function TaskListView({
                         <div className="flex flex-col items-start md:items-center w-full md:w-1/6">
                           <div className="text-xs font-mono font-bold text-zinc-300">
                             {task.bill?.allocatedHours || 0}h / <span className="text-amber-500">{task.bill?.billedHours || 0}h</span> / {task.bill?.actualHours || 0}h
-                          </div>
-                          <div className="text-[9px] text-zinc-500 flex gap-2 uppercase tracking-widest mt-0.5">
-                            <span>Alloc</span><span>Bill</span><span>Act</span>
                           </div>
                         </div>
 

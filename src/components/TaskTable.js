@@ -76,9 +76,9 @@ export default function TaskTable({
   openEditModal,
   deleteTask,
   dynamicFields = [],
+  statusColors = {}
 }) {
   const customCols = dynamicFields.filter(
-
     (f) =>
       f.name !== "project" &&
       (f.displayLocation === "table" ||
@@ -133,8 +133,10 @@ export default function TaskTable({
         ];
 
   const getStatusColor = (status) => {
+    if (statusColors && statusColors[status]) return `${statusColors[status]} text-white border-transparent`;
     const s = (status || "").toLowerCase();
-    if (s === "complete" || s === "qa complete")
+    if (statusColors && statusColors[s]) return `${statusColors[s]} text-white border-transparent`;
+    if (s === "complete" || s === "completed" || s === "qa complete")
       return "bg-emerald-500/10 text-emerald-450 border-emerald-500/30";
     if (s === "inprocess" || s === "dev")
       return "bg-orange-500/10 text-orange-400 border-orange-500/30";

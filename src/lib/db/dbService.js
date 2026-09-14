@@ -89,13 +89,18 @@ export const dbService = {
     return adapter.updateUser(id, updateDoc);
   },
 
-  async getStatuses(orgSlug) {
-    return HARDCODED_STATUSES;
+  async getStatuses(orgSlug = 'system_default') {
+    try {
+      const adapter = await getAdapter();
+      return await adapter.getStatuses(orgSlug);
+    } catch (e) {
+      return HARDCODED_STATUSES;
+    }
   },
 
-  async saveStatuses(list, orgSlug) {
-    // Disabled as per user request to make statuses hardcoded
-    throw new Error('Statuses are now hardcoded and cannot be modified via this API.');
+  async saveStatuses(list, orgSlug = 'system_default') {
+    const adapter = await getAdapter();
+    return adapter.saveStatuses(list, orgSlug);
   },
 
   async getUserProjects(userId) {

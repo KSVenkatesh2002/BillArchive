@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useQuery } from '@tanstack/react-query';
+import { apiClient } from '@/lib/apiClient';
 import { Settings, Plus, X, RefreshCw, GripVertical } from "lucide-react";
 import SectionCard from "@/components/SectionCard";
 import {
@@ -63,16 +65,33 @@ export default function ProjectConfig({ initialDynamicFields }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  const { data: apiProjectsData } = useQuery({
+    queryKey: ['projects'],
+    queryFn: async () => {
+      const response = await apiClient.getProjects();
+      if (!response.success) throw new Error('Failed to load projects');
+      return response.projects;
+    }
+  });
+
   useEffect(() => {
+    let initialList = [];
     if (initialDynamicFields) {
       const projectField = initialDynamicFields.find(
         (f) => f.name === "project",
       );
       if (projectField && projectField.options) {
-        setProjects(projectField.options);
+        initialList = projectField.options;
       }
     }
-  }, [initialDynamicFields]);
+    
+    if (apiProjectsData && Array.isArray(apiProjectsData)) {
+      const merged = Array.from(new Set([...initialList, ...apiProjectsData])).filter(Boolean);
+      setProjects(merged);
+    } else if (initialList.length > 0) {
+      setProjects(initialList);
+    }
+  }, [initialDynamicFields, apiProjectsData]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {

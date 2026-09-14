@@ -32,6 +32,7 @@ import Toast from '@/components/Toast';
 import AuditLogModal from '@/components/AuditLogModal';
 import TaskFormModal from '@/components/TaskFormModal';
 import LogTimeModal from '@/components/LogTimeModal';
+import EditLogModal from '@/components/EditLogModal';
 import TaskListView from '@/components/TaskListView';
 import { CONFIG } from '@/lib/config';
 import { apiClient } from '@/lib/apiClient';
@@ -61,11 +62,30 @@ export default function UserDashboard() {
   } = useSelector((state) => state.tasks);
 
   // Local UI states (viewMode, modals, toast)
+  const parseLocalDate = (dateStr) => {
+    if (!dateStr) return null;
+    if (dateStr instanceof Date) return dateStr;
+    const parts = String(dateStr).split('T')[0].split('-').map(Number);
+    if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+      return new Date(parts[0], parts[1] - 1, parts[2], 0, 0, 0, 0);
+    }
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
+  const formatLocalDate = (date) => {
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
     const weekStartParam = searchParams.get('weekStart');
     if (weekStartParam) {
-      const d = new Date(weekStartParam);
-      if (!isNaN(d.getTime())) return d;
+      const parsed = parseLocalDate(weekStartParam);
+      if (parsed) return parsed;
     }
     const d = new Date();
     d.setDate(d.getDate() - d.getDay()); // Sunday
@@ -74,7 +94,7 @@ export default function UserDashboard() {
   });
 
   useEffect(() => {
-    const dStr = currentWeekStart.toISOString().split('T')[0];
+    const dStr = formatLocalDate(currentWeekStart);
     const newParams = new URLSearchParams(searchParams);
     if (newParams.get('weekStart') !== dStr) {
       newParams.set('weekStart', dStr);
@@ -85,7 +105,9 @@ export default function UserDashboard() {
   const [viewMode, setViewMode] = useState('table');
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showLogTimeModal, setShowLogTimeModal] = useState(false);
+  const [showEditLogModal, setShowEditLogModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
+  const [editingLogEntry, setEditingLogEntry] = useState(null);
   const [taskForm, setTaskForm] = useState({
     name: '',
     nickName: '',
@@ -98,7 +120,7 @@ export default function UserDashboard() {
   });
   const [initialTaskForm, setInitialTaskForm] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+  const [orgStatuses, setOrgStatuses] = useState([]);
   const [toastMessage, setToastMessage] = useState('');
 
 
@@ -330,28 +352,59 @@ export default function UserDashboard() {
     }
   };
 
+  const handleSaveLogEntry = async (logData) => {
+    setIsSubmitting(true);
+    try {
+      const res = await apiClient.updateTimeEntry(logData.taskId, logData.entryId, {
+        date: logData.date,
+        allocatedHours: logData.allocatedHours,
+        billedHours: logData.billedHours,
+        actualHours: logData.actualHours,
+        status: logData.status,
+        note: logData.note
+      });
+
+      if (res.success) {
+        setShowEditLogModal(false);
+        setEditingLogEntry(null);
+        triggerToast('Log entry details updated successfully!');
+        handleFetchTasks(page, true);
+      } else {
+        alert(res.error || 'Failed to update log details.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update log details.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const openEditModal = (task) => {
-    // Find the original unflattened task to populate the edit form accurately
     const originalTask = tasks.find(t => t._id === (task._originalId || task._id)) || task;
 
-    let entryId = null;
-    let entryDate = originalTask.workDate || new Date().toISOString();
-    let entryAlloc = originalTask.bill?.allocatedHours || '';
-    let entryBilled = originalTask.bill?.billedHours || '';
-    let entryActual = originalTask.bill?.actualHours || '';
+    if ((task._id && task._id.includes('-')) || task._entryId) {
+      const entryId = task._entryId || (task._id ? task._id.split('-')[1] : null);
+      const entry = originalTask.timeEntries?.find(e => String(e._id) === String(entryId));
 
-    if (task._id && task._id.includes('-')) {
-      entryId = task._id.split('-')[1];
-      const entry = originalTask.timeEntries?.find(e => e._id === entryId);
-      if (entry) {
-        entryDate = entry.date;
-        entryAlloc = entry.allocatedHours;
-        entryBilled = entry.billedHours;
-        entryActual = entry.actualHours;
-      }
+      setEditingLogEntry({
+        taskId: originalTask._id,
+        entryId: entryId,
+        taskName: originalTask.name,
+        name: originalTask.name,
+        date: entry ? entry.date : (task.workDate || originalTask.workDate),
+        allocatedHours: entry ? entry.allocatedHours : task.bill?.allocatedHours,
+        billedHours: entry ? entry.billedHours : task.bill?.billedHours,
+        actualHours: entry ? entry.actualHours : task.bill?.actualHours,
+        status: originalTask.status,
+        note: entry ? entry.note : ''
+      });
+      setShowEditLogModal(true);
+      return;
     }
 
-    setEditingTask({ ...originalTask, _entryId: entryId });
+    // Otherwise, edit parent task metadata
+    setEditingTask(originalTask);
     const newForm = {
       name: originalTask.name,
       nickName: originalTask.nickName || '',
@@ -359,12 +412,12 @@ export default function UserDashboard() {
       project: originalTask.project,
       source: originalTask.source,
       typeOfWork: originalTask.typeOfWork,
-      allocatedHours: entryAlloc,
-      billedHours: entryBilled,
-      actualHours: entryActual,
+      allocatedHours: originalTask.bill?.allocatedHours || '',
+      billedHours: originalTask.bill?.billedHours || '',
+      actualHours: originalTask.bill?.actualHours || '',
       clickupId: originalTask.clickupId || '',
       dynamicValues: originalTask.dynamicValues || {},
-      workDate: entryDate
+      workDate: originalTask.workDate
     };
     setTaskForm(newForm);
     setInitialTaskForm(JSON.stringify(newForm));
@@ -643,6 +696,7 @@ export default function UserDashboard() {
                   return handleDeleteTask(task ? task._originalId : id);
                 }}
                 dynamicFields={dynamicFields}
+                statusColors={enabledFields?.statusColors || {}}
               />
             ) : (
               <TaskCards
@@ -665,6 +719,7 @@ export default function UserDashboard() {
                   return handleDeleteTask(task ? task._originalId : id);
                 }}
                 dynamicFields={dynamicFields}
+                statusColors={enabledFields?.statusColors || {}}
               />
             )}
           </>
@@ -696,6 +751,19 @@ export default function UserDashboard() {
         onClose={() => setShowLogTimeModal(false)}
         tasks={tasks}
         onSubmit={handleLogTimeSubmit}
+      />
+
+      {/* Edit Log Details Modal */}
+      <EditLogModal
+        isOpen={showEditLogModal}
+        onClose={() => {
+          setShowEditLogModal(false);
+          setEditingLogEntry(null);
+        }}
+        logEntry={editingLogEntry}
+        onSave={handleSaveLogEntry}
+        saving={isSubmitting}
+        statuses={orgStatuses}
       />
 
 

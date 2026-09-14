@@ -11,7 +11,7 @@ export default function UserLayout({ children, taskModal }) {
     return (
       <div className="min-h-screen bg-black text-slate-100 font-sans selection:bg-orange-500 selection:text-white flex">
         <Sidebar />
-        <div className="flex-1 md:pl-64 flex flex-col min-h-screen overflow-x-hidden">
+        <div className="flex-1 md:pl-64 flex flex-col min-h-screen overflow-x-hidden pt-14 md:pt-0">
           <div className="flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {children}
           </div>

@@ -1,109 +1,75 @@
-# TaskFlow & Billing Matrix System
+# Task & Time Management Platform (Bill Archive)
 
-A modern, multi-tenant Next.js application built with **Redux Toolkit**, **MongoDB / In-Memory Store**, and a sleek **Pure Black Dark Theme** for managing dynamic project tasks, hours metrics, custom organization fields, and billing workflows.
-
----
-
-## 🌟 Key Features
-
-* **Redux Toolkit Architecture**:
-  * Centralized state management across 8 specialized slices (`auth`, `org`, `task`, `bill`, `report`, `admin`, `superAdmin`, `ui`).
-  * Async thunks for decoupled API interactions and zero prop drilling.
-
-* **Multi-Tenant Workspace Structure**:
-  * Intercepted dynamic routes for tasks and authentication (`/[orgId]/[userId]`).
-  * Multi-organization tenant isolation with role-based access controls (`superAdmin`, `admin`, `user`).
-
-* **Dynamic Field & Enabled Built-in Fields Schema**:
-  * **Org Admin Controls**: Organization admins can toggle standard built-in fields (`allocatedHours`, `billedHours`, `actualHours`, `source`, `typeOfWork`, `project`, `clickupId`) using interactive checkboxes.
-  * Custom metadata fields schema with dropdowns, toggles, selectors, and text inputs.
-
-* **Task Lifecycle & Filtering**:
-  * Status workflow history tracking (`inprocess`, `dev`, `ready for qa`, `qa complete`, `ready for code review`, `complete`, etc.).
-  * Real-time metrics calculations (Allocated, Billed, Actual hours, and Efficiency Variance).
-  * Flexible task filtering by source, work type, project, timeframe, and custom fields.
-
-* **Intercepted Route Task Modal**:
-  * Native modal overlay via Next.js parallel/intercepted routes (`@taskModal/(.)task-create`) with direct URL bookmarkability.
+A high-performance, enterprise-ready multi-tenant task and time log management system built with **Next.js 16 (App Router)**, **Redux Toolkit**, **TanStack Query v5**, and **PostgreSQL**.
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Key Features & Capabilities
 
-### Prerequisites
-
-* **Node.js**: v18.x or higher
-* **Package Manager**: npm, yarn, or pnpm
-
-### Installation
-
-1. **Clone the repository**:
-   ```bash
-   git clone <repository-url>
-   cd bill
-   ```
-
-2. **Install dependencies**:
-   ```bash
-   npm install
-   ```
-
-3. **Configure Environment Variables**:
-   Create a `.env.local` file in the root directory:
-   ```env
-   MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/taskflow?retryWrites=true&wfocus=majority
-   JWT_SECRET=your_jwt_secret_key_here
-   ```
-   > **Note**: If `MONGODB_URI` is omitted, the application automatically falls back to an **In-Memory Store** (Demo Mode) with pre-loaded mock data.
-
-4. **Run the Development Server**:
-   ```bash
-   npm run dev
-   ```
-   Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-5. **Build for Production**:
-   ```bash
-   npm run build
-   npm start
-   ```
+- **Sunday-to-Saturday Weekly Dashboard (`TaskListView.js`)**: Strict weekly timeframe navigation with `Current Week`, `Previous Week`, and `Next Week` relative badges.
+- **Dedicated Time Log Editor (`EditLogModal.js`)**: Edit specific time log entries with custom dates, allocated, billed, and actual hours without corrupting parent task summary metrics.
+- **Organization-Wide Projects View (`/projects`)**: Dropdown-driven project list displaying all organization-wide tasks and assigned user details (`task.user`, `task.author_name`, `task.email`).
+- **Custom Status & Color Management (`StatusConfig.js`)**: Create, edit, or delete custom statuses and assign dynamic status colors across table, card, and list views.
+- **Browser-Based Documentation Viewer (`/docs`)**: Interactive, browser-accessible documentation suite for architecture, APIs, and guidelines.
+- **Zero-Dependency Automated Testing (`npm test`)**: Built-in test runner validating week date parsing, project synchronization, and status color lookups.
 
 ---
 
-## 📁 Project Structure
+## 📚 Documentation Map
 
-```
-src/
-├── app/
-│   ├── [orgId]/[userId]/              # Dynamic multi-tenant dashboard
-│   │   ├── @taskModal/                # Intercepted modal parallel route
-│   │   ├── profile/                   # User profile & Org Admin configuration
-│   │   ├── project/[name]/            # Project-specific workspace view
-│   │   └── task-create/               # Standalone task creation route
-│   ├── api/                           # Backend Next.js API route handlers
-│   ├── login/                         # Sign-in route
-│   ├── register/                      # Organization registration route
-│   └── superadmin/                    # Multi-tenant provision controls
-├── components/                        # Clean UI components (Table, Cards, Filters, MetricsBar)
-├── lib/
-│   ├── db/                            # MongoDB Atlas & In-Memory Adapters
-│   ├── services/                      # Business logic layer (taskService, userService)
-│   └── store/                         # Redux store & 8 slice definitions
+The repository maintains formal technical documentation under the `docs/` directory, accessible via filesystem or browser (`/docs/...`):
+
+| Category | File Path | Browser Link | Summary |
+| :--- | :--- | :--- | :--- |
+| **Architecture** | [`docs/architecture/overview.md`](docs/architecture/overview.md) | `/docs/architecture/overview` | Core architectural patterns, state management, DB layer |
+| **Project Structure** | [`docs/development/project-structure.md`](docs/development/project-structure.md) | `/docs/development/project-structure` | Directory tree & file responsibility map |
+| **Coding Standards** | [`docs/development/coding-standards.md`](docs/development/coding-standards.md) | `/docs/development/coding-standards` | Next.js 16 conventions, API standards, date rules |
+| **Task Management** | [`docs/features/task-management.md`](docs/features/task-management.md) | `/docs/features/task-management` | Task workflows, creation modals, status history |
+| **Projects & Orgs** | [`docs/features/projects-and-organizations.md`](docs/features/projects-and-organizations.md) | `/docs/features/projects-and-organizations` | Multi-tenancy, dropdown project viewer, user assignments |
+| **Time Logs & Reports**| [`docs/features/time-logging-and-reports.md`](docs/features/time-logging-and-reports.md) | `/docs/features/time-logging-and-reports` | Time log entry modal, edit log vs task logic, reports |
+| **API Endpoints** | [`docs/api/endpoints.md`](docs/api/endpoints.md) | `/docs/api/endpoints` | Complete RESTful API documentation |
+| **Testing Strategy** | [`docs/testing/testing-strategy.md`](docs/testing/testing-strategy.md) | `/docs/testing/testing-strategy` | Automated test suite execution and test specs |
+| **Deployment** | [`docs/deployment/deployment.md`](docs/deployment/deployment.md) | `/docs/deployment/deployment` | PostgreSQL and Vercel environment setup |
+| **AI Agent Prompt** | [`prompts/default-project-prompt.md`](prompts/default-project-prompt.md) | N/A | Reusable prompt for future AI pair programming |
+
+---
+
+## 🛠️ Getting Started
+
+### 1. Install Dependencies
+```bash
+npm install
 ```
 
+### 2. Run Database Migrations
+```bash
+npm run db:migrate
+```
+
+### 3. Run Automated Tests
+```bash
+npm test
+```
+
+### 4. Start Development Server
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
 ---
 
-## 🛠️ API & Database Architecture
+## 🧪 Testing Suite
 
-* **Database Service Abstraction** (`src/lib/db/dbService.js`): Automatically selects between **MongoDB Atlas** (Mongoose) and **In-Memory Store** based on environment connectivity.
-* **Redux Store Slices**:
-  * `authSlice`: Handles user authentication state and session verification.
-  * `orgSlice`: Manages dynamic fields and enabled field checklist configurations.
-  * `taskSlice`: Controls task creation, editing, filtering, and metric aggregations.
-  * `uiSlice`: Controls active view modes (Table vs. Cards) and toast notification displays.
+Run the zero-dependency test suite via Node.js native test runner:
 
----
-
-## 📄 License
-
-This project is licensed under the MIT License.
+```bash
+npm test
+# or
+npm run test:unit
+```
+All 7 unit & integration tests validate:
+- Sunday-to-Saturday date boundaries & timezone safety.
+- Week status badge assignment (`Current Week`, `Previous Week`, `Next Week`).
+- Project list deduplication and merging across sources.
+- Custom status color lookup and default fallback handling.

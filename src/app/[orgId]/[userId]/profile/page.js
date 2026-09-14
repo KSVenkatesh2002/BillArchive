@@ -958,7 +958,17 @@ export default function ProfilePage() {
             <StatusConfig 
               statuses={orgStatuses} 
               statusColors={enabledFields.statusColors || {}}
-              onSave={(newColors) => handleSaveOrgConfig({ ...enabledFields, statusColors: newColors })}
+              onSave={async (newColors, newStatuses) => {
+                if (newStatuses) {
+                  try {
+                    await apiClient.updateStatuses(newStatuses, orgId);
+                    setOrgStatuses(newStatuses);
+                  } catch (e) {
+                    console.error('Failed to update statuses list:', e);
+                  }
+                }
+                handleSaveOrgConfig({ ...enabledFields, statusColors: newColors });
+              }}
               saving={savingOrg}
             />
           </div>

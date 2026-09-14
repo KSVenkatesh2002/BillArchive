@@ -6,7 +6,13 @@ import SectionCard from "@/components/SectionCard";
 import { CONFIG } from "@/lib/config";
 
 export default function StatusConfig({ statuses = [], statusColors = {}, onSave, saving }) {
+  const [statusList, setStatusList] = useState([]);
   const [colors, setColors] = useState({});
+  const [newStatus, setNewStatus] = useState('');
+
+  useEffect(() => {
+    setStatusList(statuses);
+  }, [statuses]);
 
   useEffect(() => {
     setColors(statusColors);
@@ -16,8 +22,22 @@ export default function StatusConfig({ statuses = [], statusColors = {}, onSave,
     setColors(prev => ({ ...prev, [status]: colorValue }));
   };
 
+  const handleAddStatus = (e) => {
+    e.preventDefault();
+    const val = newStatus.trim().toLowerCase();
+    if (!val) return;
+    if (statusList.some(s => s.toLowerCase() === val)) return;
+    setStatusList(prev => [...prev, val]);
+    setColors(prev => ({ ...prev, [val]: 'bg-zinc-500' }));
+    setNewStatus('');
+  };
+
+  const handleRemoveStatus = (statusToRemove) => {
+    setStatusList(prev => prev.filter(s => s !== statusToRemove));
+  };
+
   const handleSave = () => {
-    onSave(colors);
+    onSave(colors, statusList);
   };
 
   return (
@@ -25,21 +45,39 @@ export default function StatusConfig({ statuses = [], statusColors = {}, onSave,
       <div>
         <h3 className="text-sm font-bold text-white uppercase tracking-wider pb-3 border-b border-zinc-800 flex items-center gap-2">
           <Settings className="w-4 h-4 text-orange-500" />
-          <span>Status Color Configuration</span>
+          <span>Status & Color Configuration</span>
         </h3>
-        <p className="text-[10.5px] text-zinc-405 mt-1">
-          Assign a distinct color to each task status for your organization.
+        <p className="text-[10.5px] text-zinc-400 mt-1">
+          Add custom statuses and assign distinct colors for your organization.
         </p>
       </div>
 
       <div className="space-y-4 mt-4">
+        {/* Add custom status form */}
+        <form onSubmit={handleAddStatus} className="flex gap-2">
+          <input
+            type="text"
+            placeholder="New custom status name..."
+            value={newStatus}
+            onChange={(e) => setNewStatus(e.target.value)}
+            className="flex-1 bg-black border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-700 focus:outline-none focus:border-orange-500"
+          />
+          <button
+            type="submit"
+            disabled={!newStatus.trim()}
+            className="bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-2 rounded-xl text-xs font-semibold disabled:opacity-50 flex items-center gap-1 transition"
+          >
+            Add Status
+          </button>
+        </form>
+
         <div className="max-h-80 overflow-y-auto pr-1 space-y-3">
-          {statuses.length === 0 ? (
-            <div className="text-center py-6 text-zinc-555 text-xs">
+          {statusList.length === 0 ? (
+            <div className="text-center py-6 text-zinc-500 text-xs">
               No statuses available.
             </div>
           ) : (
-            statuses.map((status) => {
+            statusList.map((status) => {
               const currentColor = colors[status] || 'bg-zinc-500';
               return (
                 <div key={status} className="p-3 bg-black border border-zinc-800 rounded-xl flex justify-between items-center group relative">
@@ -59,6 +97,14 @@ export default function StatusConfig({ statuses = [], statusColors = {}, onSave,
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                       ))}
                     </select>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveStatus(status)}
+                      className="text-zinc-600 hover:text-rose-400 text-xs px-1.5 py-1 transition"
+                      title="Remove Status"
+                    >
+                      ✕
+                    </button>
                   </div>
                 </div>
               );
@@ -77,7 +123,7 @@ export default function StatusConfig({ statuses = [], statusColors = {}, onSave,
               Saving...
             </>
           ) : (
-            "Save Status Colors"
+            "Save Statuses & Colors"
           )}
         </button>
       </div>
