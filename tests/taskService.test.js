@@ -91,3 +91,17 @@ test('Updating time entry recalculates parent task bill totals', () => {
   assert.equal(totalAllocated - totalActual, -1); // Variance -1 (Over by 1h)
 });
 
+test('Deleting a single time entry from a multi-entry task removes only specified entry', () => {
+  const timeEntries = [
+    { _id: 'te-1', date: '2026-09-15', allocatedHours: 4, billedHours: 4, actualHours: 4 },
+    { _id: 'te-2', date: '2026-09-16', allocatedHours: 2, billedHours: 2, actualHours: 2 }
+  ];
+
+  const targetEntryId = 'te-1';
+  const remainingEntries = timeEntries.filter(e => String(e._id || e.id) !== String(targetEntryId));
+
+  assert.equal(remainingEntries.length, 1);
+  assert.equal(remainingEntries[0]._id, 'te-2');
+  assert.equal(remainingEntries[0].allocatedHours, 2);
+});
+

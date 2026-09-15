@@ -453,6 +453,20 @@ export default function UserDashboard() {
     }
   };
 
+  const handleSmartDelete = (id) => {
+    const task = flattenedTasks.find(t => t._id === id);
+    const taskId = task?._originalId || (typeof id === 'string' && id.includes('::') ? id.split('::')[0] : id);
+    const entryId = task?._entryId || (typeof id === 'string' && id.includes('::') ? id.split('::')[1] : null);
+
+    // If deleting a specific time log from a task with multiple logs, delete only that log entry
+    if (task && entryId && (task._entryCount > 1)) {
+      return handleDeleteTimeEntry(taskId, entryId);
+    }
+
+    // Otherwise, delete the task
+    return handleDeleteTask(taskId);
+  };
+
   const triggerToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 3500);
@@ -478,6 +492,7 @@ export default function UserDashboard() {
   const flattenedTasks = useMemo(() => {
     const list = [];
     tasks.forEach(task => {
+      const entryCount = task.timeEntries?.length || 0;
       if (task.timeEntries && task.timeEntries.length > 0) {
         task.timeEntries.forEach(te => {
           const teId = te._id || te.id;
@@ -486,6 +501,7 @@ export default function UserDashboard() {
             _id: `${task._id}::${teId}`,
             _originalId: task._id,
             _entryId: teId,
+            _entryCount: entryCount,
             workDate: te.date,
             bill: {
               allocatedHours: te.allocatedHours || 0,
@@ -495,7 +511,7 @@ export default function UserDashboard() {
           });
         });
       } else {
-        list.push({ ...task, _originalId: task._id });
+        list.push({ ...task, _originalId: task._id, _entryId: null, _entryCount: 0 });
       }
     });
     // Filter strictly by the current week bounds
@@ -621,11 +637,7 @@ export default function UserDashboard() {
               handleQuickStatusChange(task ? task._originalId : id, status);
             }}
             setActiveHistoryTask={(val) => dispatch(setActiveHistoryTask(val))}
-            deleteTask={(id) => {
-              const task = flattenedTasks.find(t => t._id === id);
-              const targetId = task?._originalId || (typeof id === 'string' && id.includes('::') ? id.split('::')[0] : id);
-              return handleDeleteTask(targetId);
-            }}
+            deleteTask={handleSmartDelete}
             dynamicFields={dynamicFields}
             currentWeekStart={currentWeekStart}
             onPrevWeek={handlePrevWeek}
@@ -686,11 +698,7 @@ export default function UserDashboard() {
                 }}
                 setActiveHistoryTask={(val) => dispatch(setActiveHistoryTask(val))}
                 openEditModal={openEditModal}
-                deleteTask={(id) => {
-                  const task = flattenedTasks.find(t => t._id === id);
-                  const targetId = task?._originalId || (typeof id === 'string' && id.includes('::') ? id.split('::')[0] : id);
-                  return handleDeleteTask(targetId);
-                }}
+                deleteTask={handleSmartDelete}
                 dynamicFields={dynamicFields}
                 statusColors={enabledFields?.statusColors || {}}
               />
@@ -704,11 +712,7 @@ export default function UserDashboard() {
                 }}
                 setActiveHistoryTask={(val) => dispatch(setActiveHistoryTask(val))}
                 openEditModal={openEditModal}
-                deleteTask={(id) => {
-                  const task = flattenedTasks.find(t => t._id === id);
-                  const targetId = task?._originalId || (typeof id === 'string' && id.includes('::') ? id.split('::')[0] : id);
-                  return handleDeleteTask(targetId);
-                }}
+                deleteTask={handleSmartDelete}
                 dynamicFields={dynamicFields}
                 statusColors={enabledFields?.statusColors || {}}
               />
@@ -753,6 +757,7 @@ export default function UserDashboard() {
         }}
         logEntry={editingLogEntry}
         onSave={handleSaveLogEntry}
+        onDelete={handleDeleteTimeEntry}
         saving={isSubmitting}
         statuses={orgStatuses}
       />

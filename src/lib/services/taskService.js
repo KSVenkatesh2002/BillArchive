@@ -429,7 +429,7 @@ export const taskService = {
     const existingTask = await dbService.findTaskById(taskId);
     if (!existingTask) throw new Error('Task not found');
 
-    const updatedEntries = (existingTask.timeEntries || []).filter(e => e._id.toString() !== entryId);
+    const updatedEntries = (existingTask.timeEntries || []).filter(e => String(e._id || e.id || '') !== String(entryId));
 
     const totalAllocated = updatedEntries.reduce((sum, e) => sum + (e.allocatedHours || 0), 0);
     const totalBilled = updatedEntries.reduce((sum, e) => sum + (e.billedHours || 0), 0);

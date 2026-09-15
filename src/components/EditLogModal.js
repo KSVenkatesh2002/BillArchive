@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Clock, Calendar, CheckCircle2, RefreshCw } from "lucide-react";
+import { X, Clock, Calendar, CheckCircle2, RefreshCw, Trash2 } from "lucide-react";
 import { CONFIG } from "@/lib/config";
 
 export default function EditLogModal({
@@ -9,6 +9,7 @@ export default function EditLogModal({
   onClose,
   logEntry,
   onSave,
+  onDelete,
   saving = false,
   statuses = []
 }) {
@@ -217,32 +218,51 @@ export default function EditLogModal({
           </div>
 
           {/* Footer Actions */}
-          <div className="pt-3 border-t border-zinc-800 flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={saving}
-              className="px-4 py-2.5 rounded-xl border border-zinc-800 text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-900 transition disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-5 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition shadow-lg shadow-orange-600/20 disabled:opacity-50 flex items-center gap-2"
-            >
-              {saving ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  Saving Log Details...
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  Save Log Details
-                </>
-              )}
-            </button>
+          <div className="pt-3 border-t border-zinc-800 flex items-center justify-between">
+            {onDelete ? (
+              <button
+                type="button"
+                onClick={() => {
+                  const taskId = logEntry.taskId || logEntry._originalId || logEntry._id;
+                  const entryId = logEntry.entryId || logEntry._entryId;
+                  onClose();
+                  onDelete(taskId, entryId);
+                }}
+                disabled={saving}
+                className="px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-xs font-semibold transition disabled:opacity-50 flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete Log Entry
+              </button>
+            ) : <div />}
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={saving}
+                className="px-4 py-2.5 rounded-xl border border-zinc-800 text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-900 transition disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="px-5 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition shadow-lg shadow-orange-600/20 disabled:opacity-50 flex items-center gap-2"
+              >
+                {saving ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    Saving Log Details...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Save Log Details
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </form>
       </div>
