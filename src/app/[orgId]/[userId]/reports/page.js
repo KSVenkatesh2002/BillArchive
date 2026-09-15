@@ -52,6 +52,8 @@ export default function ReportsPage() {
       const res = await apiClient.getReport(params);
       return res.success ? res.tasks || [] : [];
     },
+  });
+
   const taskList = reportQueryData || [];
 
   // Generate report text locally
