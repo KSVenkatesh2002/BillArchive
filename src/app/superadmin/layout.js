@@ -2,6 +2,7 @@
 
 import { useState, useEffect, createContext, useContext } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { apiClient } from "@/lib/apiClient";
 import { CONFIG } from "@/lib/config";
@@ -22,58 +23,32 @@ export const AdminContext = createContext(null);
 export const useAdmin = () => useContext(AdminContext);
 
 export default function SuperAdminLayout({ children }) {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [loadingAuth, setLoadingAuth] = useState(true);
-  const [adminData, setAdminData] = useState(null);
-  const [loadingData, setLoadingData] = useState(true);
-  const [error, setError] = useState("");
   const router = useRouter();
   const pathname = usePathname();
+  const queryClient = useQueryClient();
 
-  const fetchAdminData = async () => {
-    console.log('try1')
-    setLoadingData(true);
-    try {
-      console.log('try2')
-      const data = await apiClient.getAdminData();
-      console.log('try3')
-      if (data.success) {
-        setAdminData(data);
-      } else {
-        setError(data.error || "Failed to fetch administrator data.");
-      }
-    } catch (err) {
-      setError("An error occurred while fetching system data.");
-      console.log({err});
-    } finally {
-      setLoadingData(false);
-      console.log("final")
-    }
-  };
+  // Auth Query
+  const { data: authData, isLoading: loadingAuth, error: authError } = useQuery({
+    queryKey: ['adminAuth'],
+    queryFn: async () => apiClient.checkAuth(),
+    staleTime: 5 * 60 * 1000,
+  });
 
-  useEffect(() => {
-    async function init() {
-      try {
-        const auth = await apiClient.checkAuth();
-        const isSuperAdmin = auth.user?.role === "superAdmin" && auth.user?.email?.toLowerCase() === "admin@dialedin.com";
-          console.log({auth})
-        if (auth.authenticated && isSuperAdmin) {
-          setCurrentUser(auth.user);
-          fetchAdminData();
-        } else {
-          setError(
-            "Access Denied: You must be logged in as a super administrator.",
-          );
-          setLoadingData(false)
-        }
-      } catch (err) {
-        setError("Authentication check failed.");
-      } finally {
-        setLoadingAuth(false);
-      }
-    }
-    init();
-  }, []);
+  const currentUser = authData?.authenticated ? authData.user : null;
+  const isSuperAdmin = currentUser?.role === "superAdmin" || (currentUser?.email || "").toLowerCase() === "admin@dialedin.com";
+
+  // Admin Data Query
+  const { data: adminData, isLoading: loadingData, refetch: fetchAdminData } = useQuery({
+    queryKey: ['adminData'],
+    queryFn: async () => {
+      const res = await apiClient.getAdminData();
+      return res.success ? res : null;
+    },
+    enabled: Boolean(authData?.authenticated && isSuperAdmin),
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const error = !loadingAuth && !isSuperAdmin ? "Access Denied: You must be logged in as a super administrator." : "";
 
   const handleLogout = async () => {
     try {

@@ -1,13 +1,34 @@
 # Time Logging & Reports Documentation
 
-## Time Logging System
-- **Adding Log Entries**: Users log hours via `LogTimeModal.js` (`allocatedHours`, `billedHours`, `actualHours`, and entry date).
-- **Editing Log Entries**:
-  - Clicking the pencil icon on a specific log entry row opens `EditLogModal.js` ("Edit Log Details").
-  - Displays the specific log entry date, allocated, billed, and actual hours.
-  - Submit button explicitly labeled "Save Log Details".
-  - Calls `apiClient.updateTimeEntry(taskId, entryId, payload)` to update the individual time log without corrupting the parent task's total hours summary.
+## 1. Hour Allocation Metrics
 
-## Reports & Analytics (`/reports`)
-- Generates timeframe-based and project-based work summaries.
-- Exports text and CSV logs for client billing and project metrics.
+Every task maintains three primary hour allocation dimensions:
+- **Allocated Hours**: The initial estimated hour budget.
+- **Billed Hours**: The billable hours invoiced or logged.
+- **Actual Hours**: The total real time spent by developers.
+
+### Variance Formula
+$$\text{Variance} = \text{Allocated Hours} - \text{Actual Hours}$$
+
+- If **Variance < 0**: Highlighted in red as `Over by X.Xh`.
+- If **Variance >= 0**: Indicated as `On track`.
+
+---
+
+## 2. Time Log Entry Logs
+
+Tasks can contain multiple nested time entries. Each entry logs:
+- `date`: Work date (`YYYY-MM-DD`).
+- `hours`: Time spent.
+- `note`: Description of work completed.
+- `status`: Work status associated with that log instance.
+
+---
+
+## 3. Automated Report Generator (`/reports`)
+
+The Reports view generates formatted client billing summaries ready for email or invoice inclusion:
+- **Project Filter**: Filter by individual project or generate for all projects.
+- **Date Range**: Select custom start and end date bounds.
+- **Content Toggles**: Toggle hour breakdowns, audit histories, ClickUp links, metadata tags, and total summaries.
+- **Task Exclusion**: Check/uncheck specific tasks to exclude them from the generated report text.

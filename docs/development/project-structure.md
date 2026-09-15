@@ -1,45 +1,44 @@
-# Project Structure
-
-## Directory Layout
+# Project Structure & Navigation Guide
 
 ```
-bill/
-├── docs/                        # Formal System Documentation
-│   ├── architecture/            # Architecture & Core Concepts
-│   ├── development/             # Guidelines & Standards
-│   ├── features/                # Domain Feature Specs
-│   ├── api/                     # API Endpoint Docs
-│   ├── testing/                 # Automated Testing Strategy
-│   └── deployment/              # Deployment Guide
-├── prompts/                     # Reusable AI Prompt Instructions
-│   └── default-project-prompt.md
-├── tests/                       # Automated Test Suite (Node.js Test Runner)
-│   ├── weekDate.test.js
-│   ├── projectsApi.test.js
-│   └── statusColors.test.js
+BillArchive/
+├── docs/                        # Complete System Documentation (Markdown)
+│   ├── api/                     # API specification and endpoints
+│   ├── architecture/            # Architecture overview, stack, and data flow
+│   ├── deployment/              # Vercel & Supabase deployment guides
+│   ├── development/             # Coding standards & directory mapping
+│   ├── features/                # Core features (Tasks, Reports, Multi-tenancy)
+│   └── testing/                 # Testing strategy & coverage guidelines
 ├── src/
-│   ├── app/                     # Next.js App Router Pages & API Routes
-│   │   ├── api/                 # API Handlers (/api/tasks, /api/projects, etc.)
-│   │   ├── docs/                # Browser-based Documentation Viewer (/docs)
-│   │   ├── [orgId]/[userId]/    # Authenticated Org & User Dashboard Pages
-│   │   │   ├── page.js          # Dashboard View
-│   │   │   ├── projects/        # Organization Projects Page
-│   │   │   ├── reports/         # Reports & Analytics Page
-│   │   │   └── profile/         # User & Organization Settings
-│   ├── components/              # Shared UI Components
-│   │   ├── TaskListView.js      # Main Weekly Task Dashboard
-│   │   ├── TaskTable.js         # Table View Component
-│   │   ├── TaskCards.js         # Grid Card View Component
-│   │   ├── TaskFormModal.js     # Task Creation Modal
-│   │   ├── EditLogModal.js      # Dedicated Log Details Edit Modal
-│   │   ├── LogTimeModal.js      # Log Time Entry Modal
-│   │   └── AuditLogModal.js     # Status Audit History Modal
-│   └── lib/                     # Core Business Logic & DB Layer
-│       ├── apiClient.js         # Centralized API Fetcher
-│       ├── config.js            # Global Site Constants & Colors
-│       ├── auth.js              # Authentication Utilities
-│       ├── db/                  # Data Layer (dbService & pgAdapter)
-│       └── store/               # Redux Store & Slices
-├── README.md                    # System Root Overview & Links
-└── package.json                 # Node Scripts & Dependencies
+│   ├── app/                     # Next.js App Router Structure
+│   │   ├── @authModal/          # Parallel Route Intercepting Auth Modals
+│   │   │   ├── (.)login/        # Soft-nav Login Modal
+│   │   │   ├── (.)register/     # Soft-nav Register Modal
+│   │   │   ├── [...catchAll]/   # Catch-all fallback slot handler
+│   │   │   └── default.js       # Default slot export
+│   │   ├── [orgId]/             # Organization Namespace Dynamic Route
+│   │   │   └── [userId]/        # User Workspace Dynamic Route
+│   │   │       ├── [taskId]/    # Individual Task Detail View
+│   │   │       ├── profile/     # User & Organization Preference Config
+│   │   │       ├── projects/    # Organization Project Directory
+│   │   │       ├── reports/     # Time Logging & Billing Text Generator
+│   │   │       └── page.js      # Main Interactive Task Dashboard
+│   │   ├── superadmin/          # System Administration & Diagnostic Panel
+│   │   ├── docs/                # Interactive Documentation System (`/docs`)
+│   │   ├── login/               # Dedicated Full-Page Login
+│   │   ├── register/            # Dedicated Full-Page Register
+│   │   └── layout.js            # Root App Layout with TanStack & Redux Providers
+│   ├── components/              # Reusable UI Components
+│   │   ├── TaskListView.js      # New List View UI with Date Grouping & Copy Button
+│   │   ├── TaskCards.js         # Card Grid View Component
+│   │   ├── TaskTable.js         # Classic Table View Component
+│   │   ├── MetricsBar.js        # Hours Allocation KPI Widgets
+│   │   └── LogTimeModal.js      # Time Entry Logging Modal
+│   ├── lib/                     # Core Business Logic & State Management
+│   │   ├── hooks/               # Custom TanStack Query Hooks (`useTasksQuery`)
+│   │   ├── store/               # Redux Toolkit Slices (`taskSlice`, `authSlice`)
+│   │   ├── db/                  # Database Service & Knex Adapters
+│   │   ├── config.js            # Single Source of Truth Brand Configuration
+│   │   └── apiClient.js         # Universal Frontend API Client Interface
+└── tests/                       # Node.js Test Runner Automated Test Suite
 ```

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { Play, Check, ChevronDown, ChevronRight, Plus, MoreHorizontal, LayoutGrid, List as ListIcon, Filter, Calendar as CalendarIcon, CheckCircle, Clock, Folder, Edit2, Trash2, ChevronLeft } from 'lucide-react';
+import { Play, Check, ChevronDown, ChevronRight, Plus, MoreHorizontal, LayoutGrid, List as ListIcon, Filter, Calendar as CalendarIcon, CheckCircle, Clock, Folder, Edit2, Trash2, ChevronLeft, Copy } from 'lucide-react';
 import TaskCards from './TaskCards';
 
 export default function TaskListView({ 
@@ -10,9 +10,17 @@ export default function TaskListView({
   setActiveHistoryTask, deleteTask, dynamicFields,
   currentWeekStart, onPrevWeek, onNextWeek
 }) {
+  const [copiedId, setCopiedId] = useState(null);
   const params = useParams();
   const userId = params?.userId || "admin";
   const orgId = params?.orgId;
+
+  const handleCopyTaskDetails = (task) => {
+    const text = `id: ${task._originalId || task._id}\nname: ${task.name}\nproject: ${task.project}\ndate: ${new Date(task.workDate || task.createdAt).toLocaleDateString()}\nbill hours: ${task.bill?.billedHours || 0}`;
+    navigator.clipboard.writeText(text);
+    setCopiedId(task._id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
   // Group tasks by date
   const groupedTasks = useMemo(() => {
@@ -259,6 +267,17 @@ export default function TaskListView({
                           {task.type && (
                             <span className="px-2 py-1 text-[9px] font-bold text-zinc-400 bg-zinc-900 border border-zinc-800 rounded">{task.type}</span>
                           )}
+                          <button 
+                            onClick={() => handleCopyTaskDetails(task)} 
+                            title="Copy details as text"
+                            className="p-1.5 text-zinc-500 hover:text-orange-400 rounded border border-zinc-800 bg-zinc-900 hover:bg-zinc-800 transition flex items-center gap-1"
+                          >
+                            {copiedId === task._id ? (
+                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
+                          </button>
                           <button onClick={() => openEditModal(task)} className="p-1.5 text-zinc-500 hover:text-white rounded border border-zinc-800 bg-zinc-900 hover:bg-zinc-800 transition">
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>

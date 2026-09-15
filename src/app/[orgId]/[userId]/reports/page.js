@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import { RefreshCw, Download, Filter, Settings, Link as LinkIcon, CheckCircle, Search, LayoutDashboard, Copy, Check, FileText, Calendar, Eye, Settings2, CheckSquare, Square, ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
 import { apiClient } from '@/lib/apiClient';
 import { generateReportText } from '@/lib/utils/reportGenerator';
@@ -11,13 +12,11 @@ export default function ReportsPage() {
   const { orgId, userId } = useParams();
   const router = useRouter();
 
-  const [projectsList, setProjectsList] = useState([]);
   const [selectedProject, setSelectedProject] = useState('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
   // Task Exclusion checklist
-  const [taskList, setTaskList] = useState([]);
   const [excludedTaskIds, setExcludedTaskIds] = useState(new Set());
 
   // Report Content Toggles
@@ -27,47 +26,33 @@ export default function ReportsPage() {
   const [includeMeta, setIncludeMeta] = useState(true);
   const [includeTotals, setIncludeTotals] = useState(true);
 
-  const [reportText, setReportText] = useState('');
-  const [tasksCount, setTasksCount] = useState(0);
-  const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [activeAccordion, setActiveAccordion] = useState('filter');
 
-  // Accordion states
-  const [activeAccordion, setActiveAccordion] = useState('filter'); // 'filter', 'toggles', 'tasks', or null
+  // TanStack Query for Projects
+  const { data: projectsData } = useQuery({
+    queryKey: ['projects', orgId],
+    queryFn: async () => {
+      const res = await apiClient.getProjects();
+      return res.success ? res.projects : [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  const projectsList = projectsData || [];
 
-  // Fetch projects on mount
-  useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        const data = await apiClient.getProjects();
-        if (data.success && data.projects) {
-          setProjectsList(data.projects);
-        }
-      } catch (err) {
-        console.error('Failed to fetch projects', err);
-      }
-    };
-    fetchProjects();
-  }, []);
+  // TanStack Query for Reports Data
+  const { data: reportQueryData, isFetching: loading, refetch: fetchReport } = useQuery({
+    queryKey: ['reportTasks', selectedProject, startDate, endDate],
+    queryFn: async () => {
+      const params = {};
+      if (selectedProject && selectedProject !== 'all') params.project = selectedProject;
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
 
-  const fetchReport = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (selectedProject && selectedProject !== 'all') params.set('project', selectedProject);
-      if (startDate) params.set('startDate', startDate);
-      if (endDate) params.set('endDate', endDate);
-
-      const data = await apiClient.getReport(Object.fromEntries(params));
-      if (data.success && data.tasks) {
-        setTaskList(data.tasks);
-      }
-    } catch (err) {
-      console.error('Failed to fetch report tasks:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedProject, startDate, endDate]);
+      const res = await apiClient.getReport(params);
+      return res.success ? res.tasks || [] : [];
+    },
+  const taskList = reportQueryData || [];
 
   // Generate report text locally
   useEffect(() => {
