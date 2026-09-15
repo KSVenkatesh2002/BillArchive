@@ -381,21 +381,24 @@ export default function UserDashboard() {
   };
 
   const openEditModal = (task) => {
-    const originalTask = tasks.find(t => t._id === (task._originalId || task._id)) || task;
+    const targetTaskId = task._originalId || (task._id && task._id.includes('::') ? task._id.split('::')[0] : task._id);
+    const originalTask = tasks.find(t => t._id === targetTaskId) || task;
 
-    if ((task._id && task._id.includes('-')) || task._entryId) {
-      const entryId = task._entryId || (task._id ? task._id.split('-')[1] : null);
-      const entry = originalTask.timeEntries?.find(e => String(e._id) === String(entryId));
+    const entryId = task._entryId || (task._id && task._id.includes('::') ? task._id.split('::')[1] : null);
+
+    if (entryId || (originalTask.timeEntries && originalTask.timeEntries.length > 0)) {
+      const targetEntryId = entryId || (originalTask.timeEntries?.[0]?._id || originalTask.timeEntries?.[0]?.id);
+      const entry = originalTask.timeEntries?.find(e => String(e._id || e.id) === String(targetEntryId)) || originalTask.timeEntries?.[0];
 
       setEditingLogEntry({
         taskId: originalTask._id,
-        entryId: entryId,
+        entryId: targetEntryId,
         taskName: originalTask.name,
         name: originalTask.name,
         date: entry ? entry.date : (task.workDate || originalTask.workDate),
-        allocatedHours: entry ? entry.allocatedHours : task.bill?.allocatedHours,
-        billedHours: entry ? entry.billedHours : task.bill?.billedHours,
-        actualHours: entry ? entry.actualHours : task.bill?.actualHours,
+        allocatedHours: entry ? entry.allocatedHours : (task.bill?.allocatedHours ?? originalTask.bill?.allocatedHours ?? 0),
+        billedHours: entry ? entry.billedHours : (task.bill?.billedHours ?? originalTask.bill?.billedHours ?? 0),
+        actualHours: entry ? entry.actualHours : (task.bill?.actualHours ?? originalTask.bill?.actualHours ?? 0),
         status: originalTask.status,
         note: entry ? entry.note : ''
       });
@@ -476,10 +479,12 @@ export default function UserDashboard() {
     tasks.forEach(task => {
       if (task.timeEntries && task.timeEntries.length > 0) {
         task.timeEntries.forEach(te => {
+          const teId = te._id || te.id;
           list.push({
             ...task,
-            _id: `${task._id}-${te._id}`,
+            _id: `${task._id}::${teId}`,
             _originalId: task._id,
+            _entryId: teId,
             workDate: te.date,
             bill: {
               allocatedHours: te.allocatedHours || 0,
@@ -617,13 +622,8 @@ export default function UserDashboard() {
             setActiveHistoryTask={(val) => dispatch(setActiveHistoryTask(val))}
             deleteTask={(id) => {
               const task = flattenedTasks.find(t => t._id === id);
-              if (task && id.includes('-')) {
-                const [taskId, entryId] = id.split('-');
-                if (entryId !== 'undefined') {
-                  return handleDeleteTimeEntry(taskId, entryId);
-                }
-              }
-              return handleDeleteTask(task ? task._originalId : id);
+              const targetId = task?._originalId || (typeof id === 'string' && id.includes('::') ? id.split('::')[0] : id);
+              return handleDeleteTask(targetId);
             }}
             dynamicFields={dynamicFields}
             currentWeekStart={currentWeekStart}
@@ -687,13 +687,8 @@ export default function UserDashboard() {
                 openEditModal={openEditModal}
                 deleteTask={(id) => {
                   const task = flattenedTasks.find(t => t._id === id);
-                  if (task && id.includes('-')) {
-                    const [taskId, entryId] = id.split('-');
-                    if (entryId !== 'undefined') {
-                      return handleDeleteTimeEntry(taskId, entryId);
-                    }
-                  }
-                  return handleDeleteTask(task ? task._originalId : id);
+                  const targetId = task?._originalId || (typeof id === 'string' && id.includes('::') ? id.split('::')[0] : id);
+                  return handleDeleteTask(targetId);
                 }}
                 dynamicFields={dynamicFields}
                 statusColors={enabledFields?.statusColors || {}}
@@ -710,13 +705,8 @@ export default function UserDashboard() {
                 openEditModal={openEditModal}
                 deleteTask={(id) => {
                   const task = flattenedTasks.find(t => t._id === id);
-                  if (task && id.includes('-')) {
-                    const [taskId, entryId] = id.split('-');
-                    if (entryId !== 'undefined') {
-                      return handleDeleteTimeEntry(taskId, entryId);
-                    }
-                  }
-                  return handleDeleteTask(task ? task._originalId : id);
+                  const targetId = task?._originalId || (typeof id === 'string' && id.includes('::') ? id.split('::')[0] : id);
+                  return handleDeleteTask(targetId);
                 }}
                 dynamicFields={dynamicFields}
                 statusColors={enabledFields?.statusColors || {}}

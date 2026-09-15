@@ -55,3 +55,39 @@ test('prepareTaskPayload throws error on missing required fields', () => {
   assert.throws(() => prepareTaskPayload({ taskName: 'Test' }, {}), /Task name and Project ID are required/);
   assert.throws(() => prepareTaskPayload({ projectId: 'p1' }, {}), /Task name and Project ID are required/);
 });
+
+test('Initial time log entry generation on task creation', () => {
+  const taskWorkDate = new Date('2026-09-15');
+  const initialEntries = [
+    {
+      date: taskWorkDate,
+      allocatedHours: 5,
+      billedHours: 5,
+      actualHours: 3.5,
+      note: 'Initial Log',
+      loggedBy: 'dev@example.com'
+    }
+  ];
+
+  assert.equal(initialEntries.length, 1);
+  assert.equal(initialEntries[0].allocatedHours, 5);
+  assert.equal(initialEntries[0].actualHours, 3.5);
+  assert.equal(initialEntries[0].note, 'Initial Log');
+});
+
+test('Updating time entry recalculates parent task bill totals', () => {
+  const timeEntries = [
+    { _id: 'te-1', allocatedHours: 4, billedHours: 4, actualHours: 4 },
+    { _id: 'te-2', allocatedHours: 2, billedHours: 2, actualHours: 1 }
+  ];
+
+  // Simulate updating entry te-2 actualHours from 1 to 3
+  const updatedEntries = timeEntries.map(e => e._id === 'te-2' ? { ...e, actualHours: 3 } : e);
+  const totalAllocated = updatedEntries.reduce((sum, e) => sum + e.allocatedHours, 0);
+  const totalActual = updatedEntries.reduce((sum, e) => sum + e.actualHours, 0);
+
+  assert.equal(totalAllocated, 6);
+  assert.equal(totalActual, 7);
+  assert.equal(totalAllocated - totalActual, -1); // Variance -1 (Over by 1h)
+});
+

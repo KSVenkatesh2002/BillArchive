@@ -95,8 +95,8 @@ System-wide audit trail for security and tracking.
 | API Action | Target Table(s) | Operation | Side-Effect Description |
 |---|---|---|---|
 | `POST /api/auth/register` | `users` | `INSERT` | Creates user record with hashed password. |
-| `POST /api/tasks` | `tasks`, `audit_logs` | `INSERT` | Creates new task and logs creation event in audit log. |
-| `POST /api/tasks/[id]` | `time_entries`, `audit_logs` | `INSERT` | Creates time log entry and updates task aggregate totals. |
-| `PATCH /api/tasks/[id]` | `tasks` | `UPDATE` | Modifies status/description/estimates for specified task. |
+| `POST /api/tasks` | `tasks`, `time_entries`, `status_history` | `INSERT` | Creates new task AND automatically creates an initial `time_entries` log record for the specified `workDate`. |
+| `POST /api/tasks/[id]` (`updateTimeEntry`) | `time_entries`, `tasks` | `UPDATE` | Modifies `time_entries` record and automatically recalculates parent `tasks` aggregate billing metrics (`allocated_hours`, `billed_hours`, `actual_hours`). |
+| `PATCH /api/tasks/[id]` | `tasks`, `time_entries` | `UPDATE` | Modifies status/metadata/estimates on `tasks` table and syncs single child time entry if present. |
 | `DELETE /api/tasks/[id]` | `tasks`, `time_entries` | `DELETE` | Removes task and cascades deletion of all linked time entries. |
 | `POST /api/organization/config` | `org_configs` | `UPSERT` | Updates dynamic schema metadata for custom task fields. |

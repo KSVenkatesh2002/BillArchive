@@ -189,6 +189,7 @@ export default function UserProjectPage() {
         typeOfWork: taskForm.dynamicValues?.typeOfWork || taskForm.typeOfWork || undefined,
         clickupId: taskForm.clickupId,
         dynamicValues: taskForm.dynamicValues || {},
+        workDate: taskForm.workDate || new Date().toISOString(),
         bill: {
           allocatedHours: parseFloat(taskForm.allocatedHours || 0),
           billedHours: parseFloat(taskForm.billedHours || 0),

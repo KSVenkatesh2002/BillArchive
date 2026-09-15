@@ -37,6 +37,7 @@ export default function InterceptedTaskCreateModal() {
         typeOfWork: form.dynamicValues?.typeOfWork || form.typeOfWork || undefined,
         clickupId: form.clickupId,
         dynamicValues: form.dynamicValues || {},
+        workDate: form.workDate || new Date().toISOString(),
         bill: {
           allocatedHours: parseFloat(form.allocatedHours || 0),
           billedHours: parseFloat(form.billedHours || 0),

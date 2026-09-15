@@ -58,31 +58,42 @@ This document provides complete technical specifications for **all 31 API endpoi
 - **Request Body**:
   ```json
   {
-    "projectId": "uuid",
-    "taskName": "Implement SSO Integration",
-    "externalUrl": "https://app.clickup.com/t/8675309",
-    "estimatedHours": 10,
-    "status": "In Progress",
-    "customMetadata": { "jiraKey": "PROJ-123" }
+    "project": "Security",
+    "name": "Implement SSO Integration",
+    "clickupId": "8675309",
+    "status": "inprocess",
+    "workDate": "2026-09-15T00:00:00.000Z",
+    "bill": { "allocatedHours": 10, "billedHours": 0, "actualHours": 0 }
   }
   ```
-- **Database Side-Effects**: Inserts row into `tasks` table and creates entry in `audit_logs`.
+- **Database Side-Effects**: Inserts row into `tasks` table, automatically creates an initial `time_entries` log record for the specified `workDate`, and creates an initial status audit record in `status_history`.
 
 ### 2.3 `GET /api/tasks/[id]`
 - **Description**: Fetches detailed info for a single task including all associated time log entries.
-- **Response (200 OK)**: Task object with `time_entries` array.
+- **Response (200 OK)**: Task object with `timeEntries` array.
 
 ### 2.4 `POST /api/tasks/[id]`
-- **Description**: Logs hours worked on a task.
-- **Request Body**:
+- **Description**: Performs time log mutations (`addTimeEntry`, `updateTimeEntry`, `deleteTimeEntry`).
+- **Request Body (updateTimeEntry)**:
   ```json
-  { "hours": 3.5, "workDate": "2026-09-15", "notes": "Completed initial OAuth flow" }
+  {
+    "action": "updateTimeEntry",
+    "entryId": "uuid-or-id",
+    "entry": {
+      "date": "2026-09-15T00:00:00.000Z",
+      "allocatedHours": 5,
+      "billedHours": 5,
+      "actualHours": 4,
+      "note": "Updated log details",
+      "status": "inprocess"
+    }
+  }
   ```
-- **Database Side-Effects**: Inserts row into `time_entries` table.
+- **Database Side-Effects**: Updates matching row in `time_entries` table and recalculates aggregate `bill` totals (`allocated_hours`, `billed_hours`, `actual_hours`) on the parent `tasks` table.
 
 ### 2.5 `PATCH /api/tasks/[id]`
-- **Description**: Updates task status, estimated hours, or custom metadata.
-- **Database Side-Effects**: Modifies matching row in `tasks` table.
+- **Description**: Updates task status, metadata fields, or parent bill metrics.
+- **Database Side-Effects**: Modifies matching row in `tasks` table and syncs child time entry if exactly 1 entry exists.
 
 ### 2.6 `DELETE /api/tasks/[id]`
 - **Description**: Deletes a task.

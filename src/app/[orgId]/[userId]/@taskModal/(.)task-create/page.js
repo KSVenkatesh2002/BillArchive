@@ -48,6 +48,7 @@ export default function InterceptedTaskCreateModal() {
           ...(form.dynamicValues || {}),
           project: projectVal
         },
+        workDate: form.workDate || new Date().toISOString(),
         bill: {
           allocatedHours: parseFloat(form.allocatedHours || 0),
           billedHours: parseFloat(form.billedHours || 0),
