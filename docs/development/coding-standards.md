@@ -1,25 +1,32 @@
-# Coding Standards & Guidelines
+# Coding Standards
 
-## 1. Next.js App Router Rules
-- Read `node_modules/next/dist/docs/` for breaking changes and conventions.
-- All client components MUST declare `"use client";` at the top of the file.
-- Dynamic route parameters must be extracted via `useParams()` or `React.use()` in page components.
+## 1. Core Technologies
+- **Framework**: Next.js 16 (App Router)
+- **Language**: JavaScript (ES6+)
+- **Styling**: Tailwind CSS v4
+- **State Management**: Redux Toolkit (Client State) & TanStack React Query (Server State)
+- **Database / Auth**: Supabase
 
-## 2. API & Data Access Standards
-- Never call database adapters directly inside page components. Always go through `apiClient.js` on the frontend or `dbService.js` on the server.
-- All API handlers (`src/app/api/.../route.js`) MUST use consistent JSON response structures:
-  ```json
-  { "success": true, "data": ... }
-  ```
-  or
-  ```json
-  { "success": false, "error": "Error message description" }
-  ```
+## 2. File and Directory Structure
+- **Components**: Place UI components in `/src/components`. Maintain a flat structure unless a specific feature requires deep nesting.
+- **Hooks**: Custom React hooks should reside in `/src/lib/hooks/` (e.g., `useTasksQuery.js`).
+- **Pages**: Follow Next.js App Router conventions within `/src/app/`. Use localized layout files and parallel routing slots (`@authModal`) when appropriate.
 
-## 3. Date & Timezone Conventions
-- Week calculations must always start on **Sunday** (`d.getDay() === 0`) and end on **Saturday** (`d.getDay() === 6`).
-- Date parameters (`weekStart`) passed in URLs must be parsed using local date constructors (`parseLocalDate`) to avoid UTC day-shift bugs.
+## 3. Component Guidelines
+- **Functional Components**: Use arrow functions for component definitions.
+- **Client vs Server Components**: By default, components in the App Router are Server Components. Use the `"use client"` directive at the very top of a file only when necessary (e.g., for `useState`, `useEffect`, or event listeners like `onClick`).
+- **Props Validation**: As TypeScript is not currently enforced, ensure clear JSDoc comments or default parameters are utilized to document prop expectations.
 
-## 4. UI & Styling Rules
-- Use Vanilla CSS and Tailwind CSS classes with pre-tailored HSL or dark-mode color palettes.
-- Do not hardcode static colors inside components if status colors are customizable. Use `statusColors[status]` fallback maps.
+## 4. State Management (The Hybrid Approach)
+- **TanStack Query**: Use for all asynchronous data fetching, caching, and mutations.
+  - **Rules**: Always define unique query keys array (e.g., `['tasks', projectId]`). Handle `isLoading` and `isError` states gracefully in the UI.
+- **Redux Toolkit**: Use strictly for synchronous, global UI state (e.g., UI theme, active modal identifiers, global filter selections).
+
+## 5. Styling with Tailwind CSS
+- Avoid inline CSS. Use utility classes.
+- Construct modular class strings using template literals when conditional styling is needed.
+- Utilize the design tokens defined in `globals.css` (e.g., `--background`, `--foreground`) for theme consistency (Dark/Light mode).
+
+## 6. Code Formatting and Linting
+- Ensure all code passes `eslint` validation (`npm run lint`).
+- Use standard camelCase for variables/functions, and PascalCase for React Components.
