@@ -455,12 +455,15 @@ export const taskService = {
    * Delete a task
    */
   async deleteTask(taskId, userId) {
+    if (!taskId || typeof taskId !== 'string' || !taskId.trim()) {
+      throw new Error('Valid Task ID is required for deletion');
+    }
     const existingTask = await dbService.findTaskById(taskId);
     if (!existingTask) {
       throw new Error('Task not found');
     }
     
-    if (existingTask.userId !== userId) {
+    if (userId && existingTask.userId && existingTask.userId !== userId) {
       throw new Error('Forbidden');
     }
 

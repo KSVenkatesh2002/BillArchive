@@ -428,6 +428,7 @@ export default function UserDashboard() {
   };
 
   const handleDeleteTask = async (id) => {
+    if (!id) return;
     if (!confirm('Are you sure you want to delete this task?')) return;
     try {
       await dispatch(deleteTask(id)).unwrap();

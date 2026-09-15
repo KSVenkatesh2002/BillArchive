@@ -532,7 +532,14 @@ export const pgAdapter = {
   },
 
   async deleteTask(id) {
+    if (!id || typeof id !== 'string' || !id.trim()) {
+      throw new Error('Valid Task ID is required for deletion');
+    }
     const db = getKnex();
+    await db('task_custom_values').where({ task_id: id }).del();
+    await db('task_doc_links').where({ task_id: id }).del();
+    await db('time_entries').where({ task_id: id }).del();
+    await db('status_history').where({ task_id: id }).del();
     await db('tasks').where({ id }).del();
     return true;
   },

@@ -92,11 +92,10 @@ export const addTimeEntry = createAsyncThunk(
 
 export const deleteTask = createAsyncThunk(
   'tasks/deleteTask',
-  async (taskId, { dispatch, rejectWithValue }) => {
+  async (taskId, { rejectWithValue }) => {
     try {
       const data = await apiClient.deleteTask(taskId);
       if (data.success) {
-        dispatch(fetchTasks({ pageNum: 1, reset: true }));
         return taskId;
       }
       throw new Error(data.error || 'Failed to delete task');
@@ -191,6 +190,21 @@ const taskSlice = createSlice({
       .addCase(fetchTasks.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+      .addCase(deleteTask.fulfilled, (state, action) => {
+        const deletedId = action.payload;
+        const remaining = state.tasks.filter((t) => t._id !== deletedId && t.id !== deletedId);
+        state.tasks = remaining;
+        const totalAllocated = remaining.reduce((sum, t) => sum + (t.bill?.allocatedHours || 0), 0);
+        const totalBilled = remaining.reduce((sum, t) => sum + (t.bill?.billedHours || 0), 0);
+        const totalActual = remaining.reduce((sum, t) => sum + (t.bill?.actualHours || 0), 0);
+        state.metrics = {
+          ...state.metrics,
+          totalAllocated,
+          totalBilled,
+          totalActual,
+          variance: totalBilled - totalActual
+        };
       });
   }
 });
